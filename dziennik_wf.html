@@ -1,0 +1,3044 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Dziennik WF</title>
+
+<!-- PWA: instalacja na Androidzie + praca offline na sali (service worker) -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#33415C">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Dziennik WF">
+
+<!-- Fonty: Source Serif 4 (serif) dla nagłówków i charakteru,
+     IBM Plex Sans dla UI (czytelność w tabelach) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  * { box-sizing: border-box; }
+  :root {
+    --bg: #FAF8F3;
+    --paper: #FFFFFF;
+    --ink: #1A1A1A;
+    --ink-soft: #4A4543;
+    --ink-muted: #807A75;
+    --line: #E6E0D4;
+    --line-soft: #F1ECE0;
+    --accent: #1E2D4F;
+    --accent-warm: #8C2520;
+    --accent-soft: #D6E1EF;
+    --gold: #B08F4E;
+  }
+  body {
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.5;
+    color: var(--ink);
+    background: var(--bg);
+    margin: 0;
+    padding: 0;
+    font-feature-settings: 'kern' 1, 'liga' 1;
+  }
+  .container { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
+  h1 {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 32px; font-weight: 500; margin: 0 0 4px 0;
+    letter-spacing: -0.01em; color: var(--ink);
+  }
+  h2 {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 22px; font-weight: 500; margin: 2.5rem 0 1rem 0;
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 16px; font-weight: 500; margin: 1.5rem 0 0.75rem 0;
+  }
+  .subtitle { font-size: 14px; color: var(--ink-muted); margin: 0 0 1.5rem 0; font-style: italic; }
+  code { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 0.9em; }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 16px; margin-bottom: 16px;
+  }
+  .toolbar button {
+    background: var(--paper); border: 1px solid var(--line); color: var(--ink);
+    padding: 7px 14px; border-radius: 6px; font-size: 13px; cursor: pointer;
+    font-family: inherit;
+  }
+  .toolbar button:hover { background: var(--bg); }
+  .toolbar button.primary { background: var(--accent); color: var(--paper); border-color: var(--accent); }
+  .toolbar button.primary:hover { background: #2A3A60; }
+  .toolbar button.danger { color: var(--accent-warm); border-color: #E5C5C0; }
+  .toolbar button.danger:hover { background: #FBEEEC; }
+
+  /* Date picker */
+  .date-row {
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    background: var(--bg); padding: 10px 16px; border-radius: 8px; margin-bottom: 16px;
+  }
+  .date-row label { font-size: 13px; color: var(--ink-muted); }
+  .date-row input[type="date"] {
+    padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px;
+    font-family: inherit; font-size: 14px; background: var(--paper);
+  }
+  .date-row .lesson-count {
+    margin-left: auto; font-size: 13px; color: var(--ink-muted);
+  }
+
+  /* Pasek zapisu lekcji */
+  .save-bar {
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    background: #EAF3DE; border: 1px solid #97C459;
+    padding: 12px 16px; border-radius: 8px; margin-bottom: 16px;
+  }
+  .save-bar-status {
+    flex: 1; font-size: 13px; color: #173404; min-width: 200px;
+  }
+  .save-bar-status strong { font-weight: 500; }
+  .save-bar-btn {
+    background: #1D9E75 !important; color: white !important; border-color: #1D9E75 !important;
+    padding: 10px 20px !important; font-size: 14px !important; font-weight: 500;
+  }
+  .save-bar-btn:hover { background: #178060 !important; }
+  .save-bar.complete {
+    background: var(--bg); border-color: var(--line);
+  }
+  .save-bar.complete .save-bar-status { color: var(--ink-muted); }
+
+  /* Zakładki */
+  .tabs {
+    display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 16px;
+  }
+  .tab {
+    padding: 10px 16px; border: none; background: transparent; cursor: pointer;
+    font-family: inherit; font-size: 14px; color: var(--ink-muted); border-bottom: 2px solid transparent;
+  }
+  .tab.active { color: var(--ink); font-weight: 500; border-bottom-color: var(--ink); }
+  .tab:hover { background: var(--bg); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Legenda statusów */
+  .legend-row {
+    display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+    margin-bottom: 12px; font-size: 12px;
+  }
+  .status-btn {
+    padding: 4px 10px; border-radius: 12px; font-weight: 500;
+    border: 1px solid; cursor: pointer; font-family: inherit; font-size: 12px;
+  }
+  .status-c {  background: #C0DD97; border-color: #639922; color: #173404; }
+  .status-nc { background: #FAC775; border-color: #BA7517; color: #412402; }
+  .status-bs { background: #F0997B; border-color: #BA522F; color: #4A1B0C; }
+  .status-zw { background: #B5D4F4; border-color: #4A8BC7; color: #042C53; }
+  .status-nu { background: #C7D9F0; border-color: #6A8FBD; color: #1A2C50; }
+  .status-nb { background: #F7C1C1; border-color: #C46666; color: #501313; }
+  .status-empty { background: var(--bg); border-color: var(--line); color: var(--ink-muted); }
+  .status-blocked { background: var(--line); border-color: var(--line); color: var(--ink-muted); }
+
+  /* Tabela obecności */
+  .table-wrap { overflow-x: auto; background: var(--paper); border-radius: 4px; border: 1px solid var(--line); }
+  table.attendance { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.attendance thead { background: var(--line-soft); border-bottom: 2px solid var(--ink); }
+  table.attendance thead th {
+    padding: 12px 8px; text-align: center; font-weight: 500;
+    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--ink-soft); white-space: nowrap;
+  }
+  table.attendance thead th.left { text-align: left; padding-left: 14px; }
+  table.attendance tbody td {
+    padding: 8px 6px; border-bottom: 1px solid var(--line-soft); vertical-align: middle;
+    text-align: center;
+  }
+  table.attendance tbody td.left { text-align: left; padding-left: 14px; }
+  table.attendance tbody tr:hover { background: var(--bg); }
+  table.attendance tbody tr.long-term-released { background: var(--bg); color: var(--ink-muted); font-style: italic; }
+
+  .student-name {
+    border: none; background: transparent; font-family: inherit;
+    font-size: 14px; font-weight: 500; width: 200px; padding: 4px 8px; border-radius: 4px;
+  }
+  .student-name:hover { background: var(--bg); }
+  .student-name:focus { outline: 1px solid var(--ink); background: var(--paper); }
+
+  .long-term-checkbox {
+    cursor: pointer;
+  }
+
+  /* Status cells (klikalne w widoku obecności) */
+  .status-cell {
+    cursor: pointer; padding: 4px; border-radius: 6px;
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 40px; min-height: 28px;
+    font-weight: 500; font-size: 12px;
+  }
+  .status-cell:hover { filter: brightness(0.95); }
+
+  /* Procenty */
+  .percent-cell { font-weight: 500; }
+  .percent-cell.high { color: #173404; }
+  .percent-cell.mid { color: #412402; }
+  .percent-cell.low { color: #501313; }
+
+  .stat-detail { font-size: 11px; color: var(--ink-muted); }
+
+  /* Statystyki podsumowanie */
+  .summary-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;
+    margin-bottom: 16px;
+  }
+  .summary-card {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 4px;
+    padding: 14px 18px;
+    border-left: 3px solid var(--accent);
+  }
+  .summary-label { font-size: 11px; color: var(--ink-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .summary-value {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 26px; font-weight: 500; color: var(--ink);
+  }
+
+  /* Info boxy */
+  .info-box {
+    border-left: 3px solid var(--accent);
+    background: var(--paper);
+    padding: 14px 18px; margin-bottom: 16px;
+    border-radius: 0 4px 4px 0;
+    color: var(--ink-soft); font-size: 13px; line-height: 1.6;
+  }
+
+  .delete-btn {
+    background: transparent; border: none; color: var(--accent-warm); cursor: pointer;
+    font-size: 16px; padding: 2px 6px;
+  }
+  .delete-btn:hover { background: #FBEEEC; border-radius: 4px; }
+
+  /* Dyktowanie */
+  .dictate-zone {
+    background: var(--paper); border: 2px dashed var(--line); border-radius: 8px;
+    padding: 16px; margin-bottom: 16px;
+  }
+  .dictate-zone textarea {
+    width: 100%; min-height: 80px; padding: 10px; border: 1px solid var(--line);
+    border-radius: 6px; font-family: inherit; font-size: 14px;
+    background: var(--bg); resize: vertical;
+  }
+  .dictate-zone textarea:focus { outline: none; border-color: var(--ink-muted); }
+  .dictate-help { font-size: 12px; color: var(--ink-muted); margin-top: 8px; }
+
+  /* Mikrofon - przycisk z animacją */
+  .mic-btn {
+    background: var(--paper); border: 1px solid var(--line);
+    padding: 9px 16px; border-radius: 4px; font-size: 13px;
+    cursor: pointer; font-family: inherit; color: var(--ink);
+    display: inline-flex; align-items: center; gap: 8px;
+    transition: all 0.15s ease;
+  }
+  .mic-btn:hover {
+    background: var(--bg); border-color: var(--accent);
+  }
+  .mic-btn .mic-icon {
+    font-size: 16px;
+  }
+  .mic-btn.recording {
+    background: var(--accent-warm); color: var(--paper); border-color: var(--accent-warm);
+    animation: mic-pulse 1.4s ease-in-out infinite;
+  }
+  .mic-btn.recording .mic-icon::after {
+    content: '';
+    display: inline-block;
+    width: 8px; height: 8px;
+    background: var(--paper);
+    border-radius: 50%;
+    margin-left: 6px;
+    animation: mic-blink 0.8s ease-in-out infinite;
+  }
+  @keyframes mic-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(140, 37, 32, 0.5); }
+    50% { box-shadow: 0 0 0 8px rgba(140, 37, 32, 0); }
+  }
+  @keyframes mic-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+  .mic-status {
+    font-size: 12px; color: var(--ink-muted); font-style: italic;
+    margin-left: 8px;
+  }
+  .mic-status.live { color: var(--accent-warm); font-weight: 500; font-style: normal; }
+  .mic-unsupported {
+    font-size: 12px; color: var(--ink-muted); font-style: italic;
+    padding: 4px 8px; background: var(--bg); border-radius: 4px;
+  }
+
+  /* Sekcja dyktowania ocen */
+  .oceny-mic-zone {
+    background: var(--paper); border: 2px dashed var(--line); border-radius: 8px;
+    padding: 14px 18px; margin-bottom: 18px;
+  }
+  .oceny-mic-zone h4 {
+    margin: 0 0 8px 0;
+    font-family: 'Source Serif 4', serif;
+    font-size: 15px; font-weight: 500;
+  }
+  .oceny-mic-controls {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .oceny-mic-controls select {
+    padding: 8px 12px; border: 1px solid var(--line); border-radius: 4px;
+    font-family: inherit; font-size: 13px; background: var(--bg);
+    color: var(--ink); min-width: 200px;
+  }
+  .oceny-mic-controls select:focus { outline: none; border-color: var(--accent); background: var(--paper); }
+  .oceny-mic-input {
+    width: 100%; min-height: 60px; padding: 10px; border: 1px solid var(--line);
+    border-radius: 6px; font-family: inherit; font-size: 14px;
+    background: var(--bg); resize: vertical; margin-top: 6px;
+  }
+  .oceny-mic-input:focus { outline: none; border-color: var(--accent); background: var(--paper); }
+  .oceny-mic-help {
+    font-size: 12px; color: var(--ink-muted); margin-top: 8px;
+    line-height: 1.6;
+  }
+  .oceny-mic-help code {
+    background: var(--bg); padding: 1px 6px; border-radius: 3px;
+    font-size: 12px; color: var(--accent);
+  }
+
+  /* Pomiary - tabela */
+  .pomiary-table input {
+    width: 70px; padding: 4px 6px; border: 1px solid transparent;
+    background: transparent; font-family: inherit; font-size: 13px; text-align: right;
+    border-radius: 4px;
+  }
+  .pomiary-table input:hover { border-color: var(--line); background: rgba(255,255,255,0.5); }
+  .pomiary-table input:focus { outline: none; border-color: var(--ink); background: var(--paper); }
+
+  /* Modal informacyjny przy starcie */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100;
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-bg.active { display: flex; }
+  .modal {
+    background: var(--paper); border-radius: 12px; padding: 24px; max-width: 500px;
+    width: 100%; max-height: 90vh; overflow-y: auto;
+  }
+  .modal h3 { margin: 0 0 12px 0; }
+
+  footer {
+    margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line);
+    font-size: 12px; color: var(--ink-muted);
+  }
+
+
+  /* ================================================== */
+  /* MODUŁ OCENY — tabelaryczny dziennik (jak papier WSiP)*/
+  /* ================================================== */
+
+  .oceny-intro {
+    background: var(--paper);
+    border-left: 3px solid var(--accent);
+    padding: 18px 24px;
+    margin-bottom: 24px;
+    border-radius: 0 4px 4px 0;
+  }
+  .oceny-intro h2 { margin: 0 0 8px 0; font-size: 20px; }
+  .oceny-intro p {
+    margin: 0; font-size: 14px; color: var(--ink-soft); line-height: 1.65;
+  }
+  .oceny-intro .formula {
+    margin-top: 12px; padding: 8px 14px; background: var(--bg);
+    border: 1px solid var(--line); border-radius: 4px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+    color: var(--accent);
+    display: inline-block;
+  }
+
+  .oceny-toolbar {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    padding: 16px 0; border-bottom: 1px solid var(--line);
+    margin-bottom: 24px;
+  }
+  .oceny-toolbar .btn-oceny {
+    background: var(--paper); border: 1px solid var(--line);
+    padding: 9px 18px; border-radius: 4px; font-size: 13px;
+    cursor: pointer; font-family: inherit; color: var(--ink);
+    transition: all 0.15s ease;
+  }
+  .oceny-toolbar .btn-oceny:hover { background: var(--bg); border-color: var(--ink-muted); }
+  .oceny-toolbar .btn-oceny.primary {
+    background: var(--accent); color: var(--paper); border-color: var(--accent);
+    font-weight: 500;
+  }
+  .oceny-toolbar .btn-oceny.primary:hover { background: #2A3A60; }
+  .oceny-toolbar .count {
+    margin-left: auto; font-size: 13px; color: var(--ink-muted);
+    font-style: italic;
+  }
+
+  .oceny-wrap {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: 4px; overflow-x: auto;
+  }
+  table.dziennik {
+    width: 100%; border-collapse: collapse; font-size: 13.5px;
+  }
+  table.dziennik thead {
+    background: var(--line-soft);
+    border-bottom: 2px solid var(--ink);
+  }
+  table.dziennik thead th {
+    padding: 12px 10px; text-align: center; font-weight: 500;
+    color: var(--ink-soft);
+    border-right: 1px solid var(--line);
+    vertical-align: bottom;
+  }
+  table.dziennik thead th:last-child { border-right: none; }
+  table.dziennik thead th.col-lp { width: 36px; }
+  table.dziennik thead th.col-name {
+    text-align: left; width: 200px;
+    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  table.dziennik thead th.col-srednia {
+    width: 110px;
+    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    background: var(--accent-soft);
+  }
+
+  .col-ocena {
+    min-width: 88px; max-width: 110px;
+    background: var(--line-soft);
+    cursor: pointer;
+    transition: background 0.15s ease;
+    position: relative;
+  }
+  .col-ocena:hover { background: #E8E2D0; }
+  .col-ocena .skrot {
+    font-family: 'Source Serif 4', serif;
+    font-size: 16px; font-weight: 500;
+    color: var(--ink); display: block;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .col-ocena .waga-badge {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    padding: 1px 6px; border-radius: 8px;
+    background: var(--paper); border: 1px solid var(--line);
+    color: var(--ink-soft);
+    margin-top: 4px;
+  }
+  .col-ocena .waga-badge.w2 {
+    background: var(--accent); color: var(--paper); border-color: var(--accent);
+  }
+  .col-ocena .waga-badge.w0 {
+    background: transparent; color: var(--ink-muted); font-style: italic;
+    border: none;
+  }
+  .col-ocena .data-col {
+    display: block; font-size: 10px; color: var(--ink-muted);
+    margin-top: 4px; font-family: 'IBM Plex Sans', sans-serif;
+    text-transform: none; letter-spacing: 0;
+  }
+
+  .col-add {
+    width: 90px;
+    background: var(--bg);
+    cursor: pointer;
+    border: 1px dashed var(--line);
+    border-right: none;
+  }
+  .col-add:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+  .col-add .add-icon {
+    display: block; font-size: 20px; color: var(--ink-muted);
+    margin-bottom: 4px;
+  }
+  .col-add:hover .add-icon { color: var(--accent); }
+  .col-add .add-label {
+    font-size: 10.5px; color: var(--ink-muted);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .col-add:hover .add-label { color: var(--accent); }
+
+  table.dziennik tbody td {
+    padding: 0; border-bottom: 1px solid var(--line-soft);
+    border-right: 1px solid var(--line-soft);
+    vertical-align: middle;
+    text-align: center;
+  }
+  table.dziennik tbody td:last-child { border-right: none; }
+  table.dziennik tbody tr:last-child td { border-bottom: none; }
+  table.dziennik tbody tr:hover { background: var(--bg); }
+  table.dziennik tbody td.cell-lp {
+    font-family: 'Source Serif 4', serif;
+    color: var(--ink-muted); font-size: 14px;
+    padding: 12px 8px;
+  }
+  table.dziennik tbody td.cell-name {
+    text-align: left; padding: 12px 14px;
+    font-weight: 500; color: var(--ink);
+  }
+  table.dziennik tbody td.cell-name .empty {
+    color: var(--ink-muted); font-style: italic; font-weight: 400;
+  }
+
+  .cell-ocena { padding: 0; position: relative; }
+  .cell-ocena-content {
+    display: flex; align-items: center; justify-content: center;
+    padding: 14px 6px;
+    cursor: pointer;
+    transition: background 0.12s ease;
+    min-height: 44px;
+  }
+  .cell-ocena-content:hover { background: var(--accent-soft); }
+  .cell-ocena .val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 16px; font-weight: 500;
+  }
+  .cell-ocena.val-high  .cell-ocena-content { background: #E8F0E5; color: #2D4920; }
+  .cell-ocena.val-good  .cell-ocena-content { background: #EEF1E1; color: #3D4516; }
+  .cell-ocena.val-mid   .cell-ocena-content { background: #F5EDD7; color: #5D4A1F; }
+  .cell-ocena.val-low   .cell-ocena-content { background: #F2DBC8; color: #5C3214; }
+  .cell-ocena.val-poor  .cell-ocena-content { background: #ECCFC9; color: #5A1F15; }
+  .cell-ocena.empty .cell-ocena-content { color: var(--line); }
+  .cell-ocena.empty .cell-ocena-content::before {
+    content: '+';
+    font-size: 18px; color: var(--line);
+    transition: color 0.12s ease;
+  }
+  .cell-ocena.empty .cell-ocena-content:hover::before {
+    color: var(--accent);
+  }
+
+  .cell-srednia {
+    background: #FBFAF5;
+    padding: 12px 10px !important;
+    text-align: center !important;
+  }
+  .cell-srednia .srednia-num {
+    font-family: 'Source Serif 4', serif;
+    font-size: 22px; font-weight: 500;
+    color: var(--ink); line-height: 1;
+  }
+  .cell-srednia .of100 {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 10px; color: var(--ink-muted);
+    font-weight: 400;
+  }
+  .cell-srednia.empty .srednia-num {
+    color: var(--ink-muted); font-style: italic; font-size: 16px;
+  }
+
+  table.dziennik tfoot {
+    background: var(--line-soft);
+    border-top: 2px solid var(--ink);
+  }
+  table.dziennik tfoot td {
+    padding: 12px 8px; text-align: center;
+    font-size: 12px; color: var(--ink-soft);
+    border-right: 1px solid var(--line);
+  }
+  table.dziennik tfoot td.foot-label {
+    text-align: left; padding-left: 14px;
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.08em; font-weight: 500;
+  }
+  table.dziennik tfoot td .col-srednia-val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px; font-weight: 500; color: var(--ink);
+  }
+
+  .alarm-row { background: #FBEEEC !important; }
+  .alarm-row:hover { background: #F9E2DC !important; }
+
+  /* Modal nowej kolumny / oceny */
+  .modal-grade {
+    background: var(--paper); border-radius: 8px; padding: 28px;
+    max-width: 440px; width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  }
+  .modal-grade .modal-tag {
+    display: inline-block; padding: 3px 10px;
+    background: var(--accent-soft); color: var(--accent);
+    border-radius: 12px; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    font-weight: 500; margin-bottom: 12px;
+  }
+  .modal-grade h3 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 22px; margin: 0 0 4px 0; font-weight: 500;
+  }
+  .modal-grade .sub {
+    color: var(--ink-muted); font-size: 13px;
+    font-style: italic; margin-bottom: 22px;
+  }
+  .field { margin-bottom: 18px; }
+  .field label {
+    display: block; font-size: 10.5px; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--ink-soft); margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .field input[type="text"],
+  .field input[type="number"],
+  .field input[type="date"] {
+    width: 100%; padding: 10px 14px;
+    border: 1px solid var(--line); border-radius: 4px;
+    font-family: inherit; font-size: 14px;
+    background: var(--bg); color: var(--ink);
+    transition: border-color 0.15s ease;
+  }
+  .field input:focus { outline: none; border-color: var(--accent); background: var(--paper); }
+  .field-hint {
+    font-size: 11px; color: var(--ink-muted);
+    margin-top: 4px; font-style: italic;
+  }
+  .field-row { display: grid; grid-template-columns: 1fr 130px; gap: 14px; }
+
+  .points-row { display: flex; gap: 14px; align-items: center; }
+  .points-row .points-input {
+    width: 80px; text-align: center;
+    font-family: 'IBM Plex Mono', monospace; font-size: 18px !important;
+    font-weight: 500;
+  }
+  .points-row .points-slider {
+    flex: 1; -webkit-appearance: none; appearance: none;
+    height: 6px; background: var(--line); border-radius: 3px;
+    outline: none;
+  }
+  .points-row .points-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 20px; height: 20px; background: var(--accent);
+    border-radius: 50%; cursor: pointer; border: 2px solid var(--paper);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+
+  .waga-row {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+    background: var(--line-soft); padding: 4px; border-radius: 6px;
+  }
+  .waga-opt {
+    padding: 10px 4px; text-align: center;
+    background: transparent; border: none;
+    cursor: pointer; font-family: inherit;
+    color: var(--ink-soft);
+    border-radius: 4px;
+    transition: all 0.15s ease;
+  }
+  .waga-opt:hover { color: var(--ink); }
+  .waga-opt.active {
+    background: var(--paper); color: var(--accent); font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  }
+  .waga-opt .waga-num {
+    font-family: 'Source Serif 4', serif;
+    font-size: 22px; display: block; line-height: 1; margin-bottom: 3px;
+  }
+  .waga-opt .waga-desc {
+    font-size: 10px; color: var(--ink-muted); margin-top: 2px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+
+  .modal-actions {
+    display: flex; gap: 8px; justify-content: space-between;
+    margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line);
+  }
+  .modal-actions .right { display: flex; gap: 8px; }
+  .modal-actions button {
+    padding: 10px 22px; border-radius: 4px;
+    font-family: inherit; font-size: 13px; cursor: pointer;
+    border: 1px solid;
+  }
+  .btn-save {
+    background: var(--accent); color: var(--paper);
+    border-color: var(--accent); font-weight: 500;
+  }
+  .btn-save:hover { background: #2A3A60; }
+  .btn-cancel {
+    background: transparent; color: var(--ink-soft);
+    border-color: var(--line);
+  }
+  .btn-cancel:hover { background: var(--bg); }
+  .btn-delete-soft {
+    background: transparent; color: var(--accent-warm);
+    border-color: #E5C5C0;
+  }
+  .btn-delete-soft:hover { background: #FBEEEC; border-color: var(--accent-warm); }
+
+  @media (max-width: 700px) {
+    .toolbar { gap: 4px; padding: 8px; }
+    .toolbar button { padding: 6px 10px; font-size: 12px; }
+    h1 { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Dziennik WF</h1>
+  <p class="subtitle">Obecność, pomiary, statystyki · dane zapisują się lokalnie</p>
+
+  <div id="classBar" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:14px"></div>
+
+  <div class="info-box">
+    <strong>Szybki workflow:</strong> Zaznaczasz tylko <em>wyjątki</em> (kto dziś nie ćwiczył / nieobecny / brak stroju) — klikniesz na komórkę, wybierzesz status. Pozostali zostaną automatycznie zapisani jako <strong>C (ćwiczył)</strong> po kliknięciu <strong>"Zapisz lekcję"</strong>. Możesz też dyktować przez Win+H / Superwhisper.
+    <br><br>
+    <strong>Procent ćwiczył</strong> liczy się ze wzoru: <code>C / (C + NĆ + BS + NB)</code>. NU (usprawiedliwiony) i ZW (zwolnienie) wypadają z bazy. Wagary (NB) liczą się jak "nie ćwiczył".
+  </div>
+
+  <!-- Zakładki -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('obecnosc')">📋 Obecność</button>
+    <button class="tab" onclick="switchTab('uczniowie')">👥 Uczniowie</button>
+    <button class="tab" onclick="switchTab('pomiary')">📏 Pomiary</button>
+    <button class="tab" onclick="switchTab('oceny')">📝 Oceny</button>
+    <button class="tab" onclick="switchTab('statystyki')">📊 Statystyki</button>
+  </div>
+
+  <!-- =================================================== -->
+  <!-- ZAKŁADKA: OBECNOŚĆ -->
+  <!-- =================================================== -->
+  <div id="tab-obecnosc" class="tab-content active">
+
+    <div class="date-row">
+      <label>Data lekcji:</label>
+      <input type="date" id="lessonDate" onchange="changeDate()">
+      <button onclick="dateOffset(-1)">◀ poprz.</button>
+      <button onclick="dateOffset(1)">nast. ▶</button>
+      <button onclick="setToday()">dziś</button>
+      <button class="danger" onclick="deleteLesson()" title="usuń tę lekcję">🗑 usuń lekcję</button>
+      <span class="lesson-count" id="lessonCount"></span>
+    </div>
+
+    <!-- Przycisk szybkiego zapisu -->
+    <div class="save-bar" id="saveBar">
+      <div class="save-bar-status" id="saveBarStatus"></div>
+      <button class="primary save-bar-btn" onclick="finalizeLesson()">
+        💾 Zapisz lekcję — pozostali jako "ćwiczył"
+      </button>
+    </div>
+
+    <!-- Pole dyktowania -->
+    <div class="dictate-zone">
+      <textarea id="dictateField" placeholder="Tu możesz dyktować przez mikrofonik 🎤 albo przez Win+H / Superwhisper. Np: 'Kowalski obecny, Nowak nieobecny, Maciek brak stroju'"></textarea>
+      <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <button id="micBtnObecnosc" class="mic-btn" onclick="toggleMic('dictateField','micBtnObecnosc','micStatusObecnosc')">
+          <span class="mic-icon">🎤</span> <span>Mikrofon</span>
+        </button>
+        <button class="primary" onclick="parseDictation()">Przetwórz dyktowanie</button>
+        <button onclick="document.getElementById('dictateField').value=''">Wyczyść</button>
+        <span id="micStatusObecnosc" class="mic-status"></span>
+      </div>
+      <div class="dictate-help">
+        <strong>Statusy na dziś:</strong>
+        <em>ćwiczył / obecny / był</em> → C ·
+        <em>nieobecny / wagary</em> → NB ·
+        <em>usprawiedliwiony</em> → NU ·
+        <em>brak stroju</em> → BS ·
+        <em>zwolnienie</em> → ZW ·
+        <em>nie ćwiczył</em> → NĆ.<br>
+        <strong>Komenda usprawiedliwiania:</strong> <em>"usprawiedliw Kowalskiego"</em> — zmienia najnowsze NB tego ucznia na NU (zaległe nieobecności).<br>
+        Wpisy oddzielaj przecinkami: <em>"Kowalski był, Nowak wagary, usprawiedliw Maciek"</em>.
+      </div>
+    </div>
+
+    <!-- Legenda statusów -->
+    <div class="legend-row">
+      <span style="font-size:12px; color:var(--ink-muted); margin-right:8px;">Kliknij komórkę i wybierz:</span>
+      <span class="status-btn status-c">C — ćwiczył</span>
+      <span class="status-btn status-nc">NĆ — nie ćwiczył (bez zwolnienia)</span>
+      <span class="status-btn status-bs">BS — brak stroju</span>
+      <span class="status-btn status-nb">NB — nieobecny nieusprawiedliwiony</span>
+      <span class="status-btn status-nu">NU — nieobecny usprawiedliwiony</span>
+      <span class="status-btn status-zw">ZW — zwolnienie jednorazowe</span>
+    </div>
+
+    <div class="table-wrap">
+      <table class="attendance" id="attendanceTable">
+        <thead>
+          <tr>
+            <th class="left">#</th>
+            <th class="left">Uczeń</th>
+            <th>Status dziś</th>
+            <th>Ćwiczył</th>
+            <th>NĆ</th>
+            <th>BS</th>
+            <th>NB</th>
+            <th>NU</th>
+            <th>ZW</th>
+            <th>Łącznie</th>
+            <th>% ćwiczył</th>
+          </tr>
+        </thead>
+        <tbody id="attendanceBody"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- =================================================== -->
+  <!-- ZAKŁADKA: UCZNIOWIE -->
+  <!-- =================================================== -->
+  <div id="tab-uczniowie" class="tab-content">
+    <div class="toolbar">
+      <button class="primary" onclick="addStudent()">+ Dodaj ucznia</button>
+      <button onclick="exportJSON()">💾 Zapis JSON (backup)</button>
+      <button onclick="document.getElementById('fileImport').click()">📂 Wczytaj JSON</button>
+      <input type="file" id="fileImport" accept=".json" style="display:none" onchange="importJSON(event)">
+      <button class="primary" onclick="exportEncrypted()" title="Kopia zaszyfrowana hasłem — tę można wysłać mailem">🔒 Kopia szyfrowana</button>
+      <button onclick="document.getElementById('fileImportEnc').click()" title="Wczytaj kopię zaszyfrowaną hasłem">🔓 Wczytaj szyfrowaną</button>
+      <input type="file" id="fileImportEnc" accept=".enc.json,.json" style="display:none" onchange="importEncrypted(event)">
+      <button onclick="exportCSV()">📥 Eksport CSV (obecność)</button>
+      <button class="danger" onclick="clearAll()">🗑 Wyczyść wszystko</button>
+      <button id="btnInstall" class="primary" style="display:none" onclick="installPWA()" title="Zainstaluj jako aplikację na telefonie">📲 Zainstaluj na telefonie</button>
+    </div>
+
+    <div class="info-box">
+      <strong>Uwaga:</strong> "Zwolniony długoterminowo" oznacza ucznia ze zwolnieniem lekarskim na pół roku lub cały rok. Taki uczeń pokazuje się na liście, ale nie ma statystyk i nie można mu wpisywać obecności.
+    </div>
+
+    <div class="table-wrap">
+      <table class="attendance">
+        <thead>
+          <tr>
+            <th class="left">#</th>
+            <th class="left">Uczeń</th>
+            <th>Zwolniony długoterminowo</th>
+            <th>Wzrost [cm]</th>
+            <th>Waga [kg]</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="studentsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- =================================================== -->
+  <!-- ZAKŁADKA: POMIARY -->
+  <!-- =================================================== -->
+  <div id="tab-pomiary" class="tab-content">
+    <div class="info-box">
+      Wpisz wyniki testów dla każdego ucznia. Wzrost i waga pochodzą z karty ucznia (zakładka Uczniowie).
+    </div>
+
+    <div class="table-wrap">
+      <table class="attendance pomiary-table">
+        <thead>
+          <tr>
+            <th class="left">#</th>
+            <th class="left">Uczeń</th>
+            <th>Wzrost [cm]</th>
+            <th>Waga [kg]</th>
+            <th>Skok w dal [cm]</th>
+            <th>Bieg 10×5 [s]</th>
+            <th>Beep test [stage]</th>
+            <th>Deska [s]</th>
+          </tr>
+        </thead>
+        <tbody id="pomiaryBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- =================================================== -->
+  <!-- ZAKŁADKA: OCENY -->
+  <!-- =================================================== -->
+  <div id="tab-oceny" class="tab-content">
+
+    <div class="oceny-intro">
+      <h2>Oceny i średnia ważona</h2>
+      <p>Tworzysz <strong>kolumnę oceny</strong> (nazwa, skrót, waga, data) — pojawia się dla wszystkich uczniów. Klikasz w komórkę i wpisujesz wartość 0–100. Patrząc na kolumnę widzisz kto ma braki.</p>
+      <div class="formula">średnia ucznia = Σ(ocena × waga) / Σ(wag)</div>
+    </div>
+
+    <!-- Dyktowanie ocen -->
+    <div class="oceny-mic-zone">
+      <h4>🎤 Dyktowanie ocen do kolumny</h4>
+      <div class="oceny-mic-controls">
+        <select id="ocenyMicColumn">
+          <option value="">— wybierz kolumnę ocen —</option>
+        </select>
+        <button id="micBtnOceny" class="mic-btn" onclick="toggleMic('ocenyMicInput','micBtnOceny','micStatusOceny')">
+          <span class="mic-icon">🎤</span> <span>Mikrofon</span>
+        </button>
+        <button class="btn-oceny primary" onclick="processOcenyDictation()">Wpisz oceny</button>
+        <button class="btn-oceny" onclick="clearOcenyMic()">Wyczyść</button>
+        <span id="micStatusOceny" class="mic-status"></span>
+      </div>
+      <textarea id="ocenyMicInput" class="oceny-mic-input" placeholder="Wybierz kolumnę, kliknij mikrofon i mów. Np: 'Kowalska 85, Nowak 50, Wójcik 18, Lewandowska 95'"></textarea>
+      <div class="oceny-mic-help">
+        Format: <code>Nazwisko 85, Imię 50, Nazwisko 18</code> — rozpoznawane są imiona i nazwiska uczniów z listy.
+      </div>
+    </div>
+
+    <div class="oceny-toolbar">
+      <button class="btn-oceny primary" onclick="openGradeColumnModal()">+ Dodaj kolumnę ocen</button>
+      <button class="btn-oceny" onclick="exportOcenyCSV()">Eksport CSV</button>
+      <span class="count" id="ocenyCount">0 kolumn ocen</span>
+    </div>
+
+    <div class="oceny-wrap">
+      <table class="dziennik" id="ocenyTable">
+        <thead id="ocenyHead"></thead>
+        <tbody id="ocenyBody"></tbody>
+        <tfoot id="ocenyFoot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- =================================================== -->
+  <!-- ZAKŁADKA: STATYSTYKI -->
+  <!-- =================================================== -->
+  <div id="tab-statystyki" class="tab-content">
+    <div class="summary-grid" id="summaryGrid"></div>
+
+    <h2>Frekwencja indywidualna</h2>
+    <div class="table-wrap">
+      <table class="attendance">
+        <thead>
+          <tr>
+            <th class="left">#</th>
+            <th class="left">Uczeń</th>
+            <th>Łącznie zapisów</th>
+            <th>Wlicza się (baza)</th>
+            <th>Ćwiczył</th>
+            <th>% ćwiczył</th>
+            <th>BS</th>
+            <th>NĆ</th>
+            <th>NB</th>
+            <th>NU</th>
+            <th>ZW</th>
+          </tr>
+        </thead>
+        <tbody id="statsBody"></tbody>
+      </table>
+    </div>
+
+    <h2>Lista wszystkich lekcji</h2>
+    <div class="table-wrap">
+      <table class="attendance">
+        <thead>
+          <tr>
+            <th class="left">Data</th>
+            <th>Ćwiczyło</th>
+            <th>NĆ</th>
+            <th>BS</th>
+            <th>NB</th>
+            <th>NU</th>
+            <th>ZW</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="lessonsListBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer>
+    Dane zapisywane lokalnie w przeglądarce (localStorage). Nie są wysyłane na żaden serwer. Rób regularny backup (JSON) na dysk żeby nie stracić danych.<br>
+    Wygenerowane w rozmowie z Claude · maj 2026
+  </footer>
+
+</div>
+
+<!-- Picker statusów -->
+<div class="modal-bg" id="statusPicker" onclick="if(event.target===this) closePicker()">
+  <div class="modal" style="max-width: 380px;">
+    <h3 id="pickerTitle">Wybierz status</h3>
+    <p style="font-size: 13px; color: var(--ink-muted); margin: 0 0 12px 0;">Kliknij wybrany status na dzień: <strong id="pickerDate"></strong></p>
+    <div style="display: grid; gap: 8px;">
+      <button class="status-btn status-c" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus('C')">C — ćwiczył</button>
+      <button class="status-btn status-nc" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus('NC')">NĆ — nie ćwiczył (bez zwolnienia)</button>
+      <button class="status-btn status-bs" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus('BS')">BS — brak stroju</button>
+      <button class="status-btn status-nb" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus('NB')">NB — nieobecny nieusprawiedliwiony</button>
+      <button class="status-btn status-nu" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus('NU')">NU — nieobecny usprawiedliwiony</button>
+      <button class="status-btn status-zw" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus('ZW')">ZW — zwolnienie jednorazowe</button>
+      <button class="status-btn status-empty" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus(null)">— wyczyść —</button>
+    </div>
+
+    <!-- Sekcja usprawiedliwień NB - pokazuje się tylko jeśli uczeń ma jakieś NB w historii -->
+    <div id="pickerUsprawiedliwSection" style="display:none; margin-top:16px; padding-top:16px; border-top: 1px solid var(--line);">
+      <h4 style="margin: 0 0 8px 0; font-size: 13px; font-weight: 500;">📋 Usprawiedliwianie zaległych NB:</h4>
+      <p style="font-size: 12px; color: var(--ink-muted); margin: 0 0 10px 0;">
+        Lista nieusprawiedliwionych nieobecności tego ucznia. Klikasz datę, by zmienić NB → NU.
+      </p>
+      <div id="pickerUsprawiedliwList" style="display: grid; gap: 6px;"></div>
+    </div>
+
+    <button onclick="closePicker()" style="margin-top: 12px; padding: 8px 14px; width:100%;">Zamknij</button>
+  </div>
+</div>
+
+<!-- Confirm dialog - własny, działa wszędzie -->
+<div class="modal-bg" id="confirmModal" onclick="if(event.target===this) confirmCancel()">
+  <div class="modal" style="max-width: 420px;">
+    <h3 id="confirmTitle" style="margin-bottom: 12px;">Potwierdź</h3>
+    <div id="confirmMessage" style="font-size: 14px; line-height: 1.6; margin-bottom: 20px; white-space: pre-line; color: var(--ink);"></div>
+    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+      <button onclick="confirmCancel()" style="padding: 10px 20px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; font-family: inherit; font-size: 14px; cursor: pointer;">Anuluj</button>
+      <button onclick="confirmOk()" style="padding: 10px 20px; background: #1D9E75; color: white; border: 1px solid #1D9E75; border-radius: 6px; font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer;">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: szkoła + nazwa klasy (zamiast natywnego prompt, blokowanego w sandboxie) -->
+<div class="modal-bg" id="classPromptModal" onclick="if(event.target===this) classPromptCancel()">
+  <div class="modal" style="max-width: 420px;">
+    <h3 id="classPromptTitle" style="margin-bottom: 12px;">Klasa</h3>
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:13px;color:var(--ink-muted);margin-bottom:4px;">Szkoła (możesz zostawić puste)</label>
+      <input type="text" id="classPromptSchool" onkeydown="if(event.key==='Enter')classPromptOk()" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-family:inherit;font-size:14px;box-sizing:border-box;">
+    </div>
+    <div style="margin-bottom:20px;">
+      <label style="display:block;font-size:13px;color:var(--ink-muted);margin-bottom:4px;">Nazwa klasy (np. 5b)</label>
+      <input type="text" id="classPromptName" onkeydown="if(event.key==='Enter')classPromptOk()" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-family:inherit;font-size:14px;box-sizing:border-box;">
+    </div>
+    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+      <button onclick="classPromptCancel()" style="padding: 10px 20px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; font-family: inherit; font-size: 14px; cursor: pointer;">Anuluj</button>
+      <button onclick="classPromptOk()" style="padding: 10px 20px; background: #1D9E75; color: white; border: 1px solid #1D9E75; border-radius: 6px; font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer;">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: hasło do szyfrowanej kopii (zamiast natywnego prompt, blokowanego w sandboxie) -->
+<div class="modal-bg" id="pwdPromptModal" onclick="if(event.target===this) pwdPromptCancel()">
+  <div class="modal" style="max-width: 420px;">
+    <h3 id="pwdPromptTitle" style="margin-bottom: 8px;">Hasło</h3>
+    <div id="pwdPromptHint" style="font-size:13px;line-height:1.5;color:var(--ink-muted);margin-bottom:14px;"></div>
+    <div style="margin-bottom:20px;position:relative;">
+      <input type="password" id="pwdPromptInput" autocomplete="off" onkeydown="if(event.key==='Enter')pwdPromptOk()" style="width:100%;padding:8px 70px 8px 10px;border:1px solid var(--line);border-radius:6px;font-family:inherit;font-size:14px;box-sizing:border-box;">
+      <button type="button" onclick="pwdToggleVisible()" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:4px 8px;background:var(--paper);border:1px solid var(--line);border-radius:4px;font-family:inherit;font-size:12px;cursor:pointer;">pokaż</button>
+    </div>
+    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+      <button onclick="pwdPromptCancel()" style="padding: 10px 20px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; font-family: inherit; font-size: 14px; cursor: pointer;">Anuluj</button>
+      <button id="pwdPromptOk" onclick="pwdPromptOk()" style="padding: 10px 20px; background: #1D9E75; color: white; border: 1px solid #1D9E75; border-radius: 6px; font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer;">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nowa/edytuj kolumna ocen -->
+<div class="modal-bg" id="columnModal" onclick="if(event.target===this) closeColumnModal()">
+  <div class="modal-grade">
+    <span class="modal-tag" id="columnModalTag">Nowa kolumna</span>
+    <h3 id="columnModalTitle">Nowa kolumna ocen</h3>
+    <p class="sub">Pojawi się dla wszystkich uczniów. Potem klikasz w komórki i wpisujesz wartości.</p>
+
+    <div class="field">
+      <label>Nazwa pełna</label>
+      <input type="text" id="colFullName" placeholder="np. Test sprawnościowy listopad">
+      <div class="field-hint">Pełna nazwa — pokaże się w tooltipach i eksporcie</div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Skrót do nagłówka</label>
+        <input type="text" id="colShortName" placeholder="np. T.lis" maxlength="8">
+        <div class="field-hint">Max 8 znaków</div>
+      </div>
+      <div class="field">
+        <label>Data</label>
+        <input type="date" id="colDate">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Waga</label>
+      <div class="waga-row" id="colWagaRow">
+        <button type="button" class="waga-opt" data-waga="0" onclick="setColWaga(0)">
+          <span class="waga-num">0</span>
+          <span class="waga-desc">info</span>
+        </button>
+        <button type="button" class="waga-opt active" data-waga="1" onclick="setColWaga(1)">
+          <span class="waga-num">1</span>
+          <span class="waga-desc">normalna</span>
+        </button>
+        <button type="button" class="waga-opt" data-waga="2" onclick="setColWaga(2)">
+          <span class="waga-num">2</span>
+          <span class="waga-desc">podwójna</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeColumnModal()">Anuluj</button>
+      <div class="right">
+        <button id="colDeleteBtn" class="btn-delete-soft" style="display:none;" onclick="deleteColumn()">Usuń kolumnę</button>
+        <button class="btn-save" onclick="saveColumn()">Zapisz</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Wpisz/edytuj ocenę pojedynczego ucznia -->
+<div class="modal-bg" id="gradeModal" onclick="if(event.target===this) closeGradeModal()">
+  <div class="modal-grade">
+    <span class="modal-tag">Ocena</span>
+    <h3 id="gradeModalTitle">Wpisz ocenę</h3>
+    <p class="sub" id="gradeModalSub"></p>
+
+    <div class="field">
+      <label>Punkty (0–100)</label>
+      <div class="points-row">
+        <input type="number" id="gradeValue" class="points-input" value="50" min="0" max="100" oninput="syncSlider()">
+        <input type="range" id="gradeSlider" class="points-slider" min="0" max="100" value="50" oninput="syncNumber()">
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeGradeModal()">Anuluj</button>
+      <div class="right">
+        <button id="gradeDeleteBtn" class="btn-delete-soft" style="display:none;" onclick="deleteGrade()">Usuń</button>
+        <button class="btn-save" onclick="saveGrade()">Zapisz</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast - powiadomienia -->
+<div id="toast" style="position: fixed; top: 20px; right: 20px; padding: 14px 20px; background: #1D9E75; color: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: 14px; font-weight: 500; z-index: 200; display: none; max-width: 350px;"></div>
+
+<script>
+// =====================================================
+// DANE
+// =====================================================
+const STORAGE_KEY = 'dziennik_wf_v1';
+
+// Statusy: C, NC, BS, NB (nieusprawiedliwiony), NU (usprawiedliwiony), ZW
+const STATUS_INFO = {
+  C:  { label: 'C',  desc: 'ćwiczył',                       cls: 'status-c',  baza: true,  cwiczyl: true },
+  NC: { label: 'NĆ', desc: 'nie ćwiczył (bez zwolnienia)',  cls: 'status-nc', baza: true,  cwiczyl: false },
+  BS: { label: 'BS', desc: 'brak stroju',                   cls: 'status-bs', baza: true,  cwiczyl: false },
+  NB: { label: 'NB', desc: 'nieobecny nieusprawiedliwiony', cls: 'status-nb', baza: true,  cwiczyl: false },
+  NU: { label: 'NU', desc: 'nieobecny usprawiedliwiony',    cls: 'status-nu', baza: false, cwiczyl: false },
+  ZW: { label: 'ZW', desc: 'zwolnienie jednorazowe',        cls: 'status-zw', baza: false, cwiczyl: false }
+};
+
+// Wiele klas i szkół (szkoła = pole tekstowe klasy). Każda klasa ma własne dane.
+// state.students/attendance/... to ŻYWE wskaźniki na BIEŻĄCĄ klasę (ustawiane
+// przez activateClass) — dzięki temu cała reszta kodu działa bez zmian.
+let state = {
+  classes: [],          // [{ id, school, name, students, attendance, measurements, gradeColumns, grades }]
+  currentClassId: null,
+  students: [],
+  // attendance: { 'YYYY-MM-DD': { studentId: 'C' | 'NC' | 'BS' | 'ZW' | 'NB' } }
+  attendance: {},
+  // measurements: { studentId: { jump, shuttle, beep, plank } }
+  measurements: {},
+  // gradeColumns: [{ id, fullName, shortName, weight: 0|1|2, date: 'YYYY-MM-DD' }]
+  gradeColumns: [],
+  // grades: { columnId: { studentId: value (0-100) } }
+  grades: {},
+  currentDate: new Date().toISOString().slice(0, 10),
+  pickerStudentId: null,
+  // edycja oceny - tymczasowe
+  editingColumnId: null,
+  editingStudentId: null,
+  editingNewColumnWaga: 1
+};
+
+function makeClass(school, name, students) {
+  return {
+    id: 'k' + Date.now() + Math.floor(Math.random() * 1000),
+    school: school || '',
+    name: name || 'Klasa 1',
+    students: students || [],
+    attendance: {},
+    measurements: {},
+    gradeColumns: [],
+    grades: {}
+  };
+}
+function getCurrentClass() {
+  return state.classes.find(c => c.id === state.currentClassId) || state.classes[0] || null;
+}
+// Przepina żywe wskaźniki na wybraną klasę. Mutacje state.students mutują
+// klasę przez referencję, więc save() wystarczy że zserializuje state.classes.
+function activateClass(id) {
+  const cls = state.classes.find(c => c.id === id) || state.classes[0];
+  if (!cls) return;
+  state.currentClassId = cls.id;
+  state.students = cls.students;
+  state.attendance = cls.attendance;
+  state.measurements = cls.measurements;
+  state.gradeColumns = cls.gradeColumns;
+  state.grades = cls.grades;
+}
+
+// =====================================================
+// PERSISTENCJA
+// =====================================================
+function migrateFlat(data) {
+  // Stary płaski format (stare localStorage albo stary backup sprzed wielu klas)
+  const c = makeClass('', 'Bez przypisania', data.students || []);
+  c.attendance = data.attendance || {};
+  c.measurements = data.measurements || {};
+  c.gradeColumns = data.gradeColumns || [];
+  c.grades = data.grades || {};
+  state.classes = [c];
+  state.currentClassId = c.id;
+}
+
+function load() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      if (Array.isArray(data.classes) && data.classes.length) {
+        state.classes = data.classes;
+        state.currentClassId = data.currentClassId || data.classes[0].id;
+      } else if (data.students) {
+        migrateFlat(data);            // nic nie ginie — stare dane → klasa "Bez przypisania"
+      } else {
+        initDefault();
+      }
+    } catch(e) {
+      console.error('load error', e);
+      initDefault();
+    }
+  } else {
+    initDefault();
+  }
+  activateClass(state.currentClassId);
+}
+
+function initDefault() {
+  const students = [];
+  for (let i = 1; i <= 10; i++) {
+    students.push({ id: 'u' + i, name: '', longTermReleased: false, height: '', weight: '' });
+  }
+  const c = makeClass('', 'Klasa 1', students);
+  state.classes = [c];
+  state.currentClassId = c.id;
+}
+
+function save() {
+  // state.students itd. są referencjami do state.classes[i], więc to wystarcza.
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    classes: state.classes,
+    currentClassId: state.currentClassId
+  }));
+}
+
+// =====================================================
+// KLASY / SZKOŁY — pasek wyboru
+// =====================================================
+let uiSelectedSchool = null;
+
+function distinctSchools() {
+  const out = [];
+  state.classes.forEach(c => { if (!out.includes(c.school)) out.push(c.school); });
+  return out;
+}
+
+function refreshAll() {
+  renderClassBar();
+  renderAttendance();
+  renderStudents();
+  renderPomiary();
+  renderOceny();
+  renderStats();
+}
+
+function renderClassBar() {
+  const bar = document.getElementById('classBar');
+  if (!bar) return;
+  const cur = getCurrentClass();
+  if (uiSelectedSchool === null) uiSelectedSchool = cur ? cur.school : '';
+  if (!state.classes.some(c => c.school === uiSelectedSchool)) uiSelectedSchool = cur ? cur.school : '';
+  const inSchool = state.classes.filter(c => c.school === uiSelectedSchool);
+  const selStyle = 'padding:6px 10px;border:1px solid var(--line);border-radius:6px;font-family:inherit;font-size:14px;background:var(--paper)';
+  const btnStyle = 'padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--paper);cursor:pointer;font-family:inherit;font-size:13px';
+  const sOpts = distinctSchools().map(s =>
+    `<option value="${escapeHtml(s)}" ${s === uiSelectedSchool ? 'selected' : ''}>${s ? escapeHtml(s) : '— bez szkoły —'}</option>`).join('');
+  const cOpts = inSchool.map(c =>
+    `<option value="${c.id}" ${cur && c.id === cur.id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('');
+  bar.innerHTML =
+    `<span style="font-size:13px;color:var(--ink-muted)">Szkoła:</span>` +
+    `<select onchange="onSchoolChange(this.value)" style="${selStyle}">${sOpts}</select>` +
+    `<span style="font-size:13px;color:var(--ink-muted)">Klasa:</span>` +
+    `<select onchange="onClassChange(this.value)" style="${selStyle}">${cOpts}</select>` +
+    `<button onclick="uiAddClass()" style="${btnStyle}">+ klasa</button>` +
+    `<button onclick="uiRenameClass()" style="${btnStyle}">zmień nazwę</button>` +
+    `<button onclick="uiDeleteClass()" style="${btnStyle};border-color:#E5C5C0;color:var(--accent-warm)">usuń klasę</button>`;
+}
+
+function onSchoolChange(v) {
+  uiSelectedSchool = v;
+  const first = state.classes.find(c => c.school === v);
+  if (first) { activateClass(first.id); save(); refreshAll(); }
+  else renderClassBar();
+}
+function onClassChange(id) { activateClass(id); save(); refreshAll(); }
+
+// Własny modal zamiast natywnego prompt() — prompt jest blokowany w VS Code
+// Preview / sandboxowanym iframe / Chrome po "zablokuj okna dialogowe".
+let classPromptCallback = null;
+function showClassPrompt(title, school, name, onOk) {
+  document.getElementById('classPromptTitle').textContent = title;
+  document.getElementById('classPromptSchool').value = school || '';
+  document.getElementById('classPromptName').value = name || '';
+  classPromptCallback = onOk;
+  document.getElementById('classPromptModal').classList.add('active');
+  setTimeout(() => { const n = document.getElementById('classPromptName'); n.focus(); n.select(); }, 50);
+}
+function classPromptCancel() {
+  classPromptCallback = null;
+  document.getElementById('classPromptModal').classList.remove('active');
+}
+function classPromptOk() {
+  const school = document.getElementById('classPromptSchool').value.trim();
+  const name = document.getElementById('classPromptName').value.trim();
+  const cb = classPromptCallback;
+  classPromptCallback = null;
+  document.getElementById('classPromptModal').classList.remove('active');
+  if (cb) cb(school, name);
+}
+
+function uiAddClass() {
+  showClassPrompt('Nowa klasa', uiSelectedSchool || '', '', (school, name) => {
+    if (!name) { showToast('Anulowano — brak nazwy klasy.', 'warn'); return; }
+    const students = [];
+    for (let i = 1; i <= 10; i++) students.push({ id: 'u' + i, name: '', longTermReleased: false, height: '', weight: '' });
+    const c = makeClass(school, name, students);
+    state.classes.push(c);
+    uiSelectedSchool = c.school;
+    activateClass(c.id);
+    save();
+    refreshAll();
+    showToast('Dodano klasę: ' + (school ? school + ' / ' : '') + name, 'success');
+  });
+}
+function uiRenameClass() {
+  const c = getCurrentClass();
+  if (!c) return;
+  showClassPrompt('Zmień nazwę klasy', c.school || '', c.name || '', (school, name) => {
+    if (!name) { showToast('Anulowano.', 'warn'); return; }
+    c.school = school; c.name = name;
+    uiSelectedSchool = school;
+    save();
+    refreshAll();
+    showToast('Zmieniono nazwę klasy.', 'success');
+  });
+}
+function uiDeleteClass() {
+  if (state.classes.length <= 1) { showToast('Nie można usunąć ostatniej klasy.', 'warn'); return; }
+  const c = getCurrentClass();
+  if (!c) return;
+  showConfirm('Usuń klasę',
+    'Usunąć klasę "' + (c.school ? c.school + ' / ' : '') + c.name + '" wraz z całą frekwencją, pomiarami i ocenami?\nKopia wszystkich klas pobierze się automatycznie.',
+    () => {
+      backupBeforeDestruction('USUN-KLASE');
+      state.classes = state.classes.filter(x => x.id !== c.id);
+      uiSelectedSchool = state.classes[0].school;
+      activateClass(state.classes[0].id);
+      save();
+      refreshAll();
+      showToast('Usunięto klasę.', 'info');
+    });
+}
+
+// =====================================================
+// ZAKŁADKI
+// =====================================================
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'statystyki') renderStats();
+  if (name === 'uczniowie') renderStudents();
+  if (name === 'pomiary') renderPomiary();
+  if (name === 'oceny') renderOceny();
+  if (name === 'obecnosc') renderAttendance();
+}
+
+// =====================================================
+// DATA LEKCJI
+// =====================================================
+function changeDate() {
+  state.currentDate = document.getElementById('lessonDate').value;
+  renderAttendance();
+}
+function dateOffset(days) {
+  const d = new Date(state.currentDate);
+  d.setDate(d.getDate() + days);
+  state.currentDate = d.toISOString().slice(0, 10);
+  document.getElementById('lessonDate').value = state.currentDate;
+  renderAttendance();
+}
+function setToday() {
+  state.currentDate = new Date().toISOString().slice(0, 10);
+  document.getElementById('lessonDate').value = state.currentDate;
+  renderAttendance();
+}
+function deleteLesson() {
+  if (!state.attendance[state.currentDate]) return;
+  showConfirm('Usuń lekcję', 'Usunąć wszystkie wpisy obecności z dnia ' + state.currentDate + '?', () => {
+    delete state.attendance[state.currentDate];
+    save();
+    renderAttendance();
+    showToast('Usunięto lekcję ' + state.currentDate, 'info');
+  });
+}
+
+function finalizeLesson() {
+  // Liczę kto już ma status, kto jeszcze nie, ilu jest aktywnych
+  const day = state.attendance[state.currentDate] || {};
+  const activeStudents = state.students.filter(s => !s.longTermReleased);
+
+  const withoutStatus = activeStudents.filter(s => !day[s.id]);
+  const exceptions = activeStudents.filter(s => day[s.id] && day[s.id] !== 'C');
+  const alreadyC = activeStudents.filter(s => day[s.id] === 'C');
+
+  if (activeStudents.length === 0) {
+    showToast('Nie ma żadnych aktywnych uczniów (wszyscy zwolnieni długoterminowo).', 'warn');
+    return;
+  }
+
+  if (withoutStatus.length === 0) {
+    showToast('Wszyscy aktywni uczniowie już mają status na ' + state.currentDate + '.', 'info');
+    return;
+  }
+
+  // Krótki komunikat
+  const msg = `Lekcja ${state.currentDate}\n\n` +
+              `• ${withoutStatus.length} uczniów dostanie status C (ćwiczył)\n` +
+              `• ${exceptions.length} wyjątków zachowanych\n` +
+              `• Razem aktywnych: ${activeStudents.length}\n\n` +
+              `Zapisać?`;
+
+  showConfirm('Zapisz lekcję', msg, () => {
+    // Zapisz C dla wszystkich bez statusu (aktywnych)
+    if (!state.attendance[state.currentDate]) state.attendance[state.currentDate] = {};
+    withoutStatus.forEach(s => {
+      state.attendance[state.currentDate][s.id] = 'C';
+    });
+
+    save();
+    autoBackupDaily();
+    renderAttendance();
+    showToast('✓ Zapisano lekcję. ' + withoutStatus.length + ' uczniów ma status C.', 'success');
+  });
+}
+
+// =====================================================
+// OBECNOŚĆ
+// =====================================================
+function getStudentStats(studentId) {
+  const stats = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0, total: 0 };
+  Object.values(state.attendance).forEach(day => {
+    const st = day[studentId];
+    if (st && stats[st] !== undefined) {
+      stats[st]++;
+      stats.total++;
+    }
+  });
+  // Baza: ćwiczył + NĆ + BS + NB (nieusprawiedliwiony)
+  // Wypadają: NU (usprawiedliwiony) i ZW (zwolnienie)
+  stats.baza = stats.C + stats.NC + stats.BS + stats.NB;
+  stats.cwiczyl = stats.C;
+  stats.percent = stats.baza > 0 ? (stats.cwiczyl / stats.baza * 100) : null;
+  return stats;
+}
+
+function renderAttendance() {
+  document.getElementById('lessonDate').value = state.currentDate;
+  const tbody = document.getElementById('attendanceBody');
+  tbody.innerHTML = '';
+
+  state.students.forEach((s, i) => {
+    const tr = document.createElement('tr');
+    if (s.longTermReleased) tr.classList.add('long-term-released');
+
+    const stats = getStudentStats(s.id);
+    const todayStatus = (state.attendance[state.currentDate] || {})[s.id] || null;
+
+    let statusHtml = '';
+    if (s.longTermReleased) {
+      statusHtml = `<span class="status-btn status-blocked">— zwolniony —</span>`;
+    } else if (todayStatus) {
+      const info = STATUS_INFO[todayStatus];
+      statusHtml = `<button class="status-btn ${info.cls}" onclick="openPicker('${s.id}')" title="${info.desc}">${info.label}</button>`;
+    } else {
+      statusHtml = `<button class="status-btn status-empty" onclick="openPicker('${s.id}')">—</button>`;
+    }
+
+    let pctHtml = '—';
+    if (!s.longTermReleased && stats.baza > 0) {
+      const cls = stats.percent >= 90 ? 'high' : (stats.percent >= 75 ? 'mid' : 'low');
+      pctHtml = `<span class="percent-cell ${cls}">${stats.percent.toFixed(0)}%</span><br><span class="stat-detail">${stats.cwiczyl}/${stats.baza}</span>`;
+    }
+
+    tr.innerHTML = `
+      <td class="left">${i + 1}</td>
+      <td class="left"><input type="text" class="student-name" value="${escapeHtml(s.name)}" placeholder="Imię nazwisko" oninput="updateStudentName('${s.id}', this.value)"></td>
+      <td>${statusHtml}</td>
+      <td>${stats.C || ''}</td>
+      <td>${stats.NC || ''}</td>
+      <td>${stats.BS || ''}</td>
+      <td>${stats.NB || ''}</td>
+      <td>${stats.NU || ''}</td>
+      <td>${stats.ZW || ''}</td>
+      <td>${stats.total || ''}</td>
+      <td>${pctHtml}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Pasek z liczbą lekcji
+  const lessonsTotal = Object.keys(state.attendance).length;
+  document.getElementById('lessonCount').textContent = `Łącznie zapisanych lekcji: ${lessonsTotal}`;
+
+  // Aktualizuję pasek "Zapisz lekcję"
+  updateSaveBar();
+}
+
+function updateSaveBar() {
+  const day = state.attendance[state.currentDate] || {};
+  const activeStudents = state.students.filter(s => !s.longTermReleased);
+  const withoutStatus = activeStudents.filter(s => !day[s.id]);
+  const exceptions = activeStudents.filter(s => day[s.id] && day[s.id] !== 'C');
+  const alreadyC = activeStudents.filter(s => day[s.id] === 'C');
+
+  const bar = document.getElementById('saveBar');
+  const status = document.getElementById('saveBarStatus');
+
+  let msg = '';
+  if (withoutStatus.length === 0) {
+    bar.classList.add('complete');
+    msg = `<strong>✓ Lekcja zapisana.</strong> ${alreadyC.length}× ćwiczył · ${exceptions.length} wyjątków · razem ${activeStudents.length} uczniów`;
+  } else {
+    bar.classList.remove('complete');
+    msg = `<strong>${withoutStatus.length}</strong> uczeń/uczniów bez statusu · ${exceptions.length} wyjątków zaznaczonych · klik <strong>"Zapisz"</strong> → pozostali dostaną <strong>C</strong>`;
+  }
+  status.innerHTML = msg;
+}
+
+// =====================================================
+// PICKER STATUSU
+// =====================================================
+function openPicker(studentId) {
+  state.pickerStudentId = studentId;
+  const s = state.students.find(x => x.id === studentId);
+  document.getElementById('pickerTitle').textContent = (s.name || 'uczeń');
+  document.getElementById('pickerDate').textContent = state.currentDate;
+
+  // Znajdź wszystkie NB tego ucznia w historii
+  const nbDates = [];
+  Object.keys(state.attendance).forEach(date => {
+    if (state.attendance[date][studentId] === 'NB') {
+      nbDates.push(date);
+    }
+  });
+  nbDates.sort().reverse(); // najnowsze na górze
+
+  const section = document.getElementById('pickerUsprawiedliwSection');
+  const list = document.getElementById('pickerUsprawiedliwList');
+
+  if (nbDates.length === 0) {
+    section.style.display = 'none';
+  } else {
+    section.style.display = 'block';
+    list.innerHTML = '';
+    nbDates.forEach(date => {
+      const btn = document.createElement('button');
+      btn.className = 'status-btn status-nb';
+      btn.style.cssText = 'padding: 8px 12px; font-size: 13px; text-align: left; display: flex; justify-content: space-between; align-items: center;';
+      btn.innerHTML = `<span>📅 <strong>${date}</strong> — usprawiedliw (NB → NU)</span> <span style="font-size: 11px;">kliknij →</span>`;
+      btn.onclick = () => usprawiedliwDate(studentId, date);
+      list.appendChild(btn);
+    });
+  }
+
+  document.getElementById('statusPicker').classList.add('active');
+}
+
+function usprawiedliwDate(studentId, date) {
+  const s = state.students.find(x => x.id === studentId);
+  showConfirm(
+    'Usprawiedliw nieobecność',
+    `Zmienić NB ${s.name || 'ucznia'} z dnia ${date} na NU (usprawiedliwiony)?`,
+    () => {
+      if (state.attendance[date] && state.attendance[date][studentId] === 'NB') {
+        state.attendance[date][studentId] = 'NU';
+        save();
+        openPicker(studentId);
+        renderAttendance();
+        showToast('Usprawiedliwiono ' + (s.name || 'ucznia') + ' z ' + date, 'success');
+      }
+    }
+  );
+}
+function closePicker() {
+  document.getElementById('statusPicker').classList.remove('active');
+  state.pickerStudentId = null;
+}
+function setStatus(status) {
+  const sid = state.pickerStudentId;
+  if (!sid) return;
+  if (!state.attendance[state.currentDate]) state.attendance[state.currentDate] = {};
+  if (status === null) {
+    delete state.attendance[state.currentDate][sid];
+    // Jeśli pusty dzień, usuń
+    if (Object.keys(state.attendance[state.currentDate]).length === 0) {
+      delete state.attendance[state.currentDate];
+    }
+  } else {
+    state.attendance[state.currentDate][sid] = status;
+  }
+  save();
+  closePicker();
+  renderAttendance();
+}
+
+// =====================================================
+// UCZNIOWIE
+// =====================================================
+function renderStudents() {
+  const tbody = document.getElementById('studentsBody');
+  tbody.innerHTML = '';
+  state.students.forEach((s, i) => {
+    const tr = document.createElement('tr');
+    if (s.longTermReleased) tr.classList.add('long-term-released');
+    tr.innerHTML = `
+      <td class="left">${i + 1}</td>
+      <td class="left"><input type="text" class="student-name" value="${escapeHtml(s.name)}" placeholder="Imię nazwisko" oninput="updateStudentName('${s.id}', this.value)"></td>
+      <td><input type="checkbox" class="long-term-checkbox" ${s.longTermReleased ? 'checked' : ''} onchange="toggleLongTerm('${s.id}', this.checked)"></td>
+      <td><input type="number" value="${s.height}" min="100" max="220" style="width:70px; text-align:right;" oninput="updateStudentField('${s.id}', 'height', this.value)"></td>
+      <td><input type="number" value="${s.weight}" min="20" max="120" step="0.1" style="width:70px; text-align:right;" oninput="updateStudentField('${s.id}', 'weight', this.value)"></td>
+      <td><button class="delete-btn" onclick="deleteStudent('${s.id}')" title="usuń">×</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateStudentName(id, name) {
+  const s = state.students.find(x => x.id === id);
+  if (s) { s.name = name; save(); }
+}
+function updateStudentField(id, field, val) {
+  const s = state.students.find(x => x.id === id);
+  if (s) { s[field] = val; save(); }
+}
+function toggleLongTerm(id, val) {
+  const s = state.students.find(x => x.id === id);
+  if (s) {
+    s.longTermReleased = val;
+    save();
+    renderStudents();
+  }
+}
+function addStudent() {
+  const newId = 'u' + Date.now();
+  state.students.push({ id: newId, name: '', longTermReleased: false, height: '', weight: '' });
+  save();
+  renderStudents();
+}
+function deleteStudent(id) {
+  const s = state.students.find(x => x.id === id);
+  showConfirm(
+    'Usuń ucznia',
+    'Usunąć ucznia "' + (s.name || 'bez nazwiska') + '" razem z całą jego historią obecności?',
+    () => {
+      state.students = state.students.filter(s => s.id !== id);
+      Object.keys(state.attendance).forEach(d => {
+        delete state.attendance[d][id];
+        if (Object.keys(state.attendance[d]).length === 0) delete state.attendance[d];
+      });
+      delete state.measurements[id];
+      save();
+      renderStudents();
+      showToast('Usunięto ucznia', 'info');
+    }
+  );
+}
+
+// =====================================================
+// POMIARY
+// =====================================================
+function renderPomiary() {
+  const tbody = document.getElementById('pomiaryBody');
+  tbody.innerHTML = '';
+  state.students.forEach((s, i) => {
+    const tr = document.createElement('tr');
+    if (s.longTermReleased) tr.classList.add('long-term-released');
+    const m = state.measurements[s.id] || {};
+    tr.innerHTML = `
+      <td class="left">${i + 1}</td>
+      <td class="left">${escapeHtml(s.name) || '<span style="color:var(--ink-muted);">(brak nazwiska)</span>'}</td>
+      <td>${s.height || '—'}</td>
+      <td>${s.weight || '—'}</td>
+      <td><input type="number" value="${m.jump || ''}" min="50" max="300" oninput="updateMeasurement('${s.id}', 'jump', this.value)"></td>
+      <td><input type="number" value="${m.shuttle || ''}" min="10" max="30" step="0.1" oninput="updateMeasurement('${s.id}', 'shuttle', this.value)"></td>
+      <td><input type="number" value="${m.beep || ''}" min="1" max="15" step="0.5" oninput="updateMeasurement('${s.id}', 'beep', this.value)"></td>
+      <td><input type="number" value="${m.plank || ''}" min="5" max="600" oninput="updateMeasurement('${s.id}', 'plank', this.value)"></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateMeasurement(studentId, field, val) {
+  if (!state.measurements[studentId]) state.measurements[studentId] = {};
+  state.measurements[studentId][field] = val;
+  save();
+}
+
+// =====================================================
+// STATYSTYKI
+// =====================================================
+function renderStats() {
+  const tbody = document.getElementById('statsBody');
+  tbody.innerHTML = '';
+
+  let totalLessons = Object.keys(state.attendance).length;
+
+  state.students.forEach((s, i) => {
+    if (s.longTermReleased) return; // pomijamy w statystykach
+    const stats = getStudentStats(s.id);
+    const cls = stats.percent === null ? '' : (stats.percent >= 90 ? 'high' : (stats.percent >= 75 ? 'mid' : 'low'));
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="left">${i + 1}</td>
+      <td class="left">${escapeHtml(s.name) || '<span style="color:var(--ink-muted);">—</span>'}</td>
+      <td>${stats.total}</td>
+      <td>${stats.baza}</td>
+      <td>${stats.C}</td>
+      <td><span class="percent-cell ${cls}">${stats.percent !== null ? stats.percent.toFixed(0) + '%' : '—'}</span></td>
+      <td>${stats.BS}</td>
+      <td>${stats.NC}</td>
+      <td>${stats.NB}</td>
+      <td>${stats.NU}</td>
+      <td>${stats.ZW}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Lista lekcji
+  const lessonsBody = document.getElementById('lessonsListBody');
+  lessonsBody.innerHTML = '';
+  const dates = Object.keys(state.attendance).sort().reverse();
+  dates.forEach(date => {
+    const day = state.attendance[date];
+    const counts = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0 };
+    Object.values(day).forEach(st => counts[st] !== undefined && counts[st]++);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="left">${date}</td>
+      <td>${counts.C}</td>
+      <td>${counts.NC}</td>
+      <td>${counts.BS}</td>
+      <td>${counts.NB}</td>
+      <td>${counts.NU}</td>
+      <td>${counts.ZW}</td>
+      <td><button class="delete-btn" onclick="deleteLessonByDate('${date}')">×</button></td>
+    `;
+    lessonsBody.appendChild(tr);
+  });
+
+  // Karty podsumowujące
+  const active = state.students.filter(s => !s.longTermReleased);
+  let totalC = 0, totalBaza = 0;
+  active.forEach(s => {
+    const st = getStudentStats(s.id);
+    totalC += st.C; totalBaza += st.baza;
+  });
+  const avgPercent = totalBaza > 0 ? (totalC / totalBaza * 100).toFixed(0) + '%' : '—';
+
+  const grid = document.getElementById('summaryGrid');
+  grid.innerHTML = `
+    <div class="summary-card"><div class="summary-label">Liczba uczniów aktywnych</div><div class="summary-value">${active.length}</div></div>
+    <div class="summary-card"><div class="summary-label">Zwolnionych długoterminowo</div><div class="summary-value">${state.students.length - active.length}</div></div>
+    <div class="summary-card"><div class="summary-label">Zapisanych lekcji</div><div class="summary-value">${totalLessons}</div></div>
+    <div class="summary-card"><div class="summary-label">Średni % ćwiczył (klasa)</div><div class="summary-value">${avgPercent}</div></div>
+  `;
+}
+
+// =====================================================
+// DYKTOWANIE - parsowanie tekstu
+// =====================================================
+function parseDictation() {
+  const text = document.getElementById('dictateField').value.trim();
+  if (!text) return;
+
+  // Lista par (status, słowa kluczowe) - kolejność ważna! Dłuższe frazy najpierw.
+  const STATUS_KEYWORDS = [
+    { st: 'BS', kw: ['brak stroju', 'bez stroju', 'nie ma stroju', 'bs'] },
+    { st: 'NC', kw: ['nie ćwiczył', 'nie cwiczyl', 'nie cwiczyła', 'nie ćwiczyła', 'bez ćwiczeń', 'nc', 'nieprzygotowany', 'nieprzygotowana'] },
+    { st: 'NU', kw: ['nieobecny usprawiedliwiony', 'nieobecna usprawiedliwiona', 'usprawiedliwiony', 'usprawiedliwiona', 'nu'] },
+    { st: 'NB', kw: ['nieobecny nieusprawiedliwiony', 'nieusprawiedliwiony', 'nieusprawiedliwiona', 'wagary', 'ucieczka', 'nieobecny', 'nieobecna', 'nie był', 'nie była', 'nie ma', 'nb'] },
+    { st: 'ZW', kw: ['zwolnienie', 'zwolniony', 'zwolniona', 'zw'] },
+    { st: 'C',  kw: ['ćwiczył', 'cwiczyl', 'ćwiczyła', 'cwiczyla', 'obecny', 'obecna', 'jest', 'był', 'była', 'c'] }
+  ];
+
+  const normalize = (s) => s.toLowerCase().replace(/[^a-ząćęłńóśźż\s]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  if (!state.attendance[state.currentDate]) state.attendance[state.currentDate] = {};
+
+  // Dzielę po przecinkach, średnikach, "i" / kropkach
+  const segments = text.split(/[,;.\n]|(\s+i\s+)/i).filter(s => s && s.trim().length > 1);
+
+  let added = 0, usprawiedliwiono = 0, notFound = [], usprawiedliwionoInfo = [];
+
+  // Słowa kluczowe oznaczające komendę usprawiedliwienia (zmiana NB → NU)
+  const USPR_KEYWORDS = ['usprawiedliw', 'usprawiedliwia', 'usprawiedliwiamy'];
+
+  segments.forEach(seg => {
+    const segNorm = normalize(seg);
+    if (!segNorm) return;
+
+    // === KROK 1: Sprawdź czy to komenda usprawiedliwienia ===
+    // Komenda: "usprawiedliw [nazwisko]" (zmienia stare NB → NU)
+    // ALE: "[nazwisko] usprawiedliwiony/usprawiedliwiona" to status NU na dziś, nie komenda
+    const hasFullUsprForm = /usprawiedliwion[ya]/.test(segNorm);
+    let isUsprCommand = false;
+    let segWithoutUspr = segNorm;
+    if (!hasFullUsprForm) {
+      for (const k of USPR_KEYWORDS) {
+        if (segNorm.includes(k)) {
+          isUsprCommand = true;
+          segWithoutUspr = segNorm.replace(k, ' ').replace(/\s+/g, ' ').trim();
+          break;
+        }
+      }
+    }
+
+    if (isUsprCommand) {
+      // Znajdź ucznia po słowach
+      const words = segWithoutUspr.split(' ').filter(w => w.length >= 2);
+      if (words.length === 0) {
+        notFound.push(seg + ' (brak nazwiska)');
+        return;
+      }
+
+      const student = findBestStudent(words);
+      if (!student) {
+        notFound.push(seg + ' (nie znaleziono ucznia)');
+        return;
+      }
+
+      // Znajdź najnowszy NB tego ucznia
+      const nbDates = [];
+      Object.keys(state.attendance).forEach(date => {
+        if (state.attendance[date][student.id] === 'NB') nbDates.push(date);
+      });
+
+      if (nbDates.length === 0) {
+        notFound.push(seg + ' (brak nieusprawiedliwionych NB w historii)');
+        return;
+      }
+
+      nbDates.sort();
+      const newestNB = nbDates[nbDates.length - 1]; // najnowszy
+      state.attendance[newestNB][student.id] = 'NU';
+      usprawiedliwiono++;
+      usprawiedliwionoInfo.push(`${student.name} (${newestNB})`);
+      return;
+    }
+
+    // === KROK 2: Normalne parsowanie statusu ===
+    let foundStatus = null;
+    let segWithoutStatus = segNorm;
+    for (const { st, kw } of STATUS_KEYWORDS) {
+      for (const k of kw) {
+        if (segNorm.includes(k)) {
+          foundStatus = st;
+          segWithoutStatus = segNorm.replace(k, ' ').replace(/\s+/g, ' ').trim();
+          break;
+        }
+      }
+      if (foundStatus) break;
+    }
+
+    if (!foundStatus) {
+      notFound.push(seg);
+      return;
+    }
+
+    // Znajdź ucznia po słowach
+    const words = segWithoutStatus.split(' ').filter(w => w.length >= 2);
+    if (words.length === 0) {
+      notFound.push(seg);
+      return;
+    }
+
+    const bestStudent = findBestStudent(words);
+
+    if (bestStudent) {
+      state.attendance[state.currentDate][bestStudent.id] = foundStatus;
+      added++;
+    } else {
+      notFound.push(seg);
+    }
+  });
+
+  save();
+  renderAttendance();
+
+  let msg = '';
+  if (added > 0) msg += `✓ Przypisano ${added} statusów na ${state.currentDate}. `;
+  if (usprawiedliwiono > 0) {
+    msg += `✓ Usprawiedliwiono ${usprawiedliwiono}: ${usprawiedliwionoInfo.join(', ')}. `;
+  }
+
+  if (notFound.length > 0) {
+    // Pokazuje modal z listą nierozpoznanych - to wymaga uwagi użytkownika
+    const detail = msg + '\n\n⚠ Nie rozpoznano:\n' + notFound.join('\n');
+    showConfirm('Wynik dyktowania', detail, () => {});
+  } else if (msg) {
+    showToast(msg, 'success');
+  } else {
+    showToast('Nic nie rozpoznano.', 'warn');
+  }
+
+  if (notFound.length === 0) {
+    document.getElementById('dictateField').value = '';
+  }
+}
+
+// Pomocnicza funkcja - dopasowanie ucznia po słowach
+function findBestStudent(words) {
+  const normalize = (s) => s.toLowerCase().replace(/[^a-ząćęłńóśźż\s]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  let bestStudent = null;
+  let bestScore = 0;
+  state.students.forEach(s => {
+    if (s.longTermReleased) return;
+    if (!s.name) return;
+    const studentNameNorm = normalize(s.name);
+    const studentWords = studentNameNorm.split(' ').filter(w => w.length >= 2);
+    let score = 0;
+    for (const sw of studentWords) {
+      for (const w of words) {
+        if (sw === w || sw.startsWith(w) || w.startsWith(sw)) {
+          score++;
+        }
+      }
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestStudent = s;
+    }
+  });
+  return bestScore >= 1 ? bestStudent : null;
+}
+
+// =====================================================
+// EXPORT / IMPORT
+// =====================================================
+// Pełna migawka WSZYSTKICH danych (uczniowie + frekwencja + pomiary + OCENY).
+// Wcześniej backup gubił gradeColumns/grades — kopia była bezwartościowa.
+// RRRR-MM-DD_GG-MM — żeby pliki backupu były czytelne i nie nadpisywały się.
+function fileStamp() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
+         '_' + p(d.getHours()) + '-' + p(d.getMinutes());
+}
+
+// Slug bieżącej klasy do nazw plików CSV (żeby eksporty klas się nie nadpisywały).
+function classTag() {
+  const c = getCurrentClass();
+  if (!c) return '';
+  const raw = (c.school ? c.school + '-' : '') + (c.name || '');
+  return raw.replace(/[^a-zA-Z0-9ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]+/g, '-').replace(/^-+|-+$/g, '') + '_';
+}
+
+// Pełna migawka = WSZYSTKIE klasy (to jest archiwum na komputer).
+function snapshotData() {
+  return {
+    classes: state.classes,
+    currentClassId: state.currentClassId,
+    exported: new Date().toISOString()
+  };
+}
+
+function triggerDownload(obj, filename) {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportJSON() {
+  triggerDownload(snapshotData(), 'dziennik-wf_PELNA-KOPIA_wszystkie-klasy_' + fileStamp() + '.json');
+}
+
+// Auto-backup raz dziennie — wyzwalany przy pierwszym "Zapisz lekcję" w danym dniu.
+// Przeżywa wyczyszczenie localStorage. Pliki lądują w systemowym folderze Downloads.
+const AUTOBACKUP_KEY = 'dziennik_wf_last_autobackup';
+function autoBackupDaily() {
+  const today = new Date().toISOString().slice(0, 10);
+  if (localStorage.getItem(AUTOBACKUP_KEY) === today) return; // już dziś był
+  triggerDownload(snapshotData(), 'dziennik-wf_AUTO-codzienna_wszystkie-klasy_' + today + '.json');
+  localStorage.setItem(AUTOBACKUP_KEY, today);
+}
+
+// Backup PRZED operacją niszczącą (wyczyść wszystko / nadpisanie importem).
+// To brakujące "cofnij" — stare dane są na dysku zanim znikną.
+function backupBeforeDestruction(tag) {
+  triggerDownload(snapshotData(), 'dziennik-wf_PRZED-' + tag + '_wszystkie-klasy_' + fileStamp() + '.json');
+}
+
+function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      showConfirm('Wczytaj dane', 'Wczytać dane z pliku? WSZYSTKIE klasy zostaną zastąpione (kopia obecnych pobierze się automatycznie).', () => {
+        backupBeforeDestruction('IMPORT');
+        if (Array.isArray(data.classes) && data.classes.length) {
+          state.classes = data.classes;
+          state.currentClassId = data.currentClassId || data.classes[0].id;
+        } else if (data.students) {
+          migrateFlat(data);
+        } else {
+          showToast('Plik nie zawiera danych dziennika.', 'error');
+          return;
+        }
+        activateClass(state.currentClassId);
+        uiSelectedSchool = null;
+        save();
+        refreshAll();
+        showToast('Wczytano dane.', 'success');
+      });
+    } catch (err) {
+      showToast('Błąd wczytywania: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// =====================================================
+// SZYFROWANA KOPIA (Faza 3) — dane dzieci nie opuszczają urządzenia jawne
+// =====================================================
+// Po co: backup z imionami i ocenami można wysłać mailem dopiero gdy jest
+// zaszyfrowany hasłem (zakaz CLAUDE.md projektu: dane dzieci NIGDY na zewnątrz
+// bez szyfrowania). AES-GCM 256 + PBKDF2-SHA256 (klucz z hasła).
+//
+// Web Crypto (crypto.subtle) działa TYLKO w secure context: https:// lub
+// localhost. Z pliku na dysku (file://) część przeglądarek go nie udostępnia —
+// wtedy pokazujemy komunikat zamiast cichej awarii (zwykły JSON nadal działa).
+const ENC_MAGIC = 'dziennik-wf-enc';
+let pwdCallback = null;
+
+function cryptoAvailable() {
+  return !!(window.isSecureContext && window.crypto && window.crypto.subtle);
+}
+
+function showPasswordPrompt(title, hint, okLabel, onOk) {
+  document.getElementById('pwdPromptTitle').textContent = title;
+  document.getElementById('pwdPromptHint').textContent = hint;
+  document.getElementById('pwdPromptOk').textContent = okLabel;
+  const inp = document.getElementById('pwdPromptInput');
+  inp.value = ''; inp.type = 'password';
+  pwdCallback = onOk;
+  document.getElementById('pwdPromptModal').classList.add('active');
+  setTimeout(() => inp.focus(), 50);
+}
+function pwdPromptCancel() {
+  pwdCallback = null;
+  document.getElementById('pwdPromptModal').classList.remove('active');
+}
+function pwdPromptOk() {
+  const v = document.getElementById('pwdPromptInput').value;
+  const cb = pwdCallback;
+  pwdCallback = null;
+  document.getElementById('pwdPromptModal').classList.remove('active');
+  if (cb) cb(v);
+}
+function pwdToggleVisible() {
+  const i = document.getElementById('pwdPromptInput');
+  i.type = i.type === 'password' ? 'text' : 'password';
+  i.focus();
+}
+
+function _b64(buf) {
+  let s = '';
+  const bytes = new Uint8Array(buf);
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return btoa(s);
+}
+function _unb64(str) {
+  return Uint8Array.from(atob(str), c => c.charCodeAt(0));
+}
+
+async function _deriveKey(password, salt) {
+  const baseKey = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 150000, hash: 'SHA-256' },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function encryptSnapshot(password) {
+  const plaintext = new TextEncoder().encode(JSON.stringify(snapshotData()));
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await _deriveKey(password, salt);
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
+  return JSON.stringify({
+    app: ENC_MAGIC, v: 1,
+    kdf: 'PBKDF2-SHA256-150000', cipher: 'AES-GCM-256',
+    salt: _b64(salt), iv: _b64(iv), ct: _b64(ct),
+    exported: new Date().toISOString()
+  }, null, 2);
+}
+
+async function decryptBackup(fileText, password) {
+  const obj = JSON.parse(fileText);
+  if (obj.app !== ENC_MAGIC) throw new Error('not-our-format');
+  const key = await _deriveKey(password, _unb64(obj.salt));
+  const ptBuf = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: _unb64(obj.iv) }, key, _unb64(obj.ct)
+  );
+  return JSON.parse(new TextDecoder().decode(ptBuf));
+}
+
+function _triggerDownloadText(text, filename) {
+  const blob = new Blob([text], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportEncrypted() {
+  if (!cryptoAvailable()) {
+    showConfirm('Szyfrowanie niedostępne tutaj',
+      'Szyfrowana kopia działa tylko gdy dziennik jest otwarty przez https:// (zainstalowany / z hostingu), nie z pliku na dysku.\n\nMożesz teraz zrobić zwykły backup JSON — zostaje na tym komputerze, ale NIE wysyłaj go mailem. Zrobić zwykły backup?',
+      () => exportJSON());
+    return;
+  }
+  showPasswordPrompt('Hasło do kopii',
+    'Tym hasłem zaszyfrujemy imiona i oceny. Bez niego nikt — ani Ty — nie odczyta pliku. Zapamiętaj je.',
+    'Zaszyfruj i pobierz',
+    async (pwd) => {
+      if (!pwd || pwd.length < 6) { showToast('Hasło za krótkie (min. 6 znaków).', 'warn'); return; }
+      try {
+        const text = await encryptSnapshot(pwd);
+        _triggerDownloadText(text, 'dziennik-wf_SZYFROWANA_' + fileStamp() + '.enc.json');
+        showToast('Zaszyfrowana kopia pobrana. Tę możesz dołączyć do maila.', 'success');
+      } catch (e) {
+        showToast('Błąd szyfrowania: ' + e.message, 'error');
+      }
+    });
+}
+
+function importEncrypted(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!cryptoAvailable()) {
+    showToast('Odczyt szyfrowanej kopii wymaga otwarcia przez https://.', 'error');
+    event.target.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const fileText = e.target.result;
+    showPasswordPrompt('Hasło tej kopii',
+      'Podaj hasło, którym ten plik został zaszyfrowany.',
+      'Odszyfruj i wczytaj',
+      async (pwd) => {
+        let data;
+        try {
+          data = await decryptBackup(fileText, pwd);
+        } catch (err) {
+          showToast('Nie udało się odszyfrować — złe hasło lub uszkodzony / nie ten plik.', 'error');
+          return;
+        }
+        showConfirm('Wczytaj dane',
+          'Hasło OK. Wczytać dane? WSZYSTKIE klasy zostaną zastąpione (kopia obecnych pobierze się automatycznie).',
+          () => {
+            backupBeforeDestruction('IMPORT-ENC');
+            if (Array.isArray(data.classes) && data.classes.length) {
+              state.classes = data.classes;
+              state.currentClassId = data.currentClassId || data.classes[0].id;
+            } else if (data.students) {
+              migrateFlat(data);
+            } else {
+              showToast('Plik nie zawiera danych dziennika.', 'error');
+              return;
+            }
+            activateClass(state.currentClassId);
+            uiSelectedSchool = null;
+            save();
+            refreshAll();
+            showToast('Wczytano z szyfrowanej kopii.', 'success');
+          });
+      });
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function exportCSV() {
+  const dates = Object.keys(state.attendance).sort();
+  const rows = [];
+  const header = ['Lp', 'Uczen', ...dates, 'Cwiczyl', 'NC', 'BS', 'NB', 'NU', 'ZW', 'Baza', 'Procent'];
+  rows.push(header);
+
+  state.students.forEach((s, i) => {
+    if (s.longTermReleased) {
+      rows.push([i+1, s.name || '', ...dates.map(() => 'ZW-DLUG'), '', '', '', '', '', '', '', '—']);
+      return;
+    }
+    const stats = getStudentStats(s.id);
+    const row = [i+1, s.name || ''];
+    dates.forEach(d => row.push((state.attendance[d] || {})[s.id] || ''));
+    row.push(stats.C, stats.NC, stats.BS, stats.NB, stats.NU, stats.ZW, stats.baza, stats.percent !== null ? stats.percent.toFixed(0) + '%' : '—');
+    rows.push(row);
+  });
+
+  const csv = rows.map(r => r.map(c => {
+    const str = String(c);
+    return /[,;"\n]/.test(str) ? '"' + str.replace(/"/g, '""') + '"' : str;
+  }).join(';')).join('\n');
+
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'dziennik_wf_obecnosc_' + classTag() + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function clearAll() {
+  showConfirm(
+    'Wyczyść wszystko',
+    'Wyczyścić wszystkie dane? (uczniowie, obecność, pomiary)\nTego nie da się cofnąć.',
+    () => {
+      // Drugi confirm dla bezpieczeństwa
+      showConfirm('Ostatnia szansa', 'Na pewno usunąć WSZYSTKIE klasy i dane? Kopia pobierze się automatycznie.', () => {
+        backupBeforeDestruction('WYCZYSZCZENIE');
+        initDefault();
+        activateClass(state.currentClassId);
+        uiSelectedSchool = null;
+        save();
+        refreshAll();
+        showToast('Wszystkie dane wyczyszczone. Kopia zapisana w Downloads.', 'info');
+      });
+    }
+  );
+}
+
+function deleteLessonByDate(date) {
+  showConfirm('Usuń lekcję', 'Usunąć lekcję z ' + date + '?', () => {
+    delete state.attendance[date];
+    save();
+    renderStats();
+    renderAttendance();
+    showToast('Usunięto lekcję ' + date, 'info');
+  });
+}
+
+// =====================================================
+// MIKROFON - Web Speech API
+// =====================================================
+
+// Globalne instancje rozpoznawania
+let currentRecognition = null;
+let currentMicTarget = null; // ID przycisku który nagrywa
+
+// Sprawdza czy przeglądarka wspiera rozpoznawanie mowy
+function isSpeechSupported() {
+  return 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+}
+
+// Główna funkcja - uruchamia/zatrzymuje rozpoznawanie
+// targetInputId: ID textarea/input gdzie wpisywać tekst
+// btnId: ID przycisku mikrofonu (do animacji)
+// statusId: ID elementu na status (opcjonalnie)
+function toggleMic(targetInputId, btnId, statusId) {
+  if (!isSpeechSupported()) {
+    showToast('Twoja przeglądarka nie wspiera rozpoznawania mowy. Użyj Chrome lub Edge.', 'warn');
+    return;
+  }
+
+  // Jeśli już nagrywa - zatrzymaj
+  if (currentRecognition && currentMicTarget === btnId) {
+    currentRecognition.stop();
+    return;
+  }
+
+  // Jeśli inny mikrofon nagrywa - zatrzymaj go najpierw
+  if (currentRecognition) {
+    currentRecognition.stop();
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognition = new SpeechRecognition();
+  recognition.lang = 'pl-PL';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  const targetEl = document.getElementById(targetInputId);
+  const btnEl = document.getElementById(btnId);
+  const statusEl = statusId ? document.getElementById(statusId) : null;
+
+  // Zachowaj startową wartość żeby do niej dopisywać
+  const initialText = targetEl.value;
+  let finalTranscript = '';
+
+  recognition.onstart = () => {
+    btnEl.classList.add('recording');
+    btnEl.innerHTML = '<span class="mic-icon">⏹</span> <span>Zatrzymaj</span>';
+    if (statusEl) {
+      statusEl.textContent = '● słucham...';
+      statusEl.classList.add('live');
+    }
+  };
+
+  recognition.onresult = (event) => {
+    let interim = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        finalTranscript += transcript + ' ';
+      } else {
+        interim += transcript;
+      }
+    }
+    // Aktualizuje pole tekstowe: początek + final + interim
+    const separator = initialText && !initialText.endsWith(' ') && !initialText.endsWith('\n') ? ' ' : '';
+    targetEl.value = initialText + separator + finalTranscript + interim;
+  };
+
+  recognition.onerror = (event) => {
+    console.error('Speech recognition error:', event.error);
+    let msg = 'Błąd rozpoznawania mowy';
+    if (event.error === 'not-allowed') msg = 'Brak dostępu do mikrofonu. Pozwól na dostęp w przeglądarce.';
+    else if (event.error === 'no-speech') msg = 'Nie wykryto mowy. Spróbuj ponownie.';
+    else if (event.error === 'network') msg = 'Błąd sieci. Rozpoznawanie mowy wymaga internetu.';
+    else if (event.error === 'audio-capture') msg = 'Brak mikrofonu.';
+    else if (event.error === 'aborted') return; // anulowane przez nas - bez komunikatu
+    showToast(msg, 'error');
+  };
+
+  recognition.onend = () => {
+    btnEl.classList.remove('recording');
+    btnEl.innerHTML = '<span class="mic-icon">🎤</span> <span>Mikrofon</span>';
+    if (statusEl) {
+      statusEl.textContent = '';
+      statusEl.classList.remove('live');
+    }
+    currentRecognition = null;
+    currentMicTarget = null;
+  };
+
+  currentRecognition = recognition;
+  currentMicTarget = btnId;
+  recognition.start();
+}
+
+// =====================================================
+// DYKTOWANIE OCEN — parser
+// =====================================================
+
+// Konwertuje słowne liczby na cyfry (dla mowy)
+function parseSpokenNumber(text) {
+  const map = {
+    'zero': 0, 'jeden': 1, 'dwa': 2, 'trzy': 3, 'cztery': 4, 'pięć': 5, 'piec': 5,
+    'sześć': 6, 'szesc': 6, 'siedem': 7, 'osiem': 8, 'dziewięć': 9, 'dziewiec': 9,
+    'dziesięć': 10, 'dziesiec': 10
+  };
+  // Sprawdź czy to bezpośrednio liczba
+  const num = parseInt(text, 10);
+  if (!isNaN(num)) return num;
+  // Czy to słowo-liczba?
+  const key = text.toLowerCase().trim();
+  if (map[key] !== undefined) return map[key];
+  return null;
+}
+
+// Normalizuje string - usuwa polskie znaki, lowercase, trim
+function normalize(s) {
+  return s.toLowerCase()
+    .replace(/ą/g,'a').replace(/ć/g,'c').replace(/ę/g,'e').replace(/ł/g,'l')
+    .replace(/ń/g,'n').replace(/ó/g,'o').replace(/ś/g,'s').replace(/ź/g,'z').replace(/ż/g,'z')
+    .trim();
+}
+
+// Znajduje ucznia po fragmencie nazwiska/imienia
+function findStudentByFragment(fragment) {
+  const frag = normalize(fragment);
+  if (!frag) return null;
+
+  // Najpierw exact match w imieniu lub nazwisku
+  let best = null;
+  let bestScore = 0;
+
+  state.students.forEach(s => {
+    if (s.longTermReleased || !s.name) return;
+    const normName = normalize(s.name);
+    // Test: czy fragment jest częścią imienia/nazwiska
+    if (normName.includes(frag)) {
+      // Punktuje: czy fragment pokrywa się z początkiem słowa
+      const words = normName.split(/\s+/);
+      let score = 0;
+      words.forEach(w => {
+        if (w.startsWith(frag)) score += 10;
+        else if (w.includes(frag)) score += 5;
+      });
+      // Im krótszy fragment, tym mniejszy score (mniej pewny)
+      if (frag.length < 3) score -= 5;
+      if (score > bestScore) {
+        bestScore = score;
+        best = s;
+      }
+    }
+  });
+
+  return bestScore >= 5 ? best : null;
+}
+
+// Parser tekstu dyktowania ocen
+// Format: "Anna 85, Maciek 50, Piotr 18" lub z myślnikami/kropkami
+function parseGradesDictation(text, columnId) {
+  if (!columnId) {
+    showToast('Najpierw wybierz kolumnę ocen z listy.', 'warn');
+    return;
+  }
+  const col = state.gradeColumns.find(c => c.id === columnId);
+  if (!col) return;
+
+  // Rozdziel po przecinkach, średnikach lub nowych liniach
+  const segments = text.split(/[,;.\n]/).map(s => s.trim()).filter(s => s);
+
+  let added = 0;
+  let notFound = [];
+  let invalidValue = [];
+
+  segments.forEach(seg => {
+    // Znajdź liczbę w segmencie (0-100)
+    // Może być na końcu, na początku lub w środku
+    const numMatch = seg.match(/\b(\d{1,3})\b/);
+    if (!numMatch) {
+      notFound.push(seg);
+      return;
+    }
+    const value = parseInt(numMatch[1], 10);
+    if (value < 0 || value > 100) {
+      invalidValue.push(seg);
+      return;
+    }
+
+    // Reszta segmentu to nazwisko/imię
+    const namePart = seg.replace(numMatch[0], '').trim();
+    if (!namePart) {
+      notFound.push(seg);
+      return;
+    }
+
+    const student = findStudentByFragment(namePart);
+    if (!student) {
+      notFound.push(seg);
+      return;
+    }
+
+    // Wpisz ocenę
+    if (!state.grades[columnId]) state.grades[columnId] = {};
+    state.grades[columnId][student.id] = value;
+    added++;
+  });
+
+  save();
+  renderOceny();
+
+  let msg = '';
+  if (added > 0) msg += `✓ Wpisano ${added} ocen do kolumny "${col.shortName}". `;
+  if (invalidValue.length > 0) msg += `⚠ Wartości poza 0-100: ${invalidValue.join(', ')}. `;
+
+  if (notFound.length > 0) {
+    showConfirm(
+      'Wynik dyktowania ocen',
+      msg + '\n\n⚠ Nie rozpoznano:\n' + notFound.join('\n') + '\n\n(Sprawdź czy uczeń jest na liście i czy imię/nazwisko jest wpisane w zakładce 👥 Uczniowie)',
+      () => {}
+    );
+  } else if (msg) {
+    showToast(msg, 'success');
+  } else {
+    showToast('Nic nie rozpoznano. Format: "Anna 85, Maciek 50"', 'warn');
+  }
+}
+
+function processOcenyDictation() {
+  const text = document.getElementById('ocenyMicInput').value.trim();
+  if (!text) {
+    showToast('Pole dyktowania jest puste.', 'warn');
+    return;
+  }
+  const columnId = document.getElementById('ocenyMicColumn').value;
+  parseGradesDictation(text, columnId);
+}
+
+function clearOcenyMic() {
+  document.getElementById('ocenyMicInput').value = '';
+}
+
+// =====================================================
+// MODUŁ OCENY
+// =====================================================
+
+// Klasyfikacja wartości oceny na 5 poziomów (do koloru pigułki)
+function getGradeValClass(value) {
+  if (value >= 80) return 'val-high';
+  if (value >= 60) return 'val-good';
+  if (value >= 40) return 'val-mid';
+  if (value >= 20) return 'val-low';
+  return 'val-poor';
+}
+
+// Krótka data dd.mm do nagłówka kolumny
+function shortDate(isoDate) {
+  if (!isoDate) return '';
+  const parts = isoDate.split('-');
+  if (parts.length !== 3) return isoDate;
+  return parts[2] + '.' + parts[1];
+}
+
+// Średnia ważona ucznia
+function calculateStudentAverage(studentId) {
+  let sumVal = 0;
+  let sumWag = 0;
+  state.gradeColumns.forEach(col => {
+    if (col.weight === 0) return; // info nie liczy
+    const colGrades = state.grades[col.id] || {};
+    const v = colGrades[studentId];
+    if (v === undefined || v === null) return; // brak oceny - pomijamy
+    sumVal += v * col.weight;
+    sumWag += col.weight;
+  });
+  if (sumWag === 0) return null;
+  return Math.round(sumVal / sumWag);
+}
+
+// Średnia kolumny (po wszystkich uczniach którzy mają ocenę)
+function calculateColumnAverage(columnId) {
+  const colGrades = state.grades[columnId] || {};
+  const values = [];
+  state.students.forEach(s => {
+    if (s.longTermReleased) return;
+    const v = colGrades[s.id];
+    if (v !== undefined && v !== null) values.push(v);
+  });
+  if (values.length === 0) return null;
+  const sum = values.reduce((a,b) => a+b, 0);
+  return Math.round(sum / values.length);
+}
+
+// Liczba ocen w strefie "alarm" (poniżej 20) - dla podświetlenia wiersza
+function countAlarmGrades(studentId) {
+  let count = 0;
+  state.gradeColumns.forEach(col => {
+    const v = (state.grades[col.id] || {})[studentId];
+    if (v !== undefined && v < 20) count++;
+  });
+  return count;
+}
+
+// Render całej zakładki Oceny
+function renderOceny() {
+  renderOcenyCount();
+  renderOcenyHead();
+  renderOcenyBody();
+  renderOcenyFoot();
+  renderOcenyMicDropdown();
+}
+
+function renderOcenyMicDropdown() {
+  const select = document.getElementById('ocenyMicColumn');
+  if (!select) return;
+  const currentValue = select.value;
+  let opts = '<option value="">— wybierz kolumnę ocen —</option>';
+  state.gradeColumns.forEach(col => {
+    opts += `<option value="${col.id}">${escapeHtml(col.shortName)} — ${escapeHtml(col.fullName || col.shortName)} (waga ${col.weight}, ${col.date || ''})</option>`;
+  });
+  select.innerHTML = opts;
+  // Zachowaj wybór jeśli kolumna nadal istnieje
+  if (currentValue && state.gradeColumns.some(c => c.id === currentValue)) {
+    select.value = currentValue;
+  }
+}
+
+function renderOcenyCount() {
+  const activeStudents = state.students.filter(s => !s.longTermReleased);
+  let totalGrades = 0;
+  state.gradeColumns.forEach(col => {
+    const cg = state.grades[col.id] || {};
+    Object.values(cg).forEach(v => { if (v !== undefined && v !== null) totalGrades++; });
+  });
+  document.getElementById('ocenyCount').textContent =
+    `${activeStudents.length} uczniów · ${state.gradeColumns.length} kolumn ocen · ${totalGrades} wpisanych ocen`;
+}
+
+function renderOcenyHead() {
+  const head = document.getElementById('ocenyHead');
+  let h = '<tr>';
+  h += '<th class="col-lp">#</th>';
+  h += '<th class="col-name">Uczeń</th>';
+
+  state.gradeColumns.forEach((col, idx) => {
+    const wagaClass = col.weight === 2 ? 'w2' : (col.weight === 0 ? 'w0' : '');
+    const wagaText = col.weight === 0 ? 'info' : '×' + col.weight;
+    h += `<th class="col-ocena" title="${escapeHtml(col.fullName || col.shortName)}" onclick="editColumn('${col.id}')">`;
+    h += `<span class="skrot">${escapeHtml(col.shortName)}</span>`;
+    h += `<span class="waga-badge ${wagaClass}">${wagaText}</span>`;
+    h += `<span class="data-col">${shortDate(col.date)}</span>`;
+    h += '</th>';
+  });
+
+  h += '<th class="col-add" onclick="openGradeColumnModal()" title="Dodaj nową kolumnę oceny">';
+  h += '<span class="add-icon">＋</span><span class="add-label">nowa</span>';
+  h += '</th>';
+
+  h += '<th class="col-srednia">Średnia<br>ważona</th>';
+  h += '</tr>';
+  head.innerHTML = h;
+}
+
+function renderOcenyBody() {
+  const body = document.getElementById('ocenyBody');
+  let h = '';
+
+  state.students.forEach((student, idx) => {
+    if (student.longTermReleased) return; // pomijamy zwolnionych
+
+    const alarmCount = countAlarmGrades(student.id);
+    const rowClass = alarmCount >= 2 ? 'alarm-row' : '';
+
+    h += `<tr class="${rowClass}">`;
+    h += `<td class="cell-lp">${idx + 1}</td>`;
+    const nameDisplay = student.name
+      ? escapeHtml(student.name)
+      : '<span class="empty">bez nazwiska</span>';
+    h += `<td class="cell-name">${nameDisplay}</td>`;
+
+    state.gradeColumns.forEach(col => {
+      const v = (state.grades[col.id] || {})[student.id];
+      if (v === undefined || v === null) {
+        h += `<td class="cell-ocena empty" onclick="openGradeModal('${col.id}','${student.id}')">`;
+        h += `<span class="cell-ocena-content"></span></td>`;
+      } else {
+        const valClass = getGradeValClass(v);
+        h += `<td class="cell-ocena ${valClass}" onclick="openGradeModal('${col.id}','${student.id}')">`;
+        h += `<span class="cell-ocena-content"><span class="val">${v}</span></span></td>`;
+      }
+    });
+
+    // pusta kolumna pod "+"
+    h += '<td style="background: var(--bg); border-left: 1px dashed var(--line);"></td>';
+
+    // średnia
+    const avg = calculateStudentAverage(student.id);
+    if (avg === null) {
+      h += '<td class="cell-srednia empty"><span class="srednia-num">—</span></td>';
+    } else {
+      h += `<td class="cell-srednia"><span class="srednia-num">${avg}<span class="of100">/100</span></span></td>`;
+    }
+
+    h += '</tr>';
+  });
+
+  if (state.students.filter(s => !s.longTermReleased).length === 0) {
+    h = '<tr><td colspan="99" style="padding: 40px; text-align: center; color: var(--ink-muted); font-style: italic;">Brak aktywnych uczniów. Dodaj uczniów w zakładce 👥 Uczniowie.</td></tr>';
+  }
+
+  body.innerHTML = h;
+}
+
+function renderOcenyFoot() {
+  const foot = document.getElementById('ocenyFoot');
+  if (state.gradeColumns.length === 0) {
+    foot.innerHTML = '';
+    return;
+  }
+
+  let h = '<tr>';
+  h += '<td class="foot-label" colspan="2">Średnia kolumny</td>';
+
+  state.gradeColumns.forEach(col => {
+    const avg = calculateColumnAverage(col.id);
+    h += `<td>${avg === null ? '—' : `<span class="col-srednia-val">${avg}</span>`}</td>`;
+  });
+
+  h += '<td>—</td>'; // pod "+"
+
+  // średnia ogólna klasy
+  const classAvgs = state.students
+    .filter(s => !s.longTermReleased)
+    .map(s => calculateStudentAverage(s.id))
+    .filter(v => v !== null);
+  const classAvg = classAvgs.length > 0
+    ? Math.round(classAvgs.reduce((a,b) => a+b, 0) / classAvgs.length)
+    : null;
+  h += `<td>${classAvg === null ? '—' : `<span class="col-srednia-val">${classAvg}</span>`}</td>`;
+
+  h += '</tr>';
+  foot.innerHTML = h;
+}
+
+// === KOLUMNA OCEN - dodawanie/edycja ===
+
+function openGradeColumnModal() {
+  // Tryb: nowa kolumna
+  state.editingColumnId = null;
+  state.editingNewColumnWaga = 1;
+  document.getElementById('columnModalTitle').textContent = 'Nowa kolumna ocen';
+  document.getElementById('columnModalTag').textContent = 'Nowa kolumna';
+  document.getElementById('colFullName').value = '';
+  document.getElementById('colShortName').value = '';
+  document.getElementById('colDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('colDeleteBtn').style.display = 'none';
+  updateWagaButtons(1);
+  document.getElementById('columnModal').classList.add('active');
+  setTimeout(() => document.getElementById('colFullName').focus(), 50);
+}
+
+function editColumn(columnId) {
+  const col = state.gradeColumns.find(c => c.id === columnId);
+  if (!col) return;
+  state.editingColumnId = columnId;
+  state.editingNewColumnWaga = col.weight;
+  document.getElementById('columnModalTitle').textContent = 'Edytuj kolumnę ocen';
+  document.getElementById('columnModalTag').textContent = 'Edycja';
+  document.getElementById('colFullName').value = col.fullName || '';
+  document.getElementById('colShortName').value = col.shortName || '';
+  document.getElementById('colDate').value = col.date || '';
+  document.getElementById('colDeleteBtn').style.display = 'inline-block';
+  updateWagaButtons(col.weight);
+  document.getElementById('columnModal').classList.add('active');
+}
+
+function setColWaga(w) {
+  state.editingNewColumnWaga = w;
+  updateWagaButtons(w);
+}
+
+function updateWagaButtons(activeWaga) {
+  document.querySelectorAll('#colWagaRow .waga-opt').forEach(btn => {
+    const w = parseInt(btn.dataset.waga, 10);
+    btn.classList.toggle('active', w === activeWaga);
+  });
+}
+
+function closeColumnModal() {
+  document.getElementById('columnModal').classList.remove('active');
+  state.editingColumnId = null;
+}
+
+function saveColumn() {
+  const fullName = document.getElementById('colFullName').value.trim();
+  const shortName = document.getElementById('colShortName').value.trim();
+  const date = document.getElementById('colDate').value;
+  const weight = state.editingNewColumnWaga;
+
+  if (!shortName) {
+    showToast('Podaj skrót do nagłówka.', 'warn');
+    return;
+  }
+  if (shortName.length > 8) {
+    showToast('Skrót max 8 znaków.', 'warn');
+    return;
+  }
+
+  if (state.editingColumnId) {
+    // Edycja istniejącej
+    const col = state.gradeColumns.find(c => c.id === state.editingColumnId);
+    if (col) {
+      col.fullName = fullName || shortName;
+      col.shortName = shortName;
+      col.date = date;
+      col.weight = weight;
+    }
+    showToast('Zaktualizowano kolumnę "' + shortName + '"', 'success');
+  } else {
+    // Nowa
+    const newCol = {
+      id: 'gc_' + Date.now() + '_' + Math.floor(Math.random()*1000),
+      fullName: fullName || shortName,
+      shortName,
+      date: date || new Date().toISOString().slice(0,10),
+      weight
+    };
+    state.gradeColumns.push(newCol);
+    state.grades[newCol.id] = {};
+    showToast('Dodano kolumnę "' + shortName + '"', 'success');
+  }
+
+  save();
+  closeColumnModal();
+  renderOceny();
+}
+
+function deleteColumn() {
+  if (!state.editingColumnId) return;
+  const col = state.gradeColumns.find(c => c.id === state.editingColumnId);
+  if (!col) return;
+  showConfirm(
+    'Usuń kolumnę ocen',
+    'Usunąć kolumnę "' + col.shortName + '" wraz ze wszystkimi ocenami w niej?\nTego nie da się cofnąć.',
+    () => {
+      state.gradeColumns = state.gradeColumns.filter(c => c.id !== state.editingColumnId);
+      delete state.grades[state.editingColumnId];
+      save();
+      closeColumnModal();
+      renderOceny();
+      showToast('Usunięto kolumnę "' + col.shortName + '"', 'info');
+    }
+  );
+}
+
+// === OCENA POJEDYNCZEGO UCZNIA ===
+
+function openGradeModal(columnId, studentId) {
+  const col = state.gradeColumns.find(c => c.id === columnId);
+  const student = state.students.find(s => s.id === studentId);
+  if (!col || !student) return;
+
+  state.editingColumnId = columnId;
+  state.editingStudentId = studentId;
+
+  const existing = (state.grades[columnId] || {})[studentId];
+  const isEditing = existing !== undefined && existing !== null;
+
+  document.getElementById('gradeModalTitle').textContent =
+    isEditing ? `Edytuj ocenę` : 'Wpisz ocenę';
+  document.getElementById('gradeModalSub').textContent =
+    `${student.name || 'Uczeń bez nazwiska'} — ${col.fullName || col.shortName}`;
+  document.getElementById('gradeValue').value = isEditing ? existing : 50;
+  document.getElementById('gradeSlider').value = isEditing ? existing : 50;
+  document.getElementById('gradeDeleteBtn').style.display = isEditing ? 'inline-block' : 'none';
+
+  document.getElementById('gradeModal').classList.add('active');
+  setTimeout(() => {
+    const inp = document.getElementById('gradeValue');
+    inp.focus();
+    inp.select();
+  }, 50);
+}
+
+function syncSlider() {
+  const v = parseInt(document.getElementById('gradeValue').value, 10);
+  if (!isNaN(v)) document.getElementById('gradeSlider').value = Math.max(0, Math.min(100, v));
+}
+
+function syncNumber() {
+  document.getElementById('gradeValue').value = document.getElementById('gradeSlider').value;
+}
+
+function closeGradeModal() {
+  document.getElementById('gradeModal').classList.remove('active');
+  state.editingColumnId = null;
+  state.editingStudentId = null;
+}
+
+function saveGrade() {
+  let v = parseInt(document.getElementById('gradeValue').value, 10);
+  if (isNaN(v)) {
+    showToast('Wpisz liczbę od 0 do 100.', 'warn');
+    return;
+  }
+  v = Math.max(0, Math.min(100, v));
+
+  const cid = state.editingColumnId;
+  const sid = state.editingStudentId;
+  if (!cid || !sid) return;
+
+  if (!state.grades[cid]) state.grades[cid] = {};
+  state.grades[cid][sid] = v;
+
+  save();
+  closeGradeModal();
+  renderOceny();
+}
+
+function deleteGrade() {
+  const cid = state.editingColumnId;
+  const sid = state.editingStudentId;
+  if (!cid || !sid) return;
+
+  if (state.grades[cid]) {
+    delete state.grades[cid][sid];
+  }
+  save();
+  closeGradeModal();
+  renderOceny();
+  showToast('Usunięto ocenę', 'info');
+}
+
+// === EKSPORT CSV OCEN ===
+
+function exportOcenyCSV() {
+  if (state.gradeColumns.length === 0) {
+    showToast('Brak kolumn ocen do eksportu.', 'warn');
+    return;
+  }
+
+  const rows = [];
+  const header = ['Lp', 'Uczen'];
+  state.gradeColumns.forEach(col => {
+    header.push(col.shortName + ' (' + (col.fullName || '') + ', waga ' + col.weight + ', ' + (col.date || '') + ')');
+  });
+  header.push('Srednia ważona');
+  rows.push(header);
+
+  state.students.forEach((s, i) => {
+    if (s.longTermReleased) return;
+    const row = [i+1, s.name || ''];
+    state.gradeColumns.forEach(col => {
+      const v = (state.grades[col.id] || {})[s.id];
+      row.push(v === undefined || v === null ? '' : v);
+    });
+    const avg = calculateStudentAverage(s.id);
+    row.push(avg === null ? '' : avg);
+    rows.push(row);
+  });
+
+  // Średnia kolumny
+  const avgRow = ['', 'Średnia kolumny'];
+  state.gradeColumns.forEach(col => {
+    const a = calculateColumnAverage(col.id);
+    avgRow.push(a === null ? '' : a);
+  });
+  avgRow.push('');
+  rows.push(avgRow);
+
+  const csv = rows.map(r => r.map(c => {
+    const s = String(c);
+    return s.includes(',') || s.includes('"') || s.includes('\n')
+      ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }).join(',')).join('\n');
+
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'dziennik_wf_oceny_' + classTag() + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Wyeksportowano CSV', 'success');
+}
+
+// =====================================================
+// UTIL
+// =====================================================
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+}
+
+// Własny confirm dialog (działa w artefakcie Claude'a i wszędzie)
+let confirmCallback = null;
+function showConfirm(title, message, onOk) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMessage').textContent = message;
+  confirmCallback = onOk;
+  document.getElementById('confirmModal').classList.add('active');
+}
+function confirmOk() {
+  const cb = confirmCallback;
+  confirmCallback = null;
+  document.getElementById('confirmModal').classList.remove('active');
+  if (cb) cb();
+}
+function confirmCancel() {
+  confirmCallback = null;
+  document.getElementById('confirmModal').classList.remove('active');
+}
+
+// Toast - powiadomienie u góry ekranu
+let toastTimeout = null;
+function showToast(message, type) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  // Kolory: success (zielony), warn (pomarańczowy), info (niebieski)
+  const colors = {
+    success: '#1D9E75',
+    warn: '#EF9F27',
+    info: '#378ADD',
+    error: '#E24B4A'
+  };
+  toast.style.background = colors[type] || colors.success;
+  toast.style.display = 'block';
+  if (toastTimeout) clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => {
+    toast.style.display = 'none';
+  }, 4000);
+}
+
+// =====================================================
+// START
+// =====================================================
+load();
+state.currentDate = new Date().toISOString().slice(0, 10);
+document.getElementById('lessonDate').value = state.currentDate;
+renderClassBar();
+renderAttendance();
+
+// =====================================================
+// PWA — rejestracja service workera + przycisk instalacji
+// =====================================================
+// SW i manifest działają tylko z https:// (lub localhost). Z pliku na dysku
+// po prostu się nie zarejestrują — aplikacja nadal działa, bez offline-PWA.
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => {
+      console.warn('SW rejestracja nieudana:', err);
+    });
+  });
+}
+
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  const b = document.getElementById('btnInstall');
+  if (b) b.style.display = '';
+});
+async function installPWA() {
+  if (!deferredInstallPrompt) {
+    showToast('Instalacja niedostępna — być może aplikacja jest już zainstalowana, albo otwierasz ją z pliku zamiast z adresu https://.', 'info');
+    return;
+  }
+  deferredInstallPrompt.prompt();
+  const { outcome } = await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  const b = document.getElementById('btnInstall');
+  if (b) b.style.display = 'none';
+  if (outcome === 'accepted') showToast('Dziennik zainstalowany — ikona jest na ekranie telefonu.', 'success');
+}
+window.addEventListener('appinstalled', () => {
+  const b = document.getElementById('btnInstall');
+  if (b) b.style.display = 'none';
+});
+</script>
+</body>
+</html>

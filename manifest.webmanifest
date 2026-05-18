@@ -1,0 +1,17 @@
+{
+  "name": "Dziennik WF",
+  "short_name": "Dziennik WF",
+  "description": "Frekwencja, pomiary i oceny WF — działa offline, dane tylko na urządzeniu.",
+  "lang": "pl",
+  "start_url": "./dziennik_wf.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F4F1EA",
+  "theme_color": "#33415C",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

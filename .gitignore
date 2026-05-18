@@ -1,0 +1,14 @@
+# DANE DZIECI NIGDY DO PUBLICZNEGO REPO.
+# Zakaz hub + CLAUDE.md projektu: imiona, nazwiska, oceny dzieci poza git.
+# Druga warstwa obrony — backups/.gitignore też to blokuje lokalnie.
+backups/
+*.enc.json
+*_PELNA-KOPIA*.json
+*_AUTO-codzienna*.json
+*_PRZED-*.json
+*_SZYFROWANA*.json
+
+# Artefakty robocze
+_check_inline.js
+.DS_Store
+Thumbs.db
