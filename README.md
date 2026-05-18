@@ -23,6 +23,12 @@ Adoptowany do projektu `nauczyciel` 2026-05-18 (był prototypem w Downloads).
   dziennie przy zapisie lekcji + backup przed operacją niszczącą.
 - Faza 2 (gotowe): model szkoła→klasa (zespół szkół, wiele klas), migracja
   starych danych bez utraty, pasek wyboru szkoły/klasy.
-- Faza 3 (plan, czeka na decyzję): PWA na Androida + przycisk „Wyślij kopię"
-  (share na maila) + statyczny hosting HTTPS.
+- Faza 3 (wdrożone): hosting HTTPS na GitHub Pages
+  (https://arturzienczyk.github.io/dziennik-wf/dziennik_wf.html) + PWA
+  (manifest + service worker, działa offline, instalacja na Androidzie) +
+  szyfrowana kopia (AES-GCM + hasło) — dane dzieci mailem dopiero zaszyfrowane,
+  zgodnie z zakazem CLAUDE.md. Repo publiczne, ale `backups/` i kopie danych
+  poza git (dwie warstwy `.gitignore`).
+  Niezweryfikowane na żywo: instalacja PWA na fizycznym Androidzie + szyfrowana
+  kopia w UI przeglądarki (rdzeń krypto przetestowany, integracja UI nie).
 - Widełki punkty→ocena 1-6 (szkolne, zatwierdzone przez MEN) — czeka na tabelę od Artura.
