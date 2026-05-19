@@ -523,6 +523,17 @@
   .cell-ocena.empty .cell-ocena-content:hover::before {
     color: var(--accent);
   }
+  /* Stopień MEN (1-6) pod wartością punktową */
+  .cell-ocena .men {
+    display: block; font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 10px; font-weight: 600; opacity: 0.65; margin-top: 1px;
+  }
+  .cell-ocena .men.warn { color: #8C2520; opacity: 0.9; }
+  .cell-srednia .men-avg {
+    display: block; font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 11px; color: var(--ink-muted); font-weight: 600; margin-top: 2px;
+  }
+  .cell-srednia .men-avg.warn { color: #8C2520; }
 
   .cell-srednia {
     background: #FBFAF5;
@@ -682,6 +693,36 @@
     .toolbar { gap: 4px; padding: 8px; }
     .toolbar button { padding: 6px 10px; font-size: 12px; }
     h1 { font-size: 20px; }
+
+    /* Odzyskać szerokość ekranu na telefonie (było 1.5rem z obu stron) */
+    .container { padding: 0.6rem; }
+    .table-wrap, .oceny-wrap { -webkit-overflow-scrolling: touch; }
+
+    /* Ciaśniejsze komórki — więcej mieści się bez przewijania */
+    table.attendance { font-size: 12px; }
+    table.attendance thead th { padding: 8px 5px; }
+    table.attendance tbody td { padding: 6px 4px; }
+    .col-ocena { min-width: 64px; }
+
+    /* Kolumny # i Uczeń przyklejone — nazwisko widoczne przy przewijaniu w bok */
+    table.attendance thead th:nth-child(1),
+    table.attendance tbody td:nth-child(1) {
+      position: sticky; left: 0; z-index: 2;
+      width: 32px; min-width: 32px;
+      background: var(--paper);
+    }
+    table.attendance thead th:nth-child(2),
+    table.attendance tbody td:nth-child(2) {
+      position: sticky; left: 32px; z-index: 2;
+      background: var(--paper);
+      box-shadow: 1px 0 0 var(--line);
+    }
+    table.attendance thead th:nth-child(1),
+    table.attendance thead th:nth-child(2) { z-index: 3; background: var(--line-soft); }
+    /* Wiersz ucznia zwolnionego: zachować jego tło też pod sticky */
+    table.attendance tbody tr.long-term-released td:nth-child(1),
+    table.attendance tbody tr.long-term-released td:nth-child(2) { background: var(--bg); }
+    .student-name { min-width: 92px; }
   }
 </style>
 </head>
@@ -2517,6 +2558,23 @@ function getGradeValClass(value) {
   return 'val-poor';
 }
 
+// Widełki MEN: % (0-100) -> ocena szkolna 1-6. Potwierdzone przez nauczyciela.
+// 0 = sprawdzian niezaliczony (NIE ocena 1) -> osobny komunikat, kolumna waga 0.
+// Poniżej 20% liczone jak 20% (podłoga: minimalna realna ocena to 1).
+function gradeMen(value) {
+  if (value === 0) return null;          // sygnał: "niezaliczony"
+  const v = value < 20 ? 20 : value;     // podłoga 20% => min ocena 1
+  if (v >= 96) return 6;
+  if (v >= 90) return 5;
+  if (v >= 75) return 4;
+  if (v >= 53) return 3;
+  if (v >= 41) return 2;
+  return 1;                              // 20-40%
+}
+function gradeMenLabel(value) {
+  return value === 0 ? '⚠ niezal.' : String(gradeMen(value));
+}
+
 // Krótka data dd.mm do nagłówka kolumny
 function shortDate(isoDate) {
   if (!isoDate) return '';
@@ -2649,8 +2707,9 @@ function renderOcenyBody() {
         h += `<span class="cell-ocena-content"></span></td>`;
       } else {
         const valClass = getGradeValClass(v);
+        const menCls = v === 0 ? 'men warn' : 'men';
         h += `<td class="cell-ocena ${valClass}" onclick="openGradeModal('${col.id}','${student.id}')">`;
-        h += `<span class="cell-ocena-content"><span class="val">${v}</span></span></td>`;
+        h += `<span class="cell-ocena-content"><span class="val">${v}</span><span class="${menCls}">${gradeMenLabel(v)}</span></span></td>`;
       }
     });
 
@@ -2662,7 +2721,10 @@ function renderOcenyBody() {
     if (avg === null) {
       h += '<td class="cell-srednia empty"><span class="srednia-num">—</span></td>';
     } else {
-      h += `<td class="cell-srednia"><span class="srednia-num">${avg}<span class="of100">/100</span></span></td>`;
+      const avgMen = avg === 0
+        ? '<span class="men-avg warn">⚠ niezaliczone</span>'
+        : `<span class="men-avg">ocena ${gradeMen(avg)}</span>`;
+      h += `<td class="cell-srednia"><span class="srednia-num">${avg}<span class="of100">/100</span></span>${avgMen}</td>`;
     }
 
     h += '</tr>';
@@ -2700,7 +2762,10 @@ function renderOcenyFoot() {
   const classAvg = classAvgs.length > 0
     ? Math.round(classAvgs.reduce((a,b) => a+b, 0) / classAvgs.length)
     : null;
-  h += `<td>${classAvg === null ? '—' : `<span class="col-srednia-val">${classAvg}</span>`}</td>`;
+  const classAvgMen = (classAvg === null || classAvg === 0)
+    ? ''
+    : ` <span class="men-avg" style="display:inline;font-size:10px;">(ocena ${gradeMen(classAvg)})</span>`;
+  h += `<td>${classAvg === null ? '—' : `<span class="col-srednia-val">${classAvg}</span>${classAvgMen}`}</td>`;
 
   h += '</tr>';
   foot.innerHTML = h;
@@ -2909,6 +2974,7 @@ function exportOcenyCSV() {
     header.push(col.shortName + ' (' + (col.fullName || '') + ', waga ' + col.weight + ', ' + (col.date || '') + ')');
   });
   header.push('Srednia ważona');
+  header.push('Ocena (1-6)');
   rows.push(header);
 
   state.students.forEach((s, i) => {
@@ -2920,6 +2986,7 @@ function exportOcenyCSV() {
     });
     const avg = calculateStudentAverage(s.id);
     row.push(avg === null ? '' : avg);
+    row.push(avg === null ? '' : (avg === 0 ? 'niezaliczone' : gradeMen(avg)));
     rows.push(row);
   });
 
@@ -2929,6 +2996,7 @@ function exportOcenyCSV() {
     const a = calculateColumnAverage(col.id);
     avgRow.push(a === null ? '' : a);
   });
+  avgRow.push('');
   avgRow.push('');
   rows.push(avgRow);
 
