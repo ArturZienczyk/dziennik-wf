@@ -31,4 +31,17 @@ Adoptowany do projektu `nauczyciel` 2026-05-18 (był prototypem w Downloads).
   poza git (dwie warstwy `.gitignore`).
   Niezweryfikowane na żywo: instalacja PWA na fizycznym Androidzie + szyfrowana
   kopia w UI przeglądarki (rdzeń krypto przetestowany, integracja UI nie).
-- Widełki punkty→ocena 1-6 (szkolne, zatwierdzone przez MEN) — czeka na tabelę od Artura.
+- Faza 4 (wdrożone): runda zmian dydaktycznych —
+  - Widełki %→ocena 1-6 MEN (96-100→6, 90-95→5, 75-89→4, 53-74→3, 41-52→2,
+    20-40→1; <20% liczone jak 20%; 0 = niezaliczony, waga 0). W tabeli ocen,
+    średniej, CSV.
+  - Responsywność: sticky kolumny #/Uczeń na telefonie (koniec poziomego
+    scrolla treści), desktop bez zmian.
+  - Spóźnienie: znacznik ⏱ doklejany do dowolnego statusu (attRead/attWrite,
+    stare backupy czytane bez migracji). Nie wpływa na %.
+  - Systematyczność: 2 auto-kolumny (Syst. I/II) liczone z % ćwiczenia w
+    oknie półrocza wg widełek; pole „Granica półrocza" per klasa; reset
+    licznika na dacie granicznej; auto-kolumny read-only.
+  Niezweryfikowane na żywo: render/klikanie w przeglądarce (logika
+  przetestowana w Node — progi, okna półrocza, round-trip spóźnienia).
+  Założenia do ew. korekty: waga systematyczności=1, kolumny na początku.
