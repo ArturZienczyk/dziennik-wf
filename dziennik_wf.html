@@ -143,6 +143,7 @@
   .status-nb { background: #F7C1C1; border-color: #C46666; color: #501313; }
   .status-empty { background: var(--bg); border-color: var(--line); color: var(--ink-muted); }
   .status-blocked { background: var(--line); border-color: var(--line); color: var(--ink-muted); }
+  .late-mark { font-size: 11px; opacity: 0.85; }
 
   /* Tabela obecności */
   .table-wrap { overflow-x: auto; background: var(--paper); border-radius: 4px; border: 1px solid var(--line); }
@@ -1011,6 +1012,11 @@
       <button class="status-btn status-empty" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus(null)">— wyczyść —</button>
     </div>
 
+    <label style="display:flex; align-items:center; gap:8px; margin-top:14px; padding:10px 12px; background:var(--bg); border:1px solid var(--line); border-radius:6px; font-size:14px; cursor:pointer;">
+      <input type="checkbox" id="pickerLate" onchange="state.pickerLate=this.checked" style="width:18px; height:18px; cursor:pointer;">
+      <span>⏱ <strong>Spóźnił się</strong> — zaznacz <em>przed</em> kliknięciem statusu (doklei się do dowolnego: „NĆ + spóźniony" itd.)</span>
+    </label>
+
     <!-- Sekcja usprawiedliwień NB - pokazuje się tylko jeśli uczeń ma jakieś NB w historii -->
     <div id="pickerUsprawiedliwSection" style="display:none; margin-top:16px; padding-top:16px; border-top: 1px solid var(--line);">
       <h4 style="margin: 0 0 8px 0; font-size: 13px; font-weight: 500;">📋 Usprawiedliwianie zaległych NB:</h4>
@@ -1185,6 +1191,7 @@ let state = {
   grades: {},
   currentDate: new Date().toISOString().slice(0, 10),
   pickerStudentId: null,
+  pickerLate: false,
   // edycja oceny - tymczasowe
   editingColumnId: null,
   editingStudentId: null,
@@ -1441,9 +1448,9 @@ function finalizeLesson() {
   const day = state.attendance[state.currentDate] || {};
   const activeStudents = state.students.filter(s => !s.longTermReleased);
 
-  const withoutStatus = activeStudents.filter(s => !day[s.id]);
-  const exceptions = activeStudents.filter(s => day[s.id] && day[s.id] !== 'C');
-  const alreadyC = activeStudents.filter(s => day[s.id] === 'C');
+  const withoutStatus = activeStudents.filter(s => !attRead(day[s.id]).s);
+  const exceptions = activeStudents.filter(s => { const st = attRead(day[s.id]).s; return st && st !== 'C'; });
+  const alreadyC = activeStudents.filter(s => attRead(day[s.id]).s === 'C');
 
   if (activeStudents.length === 0) {
     showToast('Nie ma żadnych aktywnych uczniów (wszyscy zwolnieni długoterminowo).', 'warn');
@@ -1479,10 +1486,24 @@ function finalizeLesson() {
 // =====================================================
 // OBECNOŚĆ
 // =====================================================
+// Komórka frekwencji może być stringiem (stare dane/backupy) ALBO obiektem
+// {s:status, sp:true} gdy doklejono spóźnienie. attRead toleruje oba formaty,
+// attWrite zapisuje kanonicznie: string gdy bez spóźnienia (max zgodność wstecz),
+// obiekt tylko gdy spóźnienie. Dzięki temu stare kopie czytają się bez migracji.
+function attRead(cell) {
+  if (cell == null) return { s: null, sp: false };
+  if (typeof cell === 'string') return { s: cell, sp: false };
+  return { s: cell.s || null, sp: !!cell.sp };
+}
+function attWrite(status, sp) {
+  if (!status) return null;
+  return sp ? { s: status, sp: true } : status;
+}
+
 function getStudentStats(studentId) {
   const stats = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0, total: 0 };
   Object.values(state.attendance).forEach(day => {
-    const st = day[studentId];
+    const st = attRead(day[studentId]).s;
     if (st && stats[st] !== undefined) {
       stats[st]++;
       stats.total++;
@@ -1506,14 +1527,16 @@ function renderAttendance() {
     if (s.longTermReleased) tr.classList.add('long-term-released');
 
     const stats = getStudentStats(s.id);
-    const todayStatus = (state.attendance[state.currentDate] || {})[s.id] || null;
+    const todayCell = attRead((state.attendance[state.currentDate] || {})[s.id]);
+    const todayStatus = todayCell.s;
 
     let statusHtml = '';
     if (s.longTermReleased) {
       statusHtml = `<span class="status-btn status-blocked">— zwolniony —</span>`;
     } else if (todayStatus) {
       const info = STATUS_INFO[todayStatus];
-      statusHtml = `<button class="status-btn ${info.cls}" onclick="openPicker('${s.id}')" title="${info.desc}">${info.label}</button>`;
+      const lateMark = todayCell.sp ? ' <span class="late-mark" title="spóźniony">⏱</span>' : '';
+      statusHtml = `<button class="status-btn ${info.cls}" onclick="openPicker('${s.id}')" title="${info.desc}${todayCell.sp ? ' + spóźniony' : ''}">${info.label}${lateMark}</button>`;
     } else {
       statusHtml = `<button class="status-btn status-empty" onclick="openPicker('${s.id}')">—</button>`;
     }
@@ -1551,9 +1574,9 @@ function renderAttendance() {
 function updateSaveBar() {
   const day = state.attendance[state.currentDate] || {};
   const activeStudents = state.students.filter(s => !s.longTermReleased);
-  const withoutStatus = activeStudents.filter(s => !day[s.id]);
-  const exceptions = activeStudents.filter(s => day[s.id] && day[s.id] !== 'C');
-  const alreadyC = activeStudents.filter(s => day[s.id] === 'C');
+  const withoutStatus = activeStudents.filter(s => !attRead(day[s.id]).s);
+  const exceptions = activeStudents.filter(s => { const st = attRead(day[s.id]).s; return st && st !== 'C'; });
+  const alreadyC = activeStudents.filter(s => attRead(day[s.id]).s === 'C');
 
   const bar = document.getElementById('saveBar');
   const status = document.getElementById('saveBarStatus');
@@ -1578,10 +1601,16 @@ function openPicker(studentId) {
   document.getElementById('pickerTitle').textContent = (s.name || 'uczeń');
   document.getElementById('pickerDate').textContent = state.currentDate;
 
+  // Checkbox spóźnienia = bieżący stan tego ucznia na ten dzień
+  const cur = attRead((state.attendance[state.currentDate] || {})[studentId]);
+  state.pickerLate = cur.sp;
+  const lateBox = document.getElementById('pickerLate');
+  if (lateBox) lateBox.checked = cur.sp;
+
   // Znajdź wszystkie NB tego ucznia w historii
   const nbDates = [];
   Object.keys(state.attendance).forEach(date => {
-    if (state.attendance[date][studentId] === 'NB') {
+    if (attRead(state.attendance[date][studentId]).s === 'NB') {
       nbDates.push(date);
     }
   });
@@ -1614,8 +1643,8 @@ function usprawiedliwDate(studentId, date) {
     'Usprawiedliw nieobecność',
     `Zmienić NB ${s.name || 'ucznia'} z dnia ${date} na NU (usprawiedliwiony)?`,
     () => {
-      if (state.attendance[date] && state.attendance[date][studentId] === 'NB') {
-        state.attendance[date][studentId] = 'NU';
+      if (state.attendance[date] && attRead(state.attendance[date][studentId]).s === 'NB') {
+        state.attendance[date][studentId] = attWrite('NU', attRead(state.attendance[date][studentId]).sp);
         save();
         openPicker(studentId);
         renderAttendance();
@@ -1639,7 +1668,9 @@ function setStatus(status) {
       delete state.attendance[state.currentDate];
     }
   } else {
-    state.attendance[state.currentDate][sid] = status;
+    const lateBox = document.getElementById('pickerLate');
+    const sp = lateBox ? lateBox.checked : state.pickerLate;
+    state.attendance[state.currentDate][sid] = attWrite(status, sp);
   }
   save();
   closePicker();
@@ -1775,7 +1806,7 @@ function renderStats() {
   dates.forEach(date => {
     const day = state.attendance[date];
     const counts = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0 };
-    Object.values(day).forEach(st => counts[st] !== undefined && counts[st]++);
+    Object.values(day).forEach(c => { const st = attRead(c).s; if (counts[st] !== undefined) counts[st]++; });
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="left">${date}</td>
@@ -1874,7 +1905,7 @@ function parseDictation() {
       // Znajdź najnowszy NB tego ucznia
       const nbDates = [];
       Object.keys(state.attendance).forEach(date => {
-        if (state.attendance[date][student.id] === 'NB') nbDates.push(date);
+        if (attRead(state.attendance[date][student.id]).s === 'NB') nbDates.push(date);
       });
 
       if (nbDates.length === 0) {
@@ -1884,7 +1915,7 @@ function parseDictation() {
 
       nbDates.sort();
       const newestNB = nbDates[nbDates.length - 1]; // najnowszy
-      state.attendance[newestNB][student.id] = 'NU';
+      state.attendance[newestNB][student.id] = attWrite('NU', attRead(state.attendance[newestNB][student.id]).sp);
       usprawiedliwiono++;
       usprawiedliwionoInfo.push(`${student.name} (${newestNB})`);
       return;
@@ -1919,7 +1950,7 @@ function parseDictation() {
     const bestStudent = findBestStudent(words);
 
     if (bestStudent) {
-      state.attendance[state.currentDate][bestStudent.id] = foundStatus;
+      state.attendance[state.currentDate][bestStudent.id] = attWrite(foundStatus, attRead((state.attendance[state.currentDate] || {})[bestStudent.id]).sp);
       added++;
     } else {
       notFound.push(seg);
@@ -2252,7 +2283,7 @@ function exportCSV() {
     }
     const stats = getStudentStats(s.id);
     const row = [i+1, s.name || ''];
-    dates.forEach(d => row.push((state.attendance[d] || {})[s.id] || ''));
+    dates.forEach(d => { const c = attRead((state.attendance[d] || {})[s.id]); row.push(c.s ? (c.s + (c.sp ? '+sp' : '')) : ''); });
     row.push(stats.C, stats.NC, stats.BS, stats.NB, stats.NU, stats.ZW, stats.baza, stats.percent !== null ? stats.percent.toFixed(0) + '%' : '—');
     rows.push(row);
   });
