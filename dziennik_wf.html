@@ -905,6 +905,12 @@
       <h2>Oceny i średnia ważona</h2>
       <p>Tworzysz <strong>kolumnę oceny</strong> (nazwa, skrót, waga, data) — pojawia się dla wszystkich uczniów. Klikasz w komórkę i wpisujesz wartość 0–100. Patrząc na kolumnę widzisz kto ma braki.</p>
       <div class="formula">średnia ucznia = Σ(ocena × waga) / Σ(wag)</div>
+      <div style="margin-top:12px; padding:10px 12px; background:var(--bg); border:1px solid var(--line); border-radius:6px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:13px;">
+        <span>📅 <strong>Granica półrocza</strong> (1. dzień II półrocza):</span>
+        <input type="date" id="semesterBreakInput" onchange="setSemesterBreak(this.value)" style="padding:6px 8px; border:1px solid var(--line); border-radius:5px; font-family:inherit; font-size:13px;">
+        <button class="btn-oceny" onclick="setSemesterBreak('')" style="font-size:12px;">Wyczyść</button>
+        <span style="color:var(--ink-muted);">Kolumny <strong>Syst. I / II</strong> liczą się automatycznie z % ćwiczenia w swoim okresie (od tej daty licznik startuje od zera).</span>
+      </div>
     </div>
 
     <!-- Dyktowanie ocen -->
@@ -1207,7 +1213,8 @@ function makeClass(school, name, students) {
     attendance: {},
     measurements: {},
     gradeColumns: [],
-    grades: {}
+    grades: {},
+    semesterBreak: ''   // data 1. dnia II półrocza; '' = jedno okno (cała historia)
   };
 }
 function getCurrentClass() {
@@ -1500,10 +1507,15 @@ function attWrite(status, sp) {
   return sp ? { s: status, sp: true } : status;
 }
 
-function getStudentStats(studentId) {
+// fromDate/toDate opcjonalne (ISO 'YYYY-MM-DD'). Brak = cała historia
+// (wszystkie istniejące wywołania getStudentStats(id) działają bez zmian).
+// Zakres: [fromDate, toDate) — dzień granicy należy do II półrocza.
+function getStudentStats(studentId, fromDate, toDate) {
   const stats = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0, total: 0 };
-  Object.values(state.attendance).forEach(day => {
-    const st = attRead(day[studentId]).s;
+  Object.keys(state.attendance).forEach(date => {
+    if (fromDate && date < fromDate) return;
+    if (toDate && date >= toDate) return;
+    const st = attRead(state.attendance[date][studentId]).s;
     if (st && stats[st] !== undefined) {
       stats[st]++;
       stats.total++;
@@ -2655,7 +2667,62 @@ function countAlarmGrades(studentId) {
 }
 
 // Render całej zakładki Oceny
+// === SYSTEMATYCZNOŚĆ — kolumny liczone automatycznie z frekwencji ===
+// Granica półrocza per klasa (cls.semesterBreak). Reset "kapitału" = II
+// półrocze liczone od zera (osobne okno dat). Kolumny auto:true są pochodną
+// frekwencji — nie edytuje się ich ręcznie (zmieniasz obecność → przelicza).
+const SYS_PREFIX = 'auto_sys';
+
+function getSemesterBreak() {
+  const c = getCurrentClass();
+  return (c && c.semesterBreak) ? c.semesterBreak : '';
+}
+function setSemesterBreak(v) {
+  const c = getCurrentClass();
+  if (!c) return;
+  c.semesterBreak = (v || '').trim();
+  save();
+  renderOceny();
+  showToast(c.semesterBreak ? 'Granica półrocza: ' + c.semesterBreak : 'Granica półrocza wyczyszczona — jedno okno', 'success');
+}
+
+function syncSystematicznoscColumns() {
+  // Mutacja IN-PLACE (state.gradeColumns/grades = żywe referencje klasy;
+  // reassign zerwałby je i save() zgubiłby dane).
+  for (let i = state.gradeColumns.length - 1; i >= 0; i--) {
+    if (state.gradeColumns[i].auto) state.gradeColumns.splice(i, 1);
+  }
+  Object.keys(state.grades).forEach(k => {
+    if (k.indexOf(SYS_PREFIX) === 0) delete state.grades[k];
+  });
+
+  const brk = getSemesterBreak().trim();
+  const windows = brk
+    ? [ { id: SYS_PREFIX + '1', shortName: 'Syst. I',  fullName: 'Systematyczność I półrocze (auto z frekwencji)',  from: null, to: brk },
+        { id: SYS_PREFIX + '2', shortName: 'Syst. II', fullName: 'Systematyczność II półrocze (auto z frekwencji)', from: brk,  to: null } ]
+    : [ { id: SYS_PREFIX + '0', shortName: 'Syst.',    fullName: 'Systematyczność — cała historia (ustaw granicę półrocza, by rozdzielić)', from: null, to: null } ];
+
+  // Na początek listy — systematyczność to rdzeń oceny WF u nauczyciela.
+  const newCols = windows.map(w => ({
+    id: w.id, shortName: w.shortName, fullName: w.fullName,
+    weight: 1, date: w.to || w.from || '', auto: true
+  }));
+  state.gradeColumns.unshift(...newCols);
+
+  windows.forEach(w => {
+    state.grades[w.id] = {};
+    state.students.forEach(s => {
+      if (s.longTermReleased) return;
+      const st = getStudentStats(s.id, w.from || undefined, w.to || undefined);
+      if (st.percent !== null) state.grades[w.id][s.id] = Math.round(st.percent);
+    });
+  });
+}
+
 function renderOceny() {
+  syncSystematicznoscColumns();
+  const sbi = document.getElementById('semesterBreakInput');
+  if (sbi) sbi.value = getSemesterBreak();
   renderOcenyCount();
   renderOcenyHead();
   renderOcenyBody();
@@ -2669,6 +2736,7 @@ function renderOcenyMicDropdown() {
   const currentValue = select.value;
   let opts = '<option value="">— wybierz kolumnę ocen —</option>';
   state.gradeColumns.forEach(col => {
+    if (col.auto) return; // systematyczność liczona z frekwencji, nie z dyktowania
     opts += `<option value="${col.id}">${escapeHtml(col.shortName)} — ${escapeHtml(col.fullName || col.shortName)} (waga ${col.weight}, ${col.date || ''})</option>`;
   });
   select.innerHTML = opts;
@@ -2822,6 +2890,7 @@ function openGradeColumnModal() {
 function editColumn(columnId) {
   const col = state.gradeColumns.find(c => c.id === columnId);
   if (!col) return;
+  if (col.auto) { showToast('Kolumna systematyczności liczy się automatycznie z frekwencji — zmień obecności albo granicę półrocza.', 'info'); return; }
   state.editingColumnId = columnId;
   state.editingNewColumnWaga = col.weight;
   document.getElementById('columnModalTitle').textContent = 'Edytuj kolumnę ocen';
@@ -2919,6 +2988,7 @@ function openGradeModal(columnId, studentId) {
   const col = state.gradeColumns.find(c => c.id === columnId);
   const student = state.students.find(s => s.id === studentId);
   if (!col || !student) return;
+  if (col.auto) { showToast('To ocena z systematyczności — liczona automatycznie z frekwencji, nie wpisuje się ręcznie.', 'info'); return; }
 
   state.editingColumnId = columnId;
   state.editingStudentId = studentId;
