@@ -1505,8 +1505,10 @@ function odswiezBanerMagazynu() {
   baner.style.display = '';
   tresc.innerHTML = magazyn.idbOk
     ? 'Twoje wpisy <strong>są zapisywane</strong> — dziennik przełączył się na magazyn zapasowy (IndexedDB), '
-      + 'który ma osobny limit. Nic nie ginie, ale warto zwolnić miejsce: ten wspólny limit 10 MB dzielą '
-      + 'wszystkie pliki HTML otwierane z dysku na tym komputerze.'
+      + 'który ma osobny limit. Nic nie ginie. Powód przełączenia: <code>'
+      + escapeHtml(magazyn.ostatniBlad || 'nieznany') + '</code> — kliknięcie „Co zajmuje pamięć?” pokazuje, '
+      + 'czy magazyn jest faktycznie pełny (ten wspólny limit 10 MB dzielą wszystkie pliki HTML z dysku), '
+      + 'czy przyczyna jest inna — np. przeglądarka ma zablokowany zapis danych dla stron.'
     : '<strong style="color:#C0392B;">UWAGA: zapis nie działa żadną drogą</strong> ('
       + escapeHtml(magazyn.ostatniBlad || 'nieznany błąd') + '). Zrób kopię <em>teraz</em>, '
       + 'zanim zamkniesz tę kartę — inaczej dzisiejsze wpisy przepadną.';
