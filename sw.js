@@ -3,11 +3,16 @@
  * Strategia:
  *  - dokument (nawigacja): network-first → fallback cache  (świeże gdy online,
  *    działa gdy offline; aktualizacje wchodzą same przy następnym wejściu online)
- *  - shell (manifest, ikony) i Google Fonts: stale-while-revalidate
+ *  - shell (manifest, ikony): stale-while-revalidate
+ * Od 2026-09-14 (Faza 7) kroje pisma siedza w samym pliku HTML, wiec regula
+ * dla fonts.googleapis.com/gstatic zostala usunieta - nie ma juz czego cache'owac.
  * UWAGA: przy każdej zmianie dziennik_wf.html PODBIJ CACHE_VERSION — inaczej
  * stary klient może serwować starą wersję z cache zanim sieć odpowie.
  */
-const CACHE_VERSION = 'dziennik-wf-v1';
+// v2: Fazy 5-7 (klawiatura, szyfrowane kopie, kroje w pliku). Podbicie wersji
+// jest tu KONIECZNE - bez niego klient z cache serwowalby dziennik sprzed
+// wymuszonego szyfrowania kopii, czyli cofnalby poprawke bezpieczenstwa.
+const CACHE_VERSION = 'dziennik-wf-v2';
 const SHELL = [
   './dziennik_wf.html',
   './manifest.webmanifest',
@@ -29,10 +34,6 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-function isFontHost(url) {
-  return url.host === 'fonts.googleapis.com' || url.host === 'fonts.gstatic.com';
-}
-
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
@@ -52,8 +53,9 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Shell same-origin + fonty Google: stale-while-revalidate.
-  if (url.origin === self.location.origin || isFontHost(url)) {
+  // Shell same-origin: stale-while-revalidate. Zadnych obcych hostow - dziennik
+  // nie ma sie z czym laczyc poza wlasnym katalogiem (bramka: test_siec.py).
+  if (url.origin === self.location.origin) {
     e.respondWith(
       caches.match(req).then(cached => {
         const net = fetch(req).then(resp => {
