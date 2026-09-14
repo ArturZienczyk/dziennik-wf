@@ -97,6 +97,44 @@ nazwiska dziecka**, zła fraza go nie otwiera, własne hasło odtwarza dane w ca
 - **Mikrofon** (dyktowanie) wysyła nagranie z imionami do Google — to osobna decyzja.
 - **Brak zamka na apce**: kto ma odblokowany laptop, otwiera dziennik i widzi dane.
 
+## Nic nie wychodzi z laptopa (Faza 7)
+
+Pytanie, od którego to się zaczęło: skoro dziennik chodzi w przeglądarce, czy dane
+nie trafiają do Google? **Nie trafiają** — ale sama aplikacja łączyła się z Google
+przy każdym otwarciu, po kroje pisma. Zmierzone 2026-09-14: 7 zapytań przy typowej
+pracy, z czego **6 do `fonts.googleapis.com` / `fonts.gstatic.com`**. Żadne nie
+niosło danych dzieci, ale Google widział IP i porę.
+
+Kroje są teraz wklejone do pliku jako `data:` URI. Po zmianie: **0 zapytań poza
+laptop**, a dziennik wygląda tak samo bez internetu (wcześniej bez sieci tracił
+typografię). Koszt: plik urósł ze 126 KB do ~403 KB.
+
+Dobór krojów zmierzony, nie zgadnięty — cztery warianty zapytania do Google:
+
+| wariant | plików | w pliku |
+|---|---|---|
+| wagi wypisane pojedynczo (jak było) | 16 | 1251 KB |
+| zakresy wag, Serif z osią `opsz` | 4 | 392 KB (**gubi IBM Plex Mono** — nie ma wersji variable) |
+| **zakresy wag, Serif bez osi `opsz`** ← wybrane | 6 | **259 KB** |
+| Serif tylko w wadze 600 | 6 | 189 KB (ryzyko: pozostałe wagi nagłówków syntetyzowane) |
+
+Wzięte subsety: `latin` + `latin-ext` (polskie znaki). Cyrylica, greka i wietnamski
+pominięte. Odświeżenie krojów (gdyby kiedyś trzeba): `py -3.14 narzedzia_osadz_fonty.py`.
+
+Bramka: `py -3.14 test_siec.py` — przechwytuje **każde** zapytanie podczas typowej
+pracy i wywala się, gdy którekolwiek wyjdzie poza `file://`. Odpalaj po każdej
+zmianie, która dokłada bibliotekę, ikonę albo czcionkę.
+
+### Co nadal wychodzi na zewnątrz — i kiedy
+
+- **Mikrofon** (dyktowanie): rozpoznawanie mowy w Chrome jest **serwerowe** — nagranie
+  z imionami dzieci trafia na serwery Google. Dopóki nie klikniesz mikrofonu, nic się
+  nie dzieje; ale to nie jest funkcja lokalna, mimo że tak wygląda.
+- **Nic poza tym.** `localStorage` nie jest objęty synchronizacją konta Google
+  (Chrome Sync obejmuje zakładki, historię, hasła, ustawienia, rozszerzenia — nie dane
+  zapisane przez strony). Kopie lądują w `D:\Users\Downloads` — zwykłym folderze
+  lokalnym, poza OneDrive i bez Google Drive for Desktop — i są zaszyfrowane.
+
 ## Uwaga operacyjna: jedno miejsce uruchamiania
 
 Dane siedzą w `localStorage`, który jest **osobny dla pliku na dysku i dla adresu
@@ -149,3 +187,7 @@ Adoptowany do projektu `nauczyciel` 2026-05-18 (był prototypem w Downloads).
   AES-GCM z hasłem ustawianym raz; operacja kasująca nie rusza danych, gdy kopia
   nie powstała. Bramka: `test_kopie.py`, 13/13 PASS. Zostaje otwarte: mikrofon
   (nagranie do Google) i brak zamka na samej aplikacji.
+- Faza 7 (wdrożona, zmierzona): kroje pisma wklejone do pliku — dziennik nie wykonuje
+  żadnego zapytania poza laptop (było 6 do Google po czcionki przy każdym otwarciu)
+  i wygląda tak samo bez internetu. Bramka: `test_siec.py`. Otwarte zostaje: mikrofon
+  (rozpoznawanie mowy po stronie Google) i brak zamka na aplikacji.
