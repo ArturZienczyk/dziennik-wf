@@ -725,6 +725,53 @@
     table.attendance tbody tr.long-term-released td:nth-child(2) { background: var(--bg); }
     .student-name { min-width: 92px; }
   }
+
+  /* === Tryb klawiatury (laptop) === */
+  tr.kbd-active > td { background: #FFF6DA !important; }
+  tr.kbd-active > td:first-child { box-shadow: inset 3px 0 0 #E0A800; }
+  .kbd-bar {
+    display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center;
+    background: #FFFBEF; border: 1px solid #E8D9A8; border-radius: 8px;
+    padding: 9px 12px; margin: 10px 0 14px 0; font-size: 12.5px; color: var(--ink);
+  }
+  .kbd-bar strong { font-weight: 600; }
+  kbd {
+    display: inline-block; min-width: 17px; text-align: center;
+    padding: 1px 5px; margin: 0 1px;
+    background: var(--paper); border: 1px solid #C9BB90; border-bottom-width: 2px;
+    border-radius: 4px; font-family: ui-monospace, Consolas, monospace;
+    font-size: 11.5px; font-weight: 600; color: var(--ink);
+  }
+  .grade-inline {
+    width: 100%; box-sizing: border-box; text-align: center;
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    padding: 5px 2px; border: 2px solid #1D9E75; border-radius: 4px;
+    outline: none; background: #fff; -moz-appearance: textfield;
+  }
+  .grade-inline::-webkit-outer-spin-button,
+  .grade-inline::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .quick-add {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 14px; margin-bottom: 14px;
+  }
+  .quick-add label { display: block; font-size: 13px; color: var(--ink-muted); margin-bottom: 6px; }
+  .quick-add input {
+    width: 100%; max-width: 420px; padding: 9px 11px; box-sizing: border-box;
+    border: 1px solid var(--line); border-radius: 6px;
+    font-family: inherit; font-size: 15px;
+  }
+  .quick-add input:focus { outline: none; border-color: #1D9E75; box-shadow: 0 0 0 2px rgba(29,158,117,.15); }
+  .quick-add .qa-info { margin-left: 10px; font-size: 13px; color: var(--ink-muted); }
+  .dictate-fold { margin: 10px 0 14px 0; }
+  .dictate-fold > summary {
+    cursor: pointer; list-style: none; display: inline-block;
+    padding: 6px 12px; border: 1px dashed var(--line); border-radius: 6px;
+    font-size: 13px; color: var(--ink-muted); background: var(--paper);
+    user-select: none;
+  }
+  .dictate-fold > summary::-webkit-details-marker { display: none; }
+  .dictate-fold > summary:hover { border-color: var(--ink-muted); color: var(--ink); }
+  .dictate-fold[open] > summary { margin-bottom: 10px; }
 </style>
 </head>
 <body>
@@ -736,7 +783,7 @@
   <div id="classBar" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:14px"></div>
 
   <div class="info-box">
-    <strong>Szybki workflow:</strong> Zaznaczasz tylko <em>wyjątki</em> (kto dziś nie ćwiczył / nieobecny / brak stroju) — klikniesz na komórkę, wybierzesz status. Pozostali zostaną automatycznie zapisani jako <strong>C (ćwiczył)</strong> po kliknięciu <strong>"Zapisz lekcję"</strong>. Możesz też dyktować przez Win+H / Superwhisper.
+    <strong>Szybki workflow:</strong> Zaznaczasz tylko <em>wyjątki</em> (kto dziś nie ćwiczył / nieobecny / brak stroju) — z klawiatury: <kbd>↑</kbd><kbd>↓</kbd> wybierasz ucznia, litera nadaje status. Pozostali dostaną <strong>C (ćwiczył)</strong> po <kbd>Enter</kbd>. Mysz i dyktowanie nadal działają, ale nie są potrzebne.
     <br><br>
     <strong>Procent ćwiczył</strong> liczy się ze wzoru: <code>C / (C + NĆ + BS + NB)</code>. NU (usprawiedliwiony) i ZW (zwolnienie) wypadają z bazy. Wagary (NB) liczą się jak "nie ćwiczył".
   </div>
@@ -773,6 +820,8 @@
       </button>
     </div>
 
+    <details class="dictate-fold">
+      <summary>🎤 Dyktowanie głosem — rozwiń, jeśli wolisz mówić niż pisać</summary>
     <!-- Pole dyktowania -->
     <div class="dictate-zone">
       <textarea id="dictateField" placeholder="Tu możesz dyktować przez mikrofonik 🎤 albo przez Win+H / Superwhisper. Np: 'Kowalski obecny, Nowak nieobecny, Maciek brak stroju'"></textarea>
@@ -797,15 +846,33 @@
       </div>
     </div>
 
+    </details>
+
     <!-- Legenda statusów -->
     <div class="legend-row">
-      <span style="font-size:12px; color:var(--ink-muted); margin-right:8px;">Kliknij komórkę i wybierz:</span>
+      <span style="font-size:12px; color:var(--ink-muted); margin-right:8px;">Statusy (klawisz w nawiasie niżej):</span>
       <span class="status-btn status-c">C — ćwiczył</span>
       <span class="status-btn status-nc">NĆ — nie ćwiczył (bez zwolnienia)</span>
       <span class="status-btn status-bs">BS — brak stroju</span>
       <span class="status-btn status-nb">NB — nieobecny nieusprawiedliwiony</span>
       <span class="status-btn status-nu">NU — nieobecny usprawiedliwiony</span>
       <span class="status-btn status-zw">ZW — zwolnienie jednorazowe</span>
+    </div>
+
+    <div class="kbd-bar">
+      <strong>Klawiatura (nie klikaj myszą):</strong>
+      <span><kbd>↑</kbd><kbd>↓</kbd> wybór ucznia</span>
+      <span><kbd>c</kbd> ćwiczył</span>
+      <span><kbd>n</kbd> nie ćwiczył</span>
+      <span><kbd>b</kbd> brak stroju</span>
+      <span><kbd>w</kbd> wagary (NB)</span>
+      <span><kbd>u</kbd> usprawiedliwiony</span>
+      <span><kbd>z</kbd> zwolnienie</span>
+      <span>albo <kbd>1</kbd>–<kbd>6</kbd> w kolejności legendy</span>
+      <span><kbd>s</kbd> spóźnienie</span>
+      <span><kbd>0</kbd> wyczyść</span>
+      <span><kbd>Enter</kbd> zapisz lekcję</span>
+      <span style="color:var(--ink-muted)">Po nadaniu statusu kursor sam schodzi niżej.</span>
     </div>
 
     <div class="table-wrap">
@@ -848,6 +915,16 @@
       <button id="btnInstall" class="primary" style="display:none" onclick="installPWA()" title="Zainstaluj jako aplikację na telefonie">📲 Zainstaluj na telefonie</button>
     </div>
 
+    <div class="quick-add">
+      <label for="quickAddStudent">Dopisz uczniów — wpisz nazwisko i <kbd>Enter</kbd>. Pole zostaje aktywne, lecisz całą listą bez dotykania myszy.</label>
+      <input type="text" id="quickAddStudent" placeholder="np. Kowalski Jan" autocomplete="off"
+             onkeydown="quickAddKey(event)" onpaste="quickAddPaste(event)">
+      <span class="qa-info" id="quickAddInfo"></span>
+      <div style="font-size:12px;color:var(--ink-muted);margin-top:8px;">
+        W tabeli niżej: <kbd>Enter</kbd> przechodzi do pola niżej, a na ostatnim wierszu dopisuje kolejnego ucznia.
+      </div>
+    </div>
+
     <div class="info-box">
       <strong>Uwaga:</strong> "Zwolniony długoterminowo" oznacza ucznia ze zwolnieniem lekarskim na pół roku lub cały rok. Taki uczeń pokazuje się na liście, ale nie ma statystyk i nie można mu wpisywać obecności.
     </div>
@@ -875,6 +952,14 @@
   <div id="tab-pomiary" class="tab-content">
     <div class="info-box">
       Wpisz wyniki testów dla każdego ucznia. Wzrost i waga pochodzą z karty ucznia (zakładka Uczniowie).
+    </div>
+
+    <div class="kbd-bar">
+      <strong>Jak w arkuszu:</strong>
+      <span><kbd>Enter</kbd> zapisuje i schodzi <em>w dół tej samej kolumny</em></span>
+      <span><kbd>Shift</kbd>+<kbd>Enter</kbd> w górę</span>
+      <span><kbd>Tab</kbd> w bok</span>
+      <span style="color:var(--ink-muted)">Klikasz raz w pierwszą komórkę testu i lecisz całą klasą.</span>
     </div>
 
     <div class="table-wrap">
@@ -913,6 +998,8 @@
       </div>
     </div>
 
+    <details class="dictate-fold">
+      <summary>🎤 Dyktowanie ocen — rozwiń, jeśli wolisz mówić niż pisać</summary>
     <!-- Dyktowanie ocen -->
     <div class="oceny-mic-zone">
       <h4>🎤 Dyktowanie ocen do kolumny</h4>
@@ -931,6 +1018,19 @@
       <div class="oceny-mic-help">
         Format: <code>Nazwisko 85, Imię 50, Nazwisko 18</code> — rozpoznawane są imiona i nazwiska uczniów z listy.
       </div>
+    </div>
+
+    </details>
+
+    <div class="kbd-bar">
+      <strong>Wpisywanie kolumny:</strong>
+      <span>klik w pierwszą komórkę, wpisz liczbę 0–100</span>
+      <span><kbd>Enter</kbd> zapisuje i schodzi do następnego ucznia</span>
+      <span><kbd>Shift</kbd>+<kbd>Enter</kbd> w górę</span>
+      <span><kbd>Tab</kbd> następna kolumna</span>
+      <span><kbd>Esc</kbd> anuluj</span>
+      <span>puste pole + <kbd>Enter</kbd> = kasuje ocenę</span>
+      <span style="color:var(--ink-muted)">Dwuklik = stare okienko z suwakiem.</span>
     </div>
 
     <div class="oceny-toolbar">
@@ -1146,7 +1246,7 @@
     <div class="field">
       <label>Punkty (0–100)</label>
       <div class="points-row">
-        <input type="number" id="gradeValue" class="points-input" value="50" min="0" max="100" oninput="syncSlider()">
+        <input type="number" id="gradeValue" class="points-input" value="50" min="0" max="100" oninput="syncSlider()" onkeydown="if(event.key==='Enter'){event.preventDefault();saveGrade();}">
         <input type="range" id="gradeSlider" class="points-slider" min="0" max="100" value="50" oninput="syncNumber()">
       </div>
     </div>
@@ -1534,9 +1634,19 @@ function renderAttendance() {
   const tbody = document.getElementById('attendanceBody');
   tbody.innerHTML = '';
 
+  // Kursor klawiatury: zawsze na istniejącym, niezwolnionym uczniu
+  const kbdList = state.students.filter(x => !x.longTermReleased);
+  if (!kbdList.some(x => x.id === state.kbdStudentId)) {
+    state.kbdStudentId = kbdList.length ? kbdList[0].id : null;
+  }
+
   state.students.forEach((s, i) => {
     const tr = document.createElement('tr');
     if (s.longTermReleased) tr.classList.add('long-term-released');
+
+    tr.dataset.sid = s.id;
+    if (!s.longTermReleased && s.id === state.kbdStudentId) tr.classList.add('kbd-active');
+    if (!s.longTermReleased) tr.addEventListener('mousedown', () => setKbdRow(s.id));
 
     const stats = getStudentStats(s.id);
     const todayCell = attRead((state.attendance[state.currentDate] || {})[s.id]);
@@ -1599,7 +1709,7 @@ function updateSaveBar() {
     msg = `<strong>✓ Lekcja zapisana.</strong> ${alreadyC.length}× ćwiczył · ${exceptions.length} wyjątków · razem ${activeStudents.length} uczniów`;
   } else {
     bar.classList.remove('complete');
-    msg = `<strong>${withoutStatus.length}</strong> uczeń/uczniów bez statusu · ${exceptions.length} wyjątków zaznaczonych · klik <strong>"Zapisz"</strong> → pozostali dostaną <strong>C</strong>`;
+    msg = `<strong>${withoutStatus.length}</strong> uczeń/uczniów bez statusu · ${exceptions.length} wyjątków zaznaczonych · <strong>Enter</strong> (albo klik "Zapisz") → pozostali dostaną <strong>C</strong>`;
   }
   status.innerHTML = msg;
 }
@@ -1695,6 +1805,11 @@ function setStatus(status) {
 function renderStudents() {
   const tbody = document.getElementById('studentsBody');
   tbody.innerHTML = '';
+  const qaInfo = document.getElementById('quickAddInfo');
+  if (qaInfo) {
+    const n = state.students.length;
+    qaInfo.textContent = n === 0 ? 'lista pusta' : (n + (n === 1 ? ' uczeń' : (n < 5 ? ' uczniowie' : ' uczniów')) + ' w klasie');
+  }
   state.students.forEach((s, i) => {
     const tr = document.createElement('tr');
     if (s.longTermReleased) tr.classList.add('long-term-released');
@@ -2801,13 +2916,15 @@ function renderOcenyBody() {
 
     state.gradeColumns.forEach(col => {
       const v = (state.grades[col.id] || {})[student.id];
+      const cellAttrs = `data-col="${col.id}" data-sid="${student.id}" `
+        + `onclick="editGradeCell(this)" ondblclick="openGradeModal('${col.id}','${student.id}')"`;
       if (v === undefined || v === null) {
-        h += `<td class="cell-ocena empty" onclick="openGradeModal('${col.id}','${student.id}')">`;
+        h += `<td class="cell-ocena empty" ${cellAttrs}>`;
         h += `<span class="cell-ocena-content"></span></td>`;
       } else {
         const valClass = getGradeValClass(v);
         const menCls = v === 0 ? 'men warn' : 'men';
-        h += `<td class="cell-ocena ${valClass}" onclick="openGradeModal('${col.id}','${student.id}')">`;
+        h += `<td class="cell-ocena ${valClass}" ${cellAttrs}>`;
         h += `<span class="cell-ocena-content"><span class="val">${v}</span><span class="${menCls}">${gradeMenLabel(v)}</span></span></td>`;
       }
     });
@@ -3208,6 +3325,283 @@ window.addEventListener('appinstalled', () => {
   const b = document.getElementById('btnInstall');
   if (b) b.style.display = 'none';
 });
+// =====================================================
+// WPROWADZANIE Z KLAWIATURY (laptop, seria przy biurku)
+// Trzy tryby, jedna zasada: Enter zapisuje i schodzi w dol.
+// =====================================================
+
+// --- Obecnosc: kursor po uczniach + litera = status ---
+const KBD_STATUS = {
+  '1': 'C',  '2': 'NC', '3': 'BS', '4': 'NB', '5': 'NU', '6': 'ZW',
+  'c': 'C',  'n': 'NC', 'b': 'BS', 'w': 'NB', 'u': 'NU', 'z': 'ZW'
+};
+
+function kbdActiveStudents() {
+  return state.students.filter(s => !s.longTermReleased);
+}
+
+function setKbdRow(sid) {
+  state.kbdStudentId = sid;
+  const tbody = document.getElementById('attendanceBody');
+  if (!tbody) return;
+  Array.from(tbody.rows).forEach(r => r.classList.toggle('kbd-active', r.dataset.sid === sid));
+  const row = Array.from(tbody.rows).find(r => r.dataset.sid === sid);
+  if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest' });
+}
+
+function moveKbdRow(delta) {
+  const list = kbdActiveStudents();
+  if (!list.length) return;
+  let i = list.findIndex(s => s.id === state.kbdStudentId);
+  if (i < 0) i = (delta > 0 ? -1 : 0);
+  i = Math.max(0, Math.min(list.length - 1, i + delta));
+  setKbdRow(list[i].id);
+}
+
+function kbdSetStatus(status) {
+  const sid = state.kbdStudentId;
+  if (!sid) return;
+  if (!state.attendance[state.currentDate]) state.attendance[state.currentDate] = {};
+  const day = state.attendance[state.currentDate];
+  if (status === null) {
+    delete day[sid];
+    if (Object.keys(day).length === 0) delete state.attendance[state.currentDate];
+    save();
+    renderAttendance();
+    return;
+  }
+  const prev = attRead(day[sid]);
+  day[sid] = attWrite(status, prev.sp);   // spoznienie przezywa zmiane statusu
+  save();
+  renderAttendance();
+  moveKbdRow(1);                          // kursor sam schodzi do nastepnego ucznia
+}
+
+function kbdToggleLate() {
+  const sid = state.kbdStudentId;
+  if (!sid) return;
+  const day = state.attendance[state.currentDate];
+  const cur = attRead(day ? day[sid] : undefined);
+  if (!cur.s) { showToast('Najpierw nadaj status (c/n/b/w/u/z), potem \u23F1 klawiszem s.', 'warn'); return; }
+  day[sid] = attWrite(cur.s, !cur.sp);
+  save();
+  renderAttendance();
+}
+
+function kbdModalOpen() {
+  return !!document.querySelector('.modal-bg.active');
+}
+
+function kbdTypingTarget(t) {
+  if (!t) return false;
+  const tag = t.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || t.isContentEditable;
+}
+
+document.addEventListener('keydown', function (e) {
+  const tab = document.getElementById('tab-obecnosc');
+  if (!tab || !tab.classList.contains('active')) return;
+  if (kbdModalOpen() || kbdTypingTarget(e.target)) return;
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+  const k = (e.key || '').toLowerCase();
+  if (k === 'arrowdown') { e.preventDefault(); moveKbdRow(1); return; }
+  if (k === 'arrowup')   { e.preventDefault(); moveKbdRow(-1); return; }
+  if (k === 'enter')     { e.preventDefault(); finalizeLesson(); return; }
+  if (k === 's')         { e.preventDefault(); kbdToggleLate(); return; }
+  if (k === '0' || k === 'delete' || k === 'backspace') { e.preventDefault(); kbdSetStatus(null); return; }
+  if (KBD_STATUS[k])     { e.preventDefault(); kbdSetStatus(KBD_STATUS[k]); return; }
+});
+
+// --- Siatka inputow (Uczniowie, Pomiary, pole nazwiska w Obecnosci) ---
+// Enter / strzalki = ruch w PIONIE po tej samej kolumnie, jak w arkuszu.
+function gridNavKey(e) {
+  const el = e.target;
+  if (!el || el.tagName !== 'INPUT') return;
+  if (el.classList.contains('grade-inline')) return;              // oceny maja wlasna obsluge
+  if (['checkbox', 'date', 'range', 'file', 'password'].indexOf(el.type) >= 0) return;
+  const td = el.closest('td');   if (!td) return;
+  const tr = td.closest('tr');   if (!tr) return;
+  const tbody = tr.closest('tbody'); if (!tbody) return;
+
+  let dir = 0;
+  if (e.key === 'Enter') dir = e.shiftKey ? -1 : 1;
+  else if (e.key === 'ArrowDown') dir = 1;
+  else if (e.key === 'ArrowUp') dir = -1;
+  else return;
+
+  e.preventDefault();
+  const col = td.cellIndex;
+  const rows = Array.from(tbody.rows);
+  const idx = rows.indexOf(tr);
+  const next = rows[idx + dir];
+
+  if (!next) {
+    // Ostatni wiersz listy uczniow + Enter w dol = dopisz kolejnego i wejdz w jego pole
+    if (dir === 1 && tbody.id === 'studentsBody') {
+      addStudent();
+      const rows2 = document.getElementById('studentsBody').rows;
+      const last = rows2[rows2.length - 1];
+      const inp = last && last.cells[col] && last.cells[col].querySelector('input');
+      if (inp) { inp.focus(); if (inp.select) inp.select(); }
+    }
+    return;
+  }
+  const target = next.cells[col] && next.cells[col].querySelector('input:not([type=checkbox])');
+  if (target) { target.focus(); if (target.select) target.select(); }
+}
+document.addEventListener('keydown', gridNavKey, true);
+
+// --- Dopisywanie uczniow ciagiem (zakladka Uczniowie) ---
+function kbdAddStudents(names) {
+  const clean = names.map(n => n.trim()).filter(Boolean);
+  if (!clean.length) return 0;
+  // Najpierw zapelniam puste wiersze, ktore juz sa na liscie (zeby nie zostawaly smieci)
+  const empties = state.students.filter(x => !x.name || !x.name.trim());
+  clean.forEach((n, j) => {
+    const slot = empties.shift();
+    if (slot) { slot.name = n; return; }
+    state.students.push({
+      id: 'u' + Date.now() + '_' + j + Math.random().toString(36).slice(2, 5),
+      name: n, longTermReleased: false, height: '', weight: ''
+    });
+  });
+  save();
+  renderStudents();
+  return clean.length;
+}
+
+function quickAddKey(e) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const inp = e.target;
+  const added = kbdAddStudents((inp.value || '').split(/[\r\n;]+/));
+  if (added) { inp.value = ''; inp.focus(); }
+}
+
+function quickAddPaste(e) {
+  const cb = e.clipboardData || window.clipboardData;
+  const txt = cb ? cb.getData('text') : '';
+  if (!txt || !/[\r\n]/.test(txt)) return;      // pojedyncza linia - normalne wklejenie
+  e.preventDefault();
+  const added = kbdAddStudents(txt.split(/[\r\n]+/));
+  const inp = e.target;
+  inp.value = '';
+  inp.focus();
+  if (added) showToast('Dopisano ' + added + ' uczniów.', 'success');
+}
+
+// --- Oceny: edycja w komorce, Enter schodzi do nastepnego ucznia ---
+function editGradeCell(td) {
+  if (!td || !td.dataset || !td.dataset.col) return;
+  if (td.querySelector('input')) return;                  // juz w edycji
+  const cid = td.dataset.col, sid = td.dataset.sid;
+  const col = state.gradeColumns.find(c => c.id === cid);
+  if (!col) return;
+  if (col.auto) {
+    showToast('To ocena z systematycznosci - liczona automatycznie z frekwencji, nie wpisuje sie recznie.', 'info');
+    return;
+  }
+
+  const cur = (state.grades[cid] || {})[sid];
+  const backup = td.innerHTML;
+  td.innerHTML = '<input type="number" class="grade-inline" min="0" max="100" value="'
+    + (cur === undefined || cur === null ? '' : cur) + '">';
+  const inp = td.querySelector('input');
+  inp.focus();
+  inp.select();
+
+  inp.onblur = function () { commitGradeCell(td, inp, 0, 0); };
+  inp.onkeydown = function (ev) {
+    if (ev.key === 'Enter')           { ev.preventDefault(); commitGradeCell(td, inp, ev.shiftKey ? -1 : 1, 0); }
+    else if (ev.key === 'ArrowDown')  { ev.preventDefault(); commitGradeCell(td, inp, 1, 0); }
+    else if (ev.key === 'ArrowUp')    { ev.preventDefault(); commitGradeCell(td, inp, -1, 0); }
+    else if (ev.key === 'Tab')        { ev.preventDefault(); commitGradeCell(td, inp, 0, ev.shiftKey ? -1 : 1); }
+    else if (ev.key === 'Escape')     { ev.preventDefault(); inp.onblur = null; td.innerHTML = backup; }
+  };
+}
+
+function commitGradeCell(td, inp, rowDelta, colDelta) {
+  if (td._committing) return;
+  td._committing = true;
+  inp.onblur = null;
+
+  const cid = td.dataset.col, sid = td.dataset.sid;
+  const raw = (inp.value || '').trim();
+  if (raw === '') {
+    if (state.grades[cid]) delete state.grades[cid][sid];      // puste + Enter = kasuje ocene
+  } else {
+    let v = parseInt(raw, 10);
+    if (isNaN(v)) v = 0;
+    v = Math.max(0, Math.min(100, v));
+    if (!state.grades[cid]) state.grades[cid] = {};
+    state.grades[cid][sid] = v;
+  }
+  save();
+  renderOceny();                                              // stary <td> znika razem z flaga
+
+  const nxt = nextGradeCell(cid, sid, rowDelta, colDelta);
+  if (nxt) editGradeCell(nxt);
+}
+
+function nextGradeCell(cid, sid, rowDelta, colDelta) {
+  const body = document.getElementById('ocenyBody');
+  if (!body) return null;
+  if (colDelta) {
+    const cols = state.gradeColumns.filter(c => !c.auto);
+    let i = cols.findIndex(c => c.id === cid);
+    if (i < 0) return null;
+    i += colDelta;
+    if (i < 0 || i >= cols.length) return null;
+    return body.querySelector('td[data-col="' + cols[i].id + '"][data-sid="' + sid + '"]');
+  }
+  if (!rowDelta) return null;
+  const cells = Array.from(body.querySelectorAll('td[data-col="' + cid + '"]'));
+  const i = cells.findIndex(c => c.dataset.sid === sid);
+  if (i < 0) return null;
+  return cells[i + rowDelta] || null;
+}
+// --- Modale zatwierdzane klawiaturą (zeby sciezka bez myszy nie urywala sie w polowie) ---
+document.addEventListener('keydown', function (e) {
+  const open = document.querySelector('.modal-bg.active');
+  if (!open) return;
+  const k = e.key;
+  const inField = kbdTypingTarget(e.target);
+
+  if (k === 'Escape') {
+    e.preventDefault();
+    if (open.id === 'confirmModal') confirmCancel();
+    else if (open.id === 'statusPicker') closePicker();
+    else if (open.id === 'gradeModal') closeGradeModal();
+    else if (open.id === 'columnModal') closeColumnModal();
+    else if (open.id === 'classPromptModal') classPromptCancel();
+    else if (open.id === 'pwdPromptModal') pwdPromptCancel();
+    return;
+  }
+
+  if (k === 'Enter' && open.id === 'confirmModal') {
+    e.preventDefault();
+    confirmOk();
+    return;
+  }
+  if (k === 'Enter' && open.id === 'columnModal' && inField) {
+    e.preventDefault();
+    saveColumn();
+    return;
+  }
+
+  // Picker statusow otwarty myszka: litera/cyfra tez dziala
+  if (open.id === 'statusPicker' && !inField) {
+    const low = (k || '').toLowerCase();
+    if (KBD_STATUS[low]) {
+      e.preventDefault();
+      setStatus(KBD_STATUS[low]);
+    } else if (low === '0') {
+      e.preventDefault();
+      setStatus(null);
+    }
+  }
+}, true);
 </script>
 </body>
 </html>

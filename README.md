@@ -15,6 +15,61 @@ na żaden serwer.
 - Backupy trzymaj w `backups/` — folder jest w `.gitignore` (imiona/oceny dzieci
   NIGDY nie idą do git ani na Drive bez szyfrowania — zakaz CLAUDE.md projektu).
 
+## Wprowadzanie danych z klawiatury (Faza 5, laptop)
+
+Założenie: dane wpisujesz **przy biurku, serią po lekcji**. Mysz nie jest potrzebna
+w żadnej z trzech ścieżek; wszędzie obowiązuje ta sama zasada — **Enter zapisuje
+i schodzi w dół**.
+
+**Frekwencja** (zakładka Obecność, kursor = podświetlony wiersz):
+
+| klawisz | co robi |
+|---|---|
+| `↑` `↓` | wybór ucznia |
+| `c` | ćwiczył (C) |
+| `n` | nie ćwiczył (NĆ) |
+| `b` | brak stroju (BS) |
+| `w` | wagary / nieobecny nieusprawiedliwiony (NB) |
+| `u` | nieobecny usprawiedliwiony (NU) |
+| `z` | zwolnienie jednorazowe (ZW) |
+| `1`–`6` | to samo, w kolejności legendy |
+| `s` | dokleja spóźnienie do statusu, który już jest |
+| `0` | czyści status |
+| `Enter` | zapisuje lekcję (drugi `Enter` potwierdza okno) |
+
+Po nadaniu statusu kursor **sam schodzi niżej** — zaznaczasz tylko wyjątki i kończysz
+`Enter`em. Okienko statusów (klik myszą) nadal działa i też przyjmuje te litery;
+w nim siedzą zaległe usprawiedliwienia NB.
+
+**Oceny i pomiary** — edycja wprost w komórce, bez okna:
+`Enter` zapis + następny uczeń · `Shift+Enter` w górę · `Tab` następna kolumna ·
+`Esc` anuluj · puste pole + `Enter` kasuje ocenę · dwuklik otwiera stare okno z suwakiem.
+
+**Lista klasy** (zakładka Uczniowie): pole „Dopisz uczniów" — nazwisko + `Enter`,
+pole zostaje aktywne, lecisz całą kartką. Wklejenie kilku linii naraz dodaje wszystkich.
+Puste wiersze, które już są na liście, zapełniają się pierwsze. W tabeli `Enter`
+przechodzi do pola niżej, a na ostatnim wierszu dopisuje kolejnego ucznia.
+
+Wszystkie okna (potwierdzenia, hasła, nowa kolumna) zamyka `Esc`, a zatwierdza `Enter`.
+
+### Bramka regresji
+
+```
+py -3.14 test_klawiatura.py
+```
+
+21 sprawdzeń end-to-end w prawdziwej przeglądarce (Playwright): steruje wyłącznie
+klawiaturą i czyta stan z `localStorage`. Zrzuty ekranu lądują w `_zrzuty/` (poza git).
+**Po każdej zmianie w `dziennik_wf.html` odpal ten test** — ścieżka klawiaturowa jest
+niewidoczna gołym okiem i łatwo ją zepsuć przy okazji innej poprawki.
+
+## Uwaga operacyjna: jedno miejsce uruchamiania
+
+Dane siedzą w `localStorage`, który jest **osobny dla pliku na dysku i dla adresu
+https://**. Otwierany raz stąd, raz stamtąd dziennik pokaże dwa różne komplety danych.
+Wybierz jedno miejsce i trzymaj się go przez cały rok; przenosiny = eksport JSON
+z jednego, import w drugim.
+
 ## Status
 
 Adoptowany do projektu `nauczyciel` 2026-05-18 (był prototypem w Downloads).
@@ -44,4 +99,14 @@ Adoptowany do projektu `nauczyciel` 2026-05-18 (był prototypem w Downloads).
     licznika na dacie granicznej; auto-kolumny read-only.
   Niezweryfikowane na żywo: render/klikanie w przeglądarce (logika
   przetestowana w Node — progi, okna półrocza, round-trip spóźnienia).
+  → **Domknięte przy Fazie 5**: `test_klawiatura.py` przeszedł w prawdziwym
+  Chromium — auto-kolumna Syst. renderuje się i jest chroniona przed ręcznym
+  wpisem, widełki %→ocena pokazują się w tabeli, spóźnienie robi round-trip
+  przez UI. Otwarte zostają tylko założenia (waga=1, kolumny na początku).
   Założenia do ew. korekty: waga systematyczności=1, kolumny na początku.
+- Faza 5 (wdrożona, przetestowana e2e): wprowadzanie danych z klawiatury —
+  litery/cyfry nadają status frekwencji z auto-zejściem kursora, oceny i pomiary
+  edytowane wprost w komórce (`Enter` w dół), dopisywanie uczniów ciągiem,
+  `Enter`/`Esc` w oknach dialogowych, panele dyktowania zwinięte (tabela wyżej
+  na ekranie). Bramka: `test_klawiatura.py`, 21/21 PASS, render obejrzany.
+  Szczegóły niżej: „Wprowadzanie danych z klawiatury".
