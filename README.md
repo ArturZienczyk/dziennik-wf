@@ -10,7 +10,9 @@ na żaden serwer.
 
 ## Dane i backup
 
-- Dane żyją w `localStorage` przeglądarki — **per przeglądarka, per komputer**.
+- Dane żyją w `localStorage` **i** w IndexedDB tej przeglądarki — per przeglądarka,
+  per komputer. Drugi magazyn jest po to, by wpisy nie ginęły, gdy wspólny limit
+  plików otwieranych z dysku się zapełni (patrz „Pełna pamięć przeglądarki").
 - Kopia zapasowa: **zawsze zaszyfrowana hasłem** — auto raz dziennie przy zapisie
   lekcji, przed każdą operacją kasującą i ręcznie przyciskiem „Zapisz kopię".
   Szczegóły: „Kopie zapasowe — zawsze zaszyfrowane" niżej.
@@ -135,6 +137,45 @@ zmianie, która dokłada bibliotekę, ikonę albo czcionkę.
   zapisane przez strony). Kopie lądują w `D:\Users\Downloads` — zwykłym folderze
   lokalnym, poza OneDrive i bez Google Drive for Desktop — i są zaszyfrowane.
 
+## Pełna pamięć przeglądarki (Faza 8) — przyczyna „nie mogę dopisać klasy"
+
+**Objaw zgłoszony 2026-09-14:** klikasz „+ klasa", wpisujesz nazwę, zatwierdzasz —
+i nic. Klasy nie ma w pasku, nie ma komunikatu, po ponownym otwarciu nie ma jej też
+w danych.
+
+**Przyczyna:** pliki HTML otwierane **z dysku** (`file://`) dzielą w Chrome
+**jeden wspólny magazyn** — wszystkie naraz, limit 10 MB łącznie, nie każdy osobno.
+Zapełniły go inne projekty na tym komputerze (klucze `deckimg_PROMPTY_*`,
+`ilumkom-v1:*` — patrz `strusie-kniewo/docs/KANON-dziennik-partii.md`, gdzie ten sam
+mechanizm rozbroił dziennik partii 2026-09-04). Gdy magazyn jest pełny,
+`localStorage.setItem` rzuca `QuotaExceededError` — a `save()` nie miał żadnej
+obsługi błędu, więc wyjątek **przerywał operację w połowie**: klasa siadała w pamięci
+strony, pasek się nie odświeżał, na dysk nie szło nic i nie było żadnego komunikatu.
+
+To nie dotyczyło samych klas. **Tak samo cicho przepadał każdy status frekwencji,
+każda ocena i każde nazwisko** — aplikacja wyglądała na sprawną.
+
+**Lek — dwa magazyny zamiast jednego:**
+
+- Zapis idzie do `localStorage` **i** do IndexedDB, który ma własny limit liczony
+  z miejsca na dysku. Gdy pierwszy jest pełny, drugi pracuje dalej.
+- Przy starcie wygrywa **nowszy** zapis (pole `savedAt`) — również wtedy, gdy
+  w `localStorage` nie ma nic, bo ostatnie lekcje trafiły tylko do zapasowego.
+- Do IndexedDB piszemy z sekundowym opóźnieniem (`save()` leci przy każdym znaku
+  w nazwisku), ale `pagehide` domyka ostatni zapis przy zamykaniu karty.
+- **Awaria jest głośna:** czerwony baner na górze mówi, co się dzieje. Gdy padną oba
+  magazyny, baner żąda zrobienia kopii, zanim zamkniesz kartę.
+- Próbny zapis **przy starcie** — dowiadujesz się o pełnej pamięci, zanim wpiszesz
+  lekcję, a nie po tym, jak wpisy przepadną.
+- Przycisk **„🔍 Co zajmuje pamięć?"** pokazuje wszystkie wpisy z rozmiarami
+  i pozwala skasować cudze. Wpisów dziennika nie da się tam odznaczyć. Dziennik
+  **nie kasuje cudzych danych sam** — decyzja należy do użytkownika.
+
+Bramka: `py -3.14 test_pamiec.py` — 9 sprawdzeń. Zapycha magazyn do limitu
+i sprawdza, że przy pełnej pamięci klasa się dodaje, jest widoczna, użytkownik
+dostaje komunikat, a **klasa i wpis frekwencji przeżywają ponowne otwarcie**.
+Na koniec zwalnia miejsce i sprawdza, że zapis wraca do `localStorage`, a baner znika.
+
 ## Uwaga operacyjna: jedno miejsce uruchamiania
 
 Dane siedzą w `localStorage`, który jest **osobny dla pliku na dysku i dla adresu
@@ -191,3 +232,7 @@ Adoptowany do projektu `nauczyciel` 2026-05-18 (był prototypem w Downloads).
   żadnego zapytania poza laptop (było 6 do Google po czcionki przy każdym otwarciu)
   i wygląda tak samo bez internetu. Bramka: `test_siec.py`. Otwarte zostaje: mikrofon
   (rozpoznawanie mowy po stronie Google) i brak zamka na aplikacji.
+- Faza 8 (wdrożona, odtworzona kontrolą): drugi magazyn (IndexedDB) + głośny baner
+  + podgląd zajętości pamięci. Powód: wspólny limit `file://` był pełny, `save()`
+  nie miał obsługi błędu i każdy zapis cicho przepadał — objaw „nie mogę dopisać
+  klasy". Bramka: `test_pamiec.py`, 9/9 PASS.

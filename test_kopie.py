@@ -108,7 +108,7 @@ with sync_playwright() as pw:
     page.click('button:has-text("Uczniowie")')
     page.wait_for_timeout(200)
     with page.expect_download(timeout=15000) as dl2_info:
-        page.click('button:has-text("Zapisz kopię")')
+        page.click('#tab-uczniowie button:has-text("Zapisz kopię")')
     dl2 = dl2_info.value
     ręczna = SHOTS / "reczna_kopia.enc.json"
     dl2.save_as(str(ręczna))

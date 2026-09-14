@@ -832,6 +832,15 @@
   <h1>Dziennik WF</h1>
   <p class="subtitle">Obecność, pomiary, statystyki · dane zapisują się lokalnie</p>
 
+  <div id="magazynBaner" style="display:none;background:#FFF0F0;border:1px solid #E0A0A0;border-left:4px solid #C0392B;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13.5px;line-height:1.6;">
+    <strong style="color:#C0392B;">⚠ Pamięć przeglądarki jest pełna — dziennik pisze do magazynu zapasowego.</strong>
+    <div id="magazynBanerTresc" style="margin-top:6px;color:var(--ink);"></div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button onclick="pokazZajetoscPamieci()" style="padding:7px 12px;font-size:13px;">🔍 Co zajmuje pamięć?</button>
+      <button class="primary" onclick="exportEncrypted()" style="padding:7px 12px;font-size:13px;">🔒 Zapisz kopię teraz</button>
+    </div>
+  </div>
+
   <div id="classBar" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:14px"></div>
 
   <div class="info-box">
@@ -1313,6 +1322,26 @@
   </div>
 </div>
 
+<!-- Modal: zajetosc localStorage -->
+<div class="modal-bg" id="pamiecModal" onclick="if(event.target===this) zamknijPamiecModal()">
+  <div class="modal" style="max-width: 640px;">
+    <h3 style="margin-bottom: 8px;">Co zajmuje pamięć przeglądarki</h3>
+    <p style="font-size: 13px; color: var(--ink-muted); margin: 0 0 14px 0;">
+      Pliki HTML otwierane <strong>z dysku</strong> dzielą jeden limit (10 MB) — wszystkie naraz, nie każdy osobno.
+      Poniżej wszystko, co w nim siedzi. Wpisy dziennika są oznaczone; reszta to inne strony i narzędzia.
+      <strong>Kasujesz na własną odpowiedzialność</strong> — dziennik nie rusza cudzych danych sam.
+    </p>
+    <div id="pamiecLista" style="max-height: 340px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px;"></div>
+    <div style="margin-top: 14px; display: flex; gap: 8px; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+      <span id="pamiecPodsumowanie" style="font-size: 13px; color: var(--ink-muted);"></span>
+      <div style="display:flex; gap:8px;">
+        <button onclick="zamknijPamiecModal()" style="padding: 9px 16px;">Zamknij</button>
+        <button class="danger" onclick="usunZaznaczonePamiec()" style="padding: 9px 16px;">Usuń zaznaczone</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Toast - powiadomienia -->
 <div id="toast" style="position: fixed; top: 20px; right: 20px; padding: 14px 20px; background: #1D9E75; color: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: 14px; font-weight: 500; z-index: 200; display: none; max-width: 350px;"></div>
 
@@ -1399,6 +1428,138 @@ function migrateFlat(data) {
   state.currentClassId = c.id;
 }
 
+// =====================================================
+// MAGAZYN DANYCH — localStorage + IndexedDB (Faza 8)
+// =====================================================
+// Po co: przy otwieraniu pliku z dysku (file://) Chrome daje WSZYSTKIM plikom
+// HTML na tym komputerze jeden wspolny adres i jeden limit 10 MB. Gdy zapelni go
+// inny projekt, localStorage.setItem rzuca QuotaExceededError — a poniewaz save()
+// nie mial obslugi bledu, wyjatek przerywal operacje w połowie: klasa siadala
+// w pamieci strony, pasek sie nie odswiezał, nic nie szlo na dysk i NIE BYLO
+// Żadnego komunikatu. Objaw: „nie mogę dopisać klasy” (i po cichu: znikające oceny).
+//
+// Lek: pisz do obu magazynów. IndexedDB ma WLASNY limit, liczony z miejsca na
+// dysku, wiec dziala, gdy localStorage jest pełny. Przy starcie wygrywa nowszy
+// zapis (pole savedAt). Awaria jest głośna — baner na górze, nie cichy catch.
+const IDB_NAME = 'dziennik_wf';
+const IDB_STORE = 'stan';
+const IDB_KEY = 'stan';
+const magazyn = { lsPelna: false, idbOk: null, ostatniBlad: '' };
+
+function idbOtworz() {
+  return new Promise((res, rej) => {
+    if (!window.indexedDB) { rej(new Error('brak IndexedDB')); return; }
+    const r = indexedDB.open(IDB_NAME, 1);
+    r.onupgradeneeded = () => {
+      if (!r.result.objectStoreNames.contains(IDB_STORE)) r.result.createObjectStore(IDB_STORE);
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error || new Error('IndexedDB nie otwiera sie'));
+  });
+}
+
+function idbZapisz(dane) {
+  return idbOtworz().then(db => new Promise((res, rej) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(dane, IDB_KEY);
+    tx.oncomplete = () => { db.close(); res(true); };
+    tx.onerror = () => { db.close(); rej(tx.error); };
+    tx.onabort = () => { db.close(); rej(tx.error); };
+  }));
+}
+
+function idbCzytaj() {
+  return idbOtworz().then(db => new Promise((res, rej) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const q = tx.objectStore(IDB_STORE).get(IDB_KEY);
+    q.onsuccess = () => { db.close(); res(q.result || null); };
+    q.onerror = () => { db.close(); rej(q.error); };
+  }));
+}
+
+// save() leci przy kazdym znaku w nazwisku — do IndexedDB piszemy rzadziej,
+// ale zawsze domykamy zapis przy zamykaniu karty (pagehide).
+let idbTimer = null;
+let idbOczekujace = null;
+function idbZapiszZOpoznieniem(dane, natychmiast) {
+  idbOczekujace = dane;
+  clearTimeout(idbTimer);
+  const wykonaj = () => {
+    const d = idbOczekujace;
+    idbOczekujace = null;
+    if (!d) return;
+    idbZapisz(d)
+      .then(() => { magazyn.idbOk = true; })
+      .catch(e => { magazyn.idbOk = false; magazyn.ostatniBlad = (e && e.name) || String(e); })
+      .then(() => odswiezBanerMagazynu());
+  };
+  if (natychmiast) wykonaj(); else idbTimer = setTimeout(wykonaj, 1000);
+}
+window.addEventListener('pagehide', () => { if (idbOczekujace) idbZapiszZOpoznieniem(idbOczekujace, true); });
+
+function odswiezBanerMagazynu() {
+  const baner = document.getElementById('magazynBaner');
+  const tresc = document.getElementById('magazynBanerTresc');
+  if (!baner || !tresc) return;
+  if (!magazyn.lsPelna) { baner.style.display = 'none'; return; }
+  baner.style.display = '';
+  tresc.innerHTML = magazyn.idbOk
+    ? 'Twoje wpisy <strong>są zapisywane</strong> — dziennik przełączył się na magazyn zapasowy (IndexedDB), '
+      + 'który ma osobny limit. Nic nie ginie, ale warto zwolnić miejsce: ten wspólny limit 10 MB dzielą '
+      + 'wszystkie pliki HTML otwierane z dysku na tym komputerze.'
+    : '<strong style="color:#C0392B;">UWAGA: zapis nie działa żadną drogą</strong> ('
+      + escapeHtml(magazyn.ostatniBlad || 'nieznany błąd') + '). Zrób kopię <em>teraz</em>, '
+      + 'zanim zamkniesz tę kartę — inaczej dzisiejsze wpisy przepadną.';
+}
+
+// --- Podglad zajetosci: user sam decyduje, co skasowac (dziennik nie rusza cudzego) ---
+function pokazZajetoscPamieci() {
+  const lista = document.getElementById('pamiecLista');
+  const wiersze = [];
+  let razem = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    const v = localStorage.getItem(k) || '';
+    const bajty = (k.length + v.length) * 2;   // UTF-16
+    razem += bajty;
+    wiersze.push({ k: k, bajty: bajty, nasz: k.indexOf('dziennik_wf') === 0 });
+  }
+  wiersze.sort((a, b) => b.bajty - a.bajty);
+
+  lista.innerHTML = wiersze.map(w =>
+    '<label style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line-soft);font-size:13px;'
+    + (w.nasz ? 'background:#F0F8F4;' : '') + '">'
+    + '<input type="checkbox" class="pamiec-ptaszek" value="' + escapeHtml(w.k) + '"'
+    + (w.nasz ? ' disabled title="wpis dziennika — nie do skasowania"' : '') + '>'
+    + '<span style="flex:1;font-family:ui-monospace,Consolas,monospace;word-break:break-all;">' + escapeHtml(w.k) + '</span>'
+    + '<span style="color:var(--ink-muted);white-space:nowrap;">' + (w.bajty / 1024).toFixed(1) + ' KB</span>'
+    + (w.nasz ? '<span style="color:#1D9E75;font-weight:600;white-space:nowrap;">dziennik</span>' : '')
+    + '</label>'
+  ).join('') || '<div style="padding:20px;text-align:center;color:var(--ink-muted);">Pamięć jest pusta.</div>';
+
+  document.getElementById('pamiecPodsumowanie').textContent =
+    wiersze.length + ' wpisów, razem ' + (razem / 1024 / 1024).toFixed(2) + ' MB z ok. 10 MB limitu';
+  document.getElementById('pamiecModal').classList.add('active');
+}
+
+function zamknijPamiecModal() {
+  document.getElementById('pamiecModal').classList.remove('active');
+}
+
+function usunZaznaczonePamiec() {
+  const zazn = Array.from(document.querySelectorAll('.pamiec-ptaszek:checked')).map(x => x.value);
+  if (!zazn.length) { showToast('Nic nie zaznaczono.', 'warn'); return; }
+  showConfirm('Usuń z pamięci przeglądarki',
+    'Usunąć ' + zazn.length + ' wpis(ów)? To dane INNYCH stron i narzędzi — dziennika nie dotyczą, '
+    + 'ale tamte projekty mogą stracić swoje zapisy.',
+    () => {
+      zazn.forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
+      showToast('Usunięto ' + zazn.length + ' wpis(ów). Spróbuj zapisać coś w dzienniku.', 'success');
+      save();
+      pokazZajetoscPamieci();
+    });
+}
+
 function load() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
@@ -1420,6 +1581,32 @@ function load() {
     initDefault();
   }
   activateClass(state.currentClassId);
+  wczytajZapasowyMagazyn(saved);
+}
+
+// IndexedDB czyta się asynchronicznie, więc dociera chwilę po pierwszym renderze.
+// Bierzemy go, gdy jest NOWSZY niż to, co leży w localStorage (albo gdy tam pusto —
+// dokładnie przypadek pełnego limitu: ostatnie lekcje są tylko w zapasowym magazynie).
+function wczytajZapasowyMagazyn(surowyLS) {
+  if (!window.indexedDB) return;
+  let stempelLS = 0;
+  try { stempelLS = (JSON.parse(surowyLS || '{}') || {}).savedAt || 0; } catch (e) { stempelLS = 0; }
+
+  idbCzytaj().then(zapas => {
+    magazyn.idbOk = true;
+    if (!zapas || !Array.isArray(zapas.classes) || !zapas.classes.length) return;
+    if ((zapas.savedAt || 0) <= stempelLS) return;         // localStorage ma nowsze albo tyle samo
+    state.classes = zapas.classes;
+    state.currentClassId = zapas.currentClassId || zapas.classes[0].id;
+    activateClass(state.currentClassId);
+    uiSelectedSchool = null;
+    refreshAll();
+    showToast('Przywrócono nowszą wersję danych z magazynu zapasowego.', 'info');
+  }).catch(e => {
+    magazyn.idbOk = false;
+    magazyn.ostatniBlad = (e && e.name) || String(e);
+    odswiezBanerMagazynu();
+  });
 }
 
 function initDefault() {
@@ -1434,10 +1621,21 @@ function initDefault() {
 
 function save() {
   // state.students itd. są referencjami do state.classes[i], więc to wystarcza.
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+  const dane = {
     classes: state.classes,
-    currentClassId: state.currentClassId
-  }));
+    currentClassId: state.currentClassId,
+    savedAt: Date.now()          // rozstrzyga, który magazyn ma nowszą wersję
+  };
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(dane));
+    if (magazyn.lsPelna) { magazyn.lsPelna = false; odswiezBanerMagazynu(); }  // miejsce wróciło
+  } catch (e) {
+    // Pełny wspólny limit file:// — NIE przerywamy pracy, idziemy drugą drogą.
+    magazyn.lsPelna = true;
+    magazyn.ostatniBlad = (e && e.name) || String(e);
+    odswiezBanerMagazynu();
+  }
+  idbZapiszZOpoznieniem(dane, magazyn.lsPelna);   // przy pełnym localStorage nie zwlekamy
 }
 
 // =====================================================
@@ -3416,10 +3614,20 @@ function showToast(message, type) {
 // START
 // =====================================================
 load();
+// Próbny zapis na starcie: user ma wiedzieć o pełnej pamięci ZANIM wpisze lekcję,
+// nie po tym, jak jego wpisy cicho przepadną.
+try {
+  localStorage.setItem('dziennik_wf_probka', '1');
+  localStorage.removeItem('dziennik_wf_probka');
+} catch (e) {
+  magazyn.lsPelna = true;
+  magazyn.ostatniBlad = (e && e.name) || String(e);
+}
 state.currentDate = new Date().toISOString().slice(0, 10);
 document.getElementById('lessonDate').value = state.currentDate;
 renderClassBar();
 renderAttendance();
+odswiezBanerMagazynu();
 
 // =====================================================
 // PWA — rejestracja service workera + przycisk instalacji
