@@ -49,8 +49,11 @@ with sync_playwright() as pw:
     page.goto("http://127.0.0.1:%d/dziennik_wf.html" % PORT)
     page.wait_for_timeout(400)
     # czysta klasa: kasuje 10 pustych wierszy startowych
+    # + haslo kopii ustawione z gory, zeby auto-kopia nie przerywala testu
+    #   (sama mechanika kopii ma wlasny test: test_kopie.py)
     page.evaluate(
-        "() => { state.students.length = 0; save(); renderStudents(); renderAttendance(); }"
+        "() => { state.students.length = 0; save(); renderStudents(); renderAttendance();"
+        " localStorage.setItem('dziennik_wf_backup_pwd', 'test-haslo-123'); }"
     )
 
     def state():
@@ -181,6 +184,10 @@ with sync_playwright() as pw:
     check(
         "modal: Enter zatwierdza bez myszy",
         page.query_selector("#confirmModal.modal-bg.active") is None,
+    )
+    check(
+        "obecnosc: gotowe haslo kopii nie przerywa codziennego zapisu",
+        page.query_selector("#pwdPromptModal.modal-bg.active") is None,
     )
     day = cls()["attendance"][date]
     check(

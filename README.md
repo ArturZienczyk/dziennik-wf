@@ -11,7 +11,9 @@ na żaden serwer.
 ## Dane i backup
 
 - Dane żyją w `localStorage` przeglądarki — **per przeglądarka, per komputer**.
-- Backup JSON: auto-pobierany przy zapisie lekcji + ręczny eksport w pasku narzędzi.
+- Kopia zapasowa: **zawsze zaszyfrowana hasłem** — auto raz dziennie przy zapisie
+  lekcji, przed każdą operacją kasującą i ręcznie przyciskiem „Zapisz kopię".
+  Szczegóły: „Kopie zapasowe — zawsze zaszyfrowane" niżej.
 - Backupy trzymaj w `backups/` — folder jest w `.gitignore` (imiona/oceny dzieci
   NIGDY nie idą do git ani na Drive bez szyfrowania — zakaz CLAUDE.md projektu).
 
@@ -58,10 +60,42 @@ Wszystkie okna (potwierdzenia, hasła, nowa kolumna) zamyka `Esc`, a zatwierdza 
 py -3.14 test_klawiatura.py
 ```
 
-21 sprawdzeń end-to-end w prawdziwej przeglądarce (Playwright): steruje wyłącznie
+22 sprawdzenia end-to-end w prawdziwej przeglądarce (Playwright): steruje wyłącznie
 klawiaturą i czyta stan z `localStorage`. Zrzuty ekranu lądują w `_zrzuty/` (poza git).
 **Po każdej zmianie w `dziennik_wf.html` odpal ten test** — ścieżka klawiaturowa jest
 niewidoczna gołym okiem i łatwo ją zepsuć przy okazji innej poprawki.
+
+## Kopie zapasowe — zawsze zaszyfrowane (Faza 6)
+
+Do września 2026 kopie wychodziły **jawnie**: auto-kopia raz dziennie przy zapisie
+lekcji, kopia przed każdą operacją kasującą i ręczny „Zapis JSON" lądowały
+w Pobranych jako czytelny plik z imionami i ocenami. Taki plik wysłany mailem albo
+przeniesiony na pendrive to wyciek danych dzieci. Od Fazy 6 **każda** kopia jest
+szyfrowana (AES-GCM 256 + PBKDF2-SHA256, 150 000 iteracji).
+
+- Hasło ustawiasz **raz** — apka poprosi o nie przy pierwszym zapisie lekcji.
+  Potem żadna kopia już nie pyta; wpisywanie danych idzie bez przerw.
+- Hasło pamięta ta przeglądarka. To świadomy kompromis: kto ma odblokowany laptop,
+  widzi dane i tak w samym dzienniku — więc hasło obok nich niczego nie osłabia.
+  Chroniony jest **plik, który wychodzi z laptopa**.
+- Zapomniane hasło podejrzysz przyciskiem **🔑 Hasło kopii** (tam też się je zmienia;
+  starsze kopie otwiera nadal stare hasło).
+- Operacja kasująca dane (wyczyść wszystko / import / usuń klasę) **nie wykona się**,
+  jeśli kopia bezpieczeństwa nie powstała. Anulowanie hasła = dane nietknięte.
+- Jawny przycisk „Zapis JSON" zniknął. Wczytywanie **starych**, nieszyfrowanych
+  kopii zostaje („📂 Wczytaj stary JSON") — te sprzed września nadal się otwierają.
+- Przeglądarka bez Web Crypto: kopia powstaje jawna, ale z głośnym ostrzeżeniem
+  (utrata danych jest gorsza niż jawny plik na własnym dysku). Zmierzone 2026-09-14:
+  w Chromium szyfrowanie działa **także z pliku otwartego z dysku** (`file://`) —
+  zaszyfrowanie i odszyfrowanie przechodzą.
+
+Bramka: `py -3.14 test_kopie.py` — 13 sprawdzeń, kluczowe: **pobrany plik nie zawiera
+nazwiska dziecka**, zła fraza go nie otwiera, własne hasło odtwarza dane w całości.
+
+### Czego to NIE załatwia
+
+- **Mikrofon** (dyktowanie) wysyła nagranie z imionami do Google — to osobna decyzja.
+- **Brak zamka na apce**: kto ma odblokowany laptop, otwiera dziennik i widzi dane.
 
 ## Uwaga operacyjna: jedno miejsce uruchamiania
 
@@ -108,5 +142,10 @@ Adoptowany do projektu `nauczyciel` 2026-05-18 (był prototypem w Downloads).
   litery/cyfry nadają status frekwencji z auto-zejściem kursora, oceny i pomiary
   edytowane wprost w komórce (`Enter` w dół), dopisywanie uczniów ciągiem,
   `Enter`/`Esc` w oknach dialogowych, panele dyktowania zwinięte (tabela wyżej
-  na ekranie). Bramka: `test_klawiatura.py`, 21/21 PASS, render obejrzany.
+  na ekranie). Bramka: `test_klawiatura.py`, 22/22 PASS, render obejrzany.
   Szczegóły niżej: „Wprowadzanie danych z klawiatury".
+- Faza 6 (wdrożona, przetestowana e2e): wymuszone szyfrowanie kopii — auto-kopia
+  dzienna, kopia przed operacją niszczącą i kopia ręczna idą jedną drogą przez
+  AES-GCM z hasłem ustawianym raz; operacja kasująca nie rusza danych, gdy kopia
+  nie powstała. Bramka: `test_kopie.py`, 13/13 PASS. Zostaje otwarte: mikrofon
+  (nagranie do Google) i brak zamka na samej aplikacji.

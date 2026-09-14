@@ -904,10 +904,10 @@
   <div id="tab-uczniowie" class="tab-content">
     <div class="toolbar">
       <button class="primary" onclick="addStudent()">+ Dodaj ucznia</button>
-      <button onclick="exportJSON()">💾 Zapis JSON (backup)</button>
-      <button onclick="document.getElementById('fileImport').click()">📂 Wczytaj JSON</button>
+      <button class="primary" onclick="exportEncrypted()" title="Kopia zaszyfrowana hasłem — tę można wysłać mailem">🔒 Zapisz kopię (szyfrowana)</button>
+      <button onclick="manageBackupPassword()" title="Pokaż lub zmień hasło, którym szyfrowane są kopie">🔑 Hasło kopii</button>
+      <button onclick="document.getElementById('fileImport').click()" title="Wczytaj STARĄ, nieszyfrowaną kopię (sprzed września 2026)">📂 Wczytaj stary JSON</button>
       <input type="file" id="fileImport" accept=".json" style="display:none" onchange="importJSON(event)">
-      <button class="primary" onclick="exportEncrypted()" title="Kopia zaszyfrowana hasłem — tę można wysłać mailem">🔒 Kopia szyfrowana</button>
       <button onclick="document.getElementById('fileImportEnc').click()" title="Wczytaj kopię zaszyfrowaną hasłem">🔓 Wczytaj szyfrowaną</button>
       <input type="file" id="fileImportEnc" accept=".enc.json,.json" style="display:none" onchange="importEncrypted(event)">
       <button onclick="exportCSV()">📥 Eksport CSV (obecność)</button>
@@ -1097,7 +1097,7 @@
   </div>
 
   <footer>
-    Dane zapisywane lokalnie w przeglądarce (localStorage). Nie są wysyłane na żaden serwer. Rób regularny backup (JSON) na dysk żeby nie stracić danych.<br>
+    Dane zapisywane lokalnie w przeglądarce (localStorage). Nie są wysyłane na żaden serwer. Kopie zapasowe są szyfrowane hasłem — raz dziennie same, ręcznie przyciskiem „Zapisz kopię”.<br>
     Wygenerowane w rozmowie z Claude · maj 2026
   </footer>
 
@@ -1495,8 +1495,8 @@ function uiDeleteClass() {
   if (!c) return;
   showConfirm('Usuń klasę',
     'Usunąć klasę "' + (c.school ? c.school + ' / ' : '') + c.name + '" wraz z całą frekwencją, pomiarami i ocenami?\nKopia wszystkich klas pobierze się automatycznie.',
-    () => {
-      backupBeforeDestruction('USUN-KLASE');
+    async () => {
+      if (!await backupBeforeDestruction('USUN-KLASE')) { showToast('Przerwano — kopia bezpieczeństwa nie powstała, klasa nietknięta.', 'warn'); return; }
       state.classes = state.classes.filter(x => x.id !== c.id);
       uiSelectedSchool = state.classes[0].school;
       activateClass(state.classes[0].id);
@@ -2175,24 +2175,108 @@ function triggerDownload(obj, filename) {
   URL.revokeObjectURL(url);
 }
 
+// Zostaje dla zgodności (stare wywołania) — ale idzie już szyfrowaną drogą.
 function exportJSON() {
-  triggerDownload(snapshotData(), 'dziennik-wf_PELNA-KOPIA_wszystkie-klasy_' + fileStamp() + '.json');
+  return writeBackupFile('PELNA-KOPIA');
+}
+
+// =====================================================
+// KOPIE ZAPASOWE — zawsze zaszyfrowane (Faza 6)
+// =====================================================
+// Po co: kopia z imionami i ocenami dzieci trafia do Pobranych sama (auto raz
+// dziennie, przed każdą operacją niszczącą). Do września 2026 szła JAWNIE —
+// taki plik wysłany mailem albo skopiowany na pendrive to wyciek danych dzieci.
+// Teraz każda kopia jest szyfrowana jednym hasłem, ustawianym raz.
+//
+// Hasło żyje w localStorage tej przeglądarki. To świadomy kompromis: kto ma
+// odblokowany laptop, ma i tak dostęp do samych danych w dzienniku — więc
+// trzymanie hasła obok nich niczego nie osłabia. Chroniony jest PLIK, który
+// wychodzi z laptopa. Dzięki temu auto-kopia nie pyta o hasło przy każdej lekcji.
+const BACKUP_PWD_KEY = 'dziennik_wf_backup_pwd';
+
+function getBackupPassword() {
+  try { return localStorage.getItem(BACKUP_PWD_KEY) || ''; } catch (e) { return ''; }
+}
+
+// Zwraca hasło (Promise). Gdy go jeszcze nie ma — pyta raz. null = user anulował.
+function ensureBackupPassword() {
+  const cur = getBackupPassword();
+  if (cur) return Promise.resolve(cur);
+  return new Promise(resolve => {
+    showPasswordPrompt(
+      'Ustaw hasło kopii zapasowych',
+      'Kopie danych zapisują się same (raz dziennie i przed każdą operacją, która kasuje dane). '
+      + 'Od teraz są szyfrowane tym hasłem — plik, który wyjdzie z laptopa, bez niego jest nieczytelny. '
+      + 'Hasło pamięta ta przeglądarka; podejrzysz je przyciskiem „Hasło kopii”. Min. 6 znaków.',
+      'Ustaw hasło',
+      (v) => {
+        if (!v || v.length < 6) {
+          showToast('Hasło za krótkie (min. 6 znaków) — kopia NIE powstała.', 'warn');
+          resolve(null);
+          return;
+        }
+        localStorage.setItem(BACKUP_PWD_KEY, v);
+        showToast('Hasło ustawione. Od teraz kopie są szyfrowane.', 'success');
+        resolve(v);
+      },
+      () => { showToast('Bez hasła nie powstanie żadna kopia. Ustaw je przyciskiem „Hasło kopii”.', 'warn'); resolve(null); }
+    );
+  });
+}
+
+function manageBackupPassword() {
+  const cur = getBackupPassword();
+  showPasswordPrompt(
+    cur ? 'Hasło kopii zapasowych' : 'Ustaw hasło kopii zapasowych',
+    cur
+      ? 'Tym hasłem szyfrowane są wszystkie kopie. Kliknięcie „pokaż” odkrywa je, gdybyś go zapomniał. Wpisz nowe, żeby zmienić (stare kopie nadal otwiera się starym hasłem).'
+      : 'Jeszcze nie masz hasła — bez niego kopie nie powstają. Min. 6 znaków.',
+    'Zapisz hasło',
+    (v) => {
+      if (!v || v.length < 6) { showToast('Hasło za krótkie (min. 6 znaków). Nie zmieniono.', 'warn'); return; }
+      localStorage.setItem(BACKUP_PWD_KEY, v);
+      showToast('Hasło kopii zapisane.', 'success');
+    }
+  );
+  // podstawiam biezące hasło, żeby działało „pokaż”
+  const inp = document.getElementById('pwdPromptInput');
+  if (inp) inp.value = cur;
+}
+
+// Jedyna droga zapisu kopii na dysk. Zwraca true, gdy plik faktycznie powstał.
+async function writeBackupFile(tag) {
+  if (!cryptoAvailable()) {
+    // Przeglądarka bez Web Crypto: lepiej kopia jawna niż żadna, ale głośno o tym mówimy.
+    triggerDownload(snapshotData(), 'dziennik-wf_' + tag + '_NIESZYFROWANA_' + fileStamp() + '.json');
+    showToast('Ta przeglądarka nie daje szyfrowania — kopia zapisana JAWNIE. Zostaw ją na laptopie, nie wysyłaj.', 'warn');
+    return true;
+  }
+  const pwd = await ensureBackupPassword();
+  if (!pwd) return false;
+  try {
+    const text = await encryptSnapshot(pwd);
+    _triggerDownloadText(text, 'dziennik-wf_' + tag + '_SZYFROWANA_' + fileStamp() + '.enc.json');
+    return true;
+  } catch (e) {
+    showToast('Błąd szyfrowania kopii: ' + e.message, 'error');
+    return false;
+  }
 }
 
 // Auto-backup raz dziennie — wyzwalany przy pierwszym "Zapisz lekcję" w danym dniu.
 // Przeżywa wyczyszczenie localStorage. Pliki lądują w systemowym folderze Downloads.
 const AUTOBACKUP_KEY = 'dziennik_wf_last_autobackup';
-function autoBackupDaily() {
+async function autoBackupDaily() {
   const today = new Date().toISOString().slice(0, 10);
   if (localStorage.getItem(AUTOBACKUP_KEY) === today) return; // już dziś był
-  triggerDownload(snapshotData(), 'dziennik-wf_AUTO-codzienna_wszystkie-klasy_' + today + '.json');
-  localStorage.setItem(AUTOBACKUP_KEY, today);
+  const ok = await writeBackupFile('AUTO-codzienna');
+  if (ok) localStorage.setItem(AUTOBACKUP_KEY, today);   // bez hasła spróbujemy jeszcze raz jutro
 }
 
 // Backup PRZED operacją niszczącą (wyczyść wszystko / nadpisanie importem).
 // To brakujące "cofnij" — stare dane są na dysku zanim znikną.
-function backupBeforeDestruction(tag) {
-  triggerDownload(snapshotData(), 'dziennik-wf_PRZED-' + tag + '_wszystkie-klasy_' + fileStamp() + '.json');
+async function backupBeforeDestruction(tag) {
+  return writeBackupFile('PRZED-' + tag);
 }
 
 function importJSON(event) {
@@ -2202,8 +2286,8 @@ function importJSON(event) {
   reader.onload = (e) => {
     try {
       const data = JSON.parse(e.target.result);
-      showConfirm('Wczytaj dane', 'Wczytać dane z pliku? WSZYSTKIE klasy zostaną zastąpione (kopia obecnych pobierze się automatycznie).', () => {
-        backupBeforeDestruction('IMPORT');
+      showConfirm('Wczytaj dane', 'Wczytać dane z pliku? WSZYSTKIE klasy zostaną zastąpione (kopia obecnych pobierze się automatycznie).', async () => {
+        if (!await backupBeforeDestruction('IMPORT')) { showToast('Przerwano — kopia bezpieczeństwa nie powstała, dane nietknięte.', 'warn'); return; }
         if (Array.isArray(data.classes) && data.classes.length) {
           state.classes = data.classes;
           state.currentClassId = data.currentClassId || data.classes[0].id;
@@ -2244,7 +2328,9 @@ function cryptoAvailable() {
   return !!(window.isSecureContext && window.crypto && window.crypto.subtle);
 }
 
-function showPasswordPrompt(title, hint, okLabel, onOk) {
+let pwdCancelCallback = null;
+function showPasswordPrompt(title, hint, okLabel, onOk, onCancel) {
+  pwdCancelCallback = onCancel || null;
   document.getElementById('pwdPromptTitle').textContent = title;
   document.getElementById('pwdPromptHint').textContent = hint;
   document.getElementById('pwdPromptOk').textContent = okLabel;
@@ -2257,11 +2343,15 @@ function showPasswordPrompt(title, hint, okLabel, onOk) {
 function pwdPromptCancel() {
   pwdCallback = null;
   document.getElementById('pwdPromptModal').classList.remove('active');
+  const cc = pwdCancelCallback;
+  pwdCancelCallback = null;
+  if (cc) cc();
 }
 function pwdPromptOk() {
   const v = document.getElementById('pwdPromptInput').value;
   const cb = pwdCallback;
   pwdCallback = null;
+  pwdCancelCallback = null;
   document.getElementById('pwdPromptModal').classList.remove('active');
   if (cb) cb(v);
 }
@@ -2331,23 +2421,13 @@ function _triggerDownloadText(text, filename) {
 function exportEncrypted() {
   if (!cryptoAvailable()) {
     showConfirm('Szyfrowanie niedostępne tutaj',
-      'Szyfrowana kopia działa tylko gdy dziennik jest otwarty przez https:// (zainstalowany / z hostingu), nie z pliku na dysku.\n\nMożesz teraz zrobić zwykły backup JSON — zostaje na tym komputerze, ale NIE wysyłaj go mailem. Zrobić zwykły backup?',
-      () => exportJSON());
+      'Ta przeglądarka nie udostępnia szyfrowania (Web Crypto). W Chrome i Edge działa ono także z pliku na dysku — spróbuj otworzyć dziennik tam.\n\nMogę teraz zapisać kopię JAWNĄ — zostaje na tym komputerze, ale NIE wysyłaj jej mailem ani na Drive. Zapisać jawną?',
+      () => { triggerDownload(snapshotData(), 'dziennik-wf_RECZNA_NIESZYFROWANA_' + fileStamp() + '.json'); });
     return;
   }
-  showPasswordPrompt('Hasło do kopii',
-    'Tym hasłem zaszyfrujemy imiona i oceny. Bez niego nikt — ani Ty — nie odczyta pliku. Zapamiętaj je.',
-    'Zaszyfruj i pobierz',
-    async (pwd) => {
-      if (!pwd || pwd.length < 6) { showToast('Hasło za krótkie (min. 6 znaków).', 'warn'); return; }
-      try {
-        const text = await encryptSnapshot(pwd);
-        _triggerDownloadText(text, 'dziennik-wf_SZYFROWANA_' + fileStamp() + '.enc.json');
-        showToast('Zaszyfrowana kopia pobrana. Tę możesz dołączyć do maila.', 'success');
-      } catch (e) {
-        showToast('Błąd szyfrowania: ' + e.message, 'error');
-      }
-    });
+  writeBackupFile('RECZNA').then(ok => {
+    if (ok) showToast('Zaszyfrowana kopia pobrana. Tę możesz dołączyć do maila.', 'success');
+  });
 }
 
 function importEncrypted(event) {
@@ -2435,8 +2515,8 @@ function clearAll() {
     'Wyczyścić wszystkie dane? (uczniowie, obecność, pomiary)\nTego nie da się cofnąć.',
     () => {
       // Drugi confirm dla bezpieczeństwa
-      showConfirm('Ostatnia szansa', 'Na pewno usunąć WSZYSTKIE klasy i dane? Kopia pobierze się automatycznie.', () => {
-        backupBeforeDestruction('WYCZYSZCZENIE');
+      showConfirm('Ostatnia szansa', 'Na pewno usunąć WSZYSTKIE klasy i dane? Kopia pobierze się automatycznie.', async () => {
+        if (!await backupBeforeDestruction('WYCZYSZCZENIE')) { showToast('Przerwano — kopia bezpieczeństwa nie powstała, dane nietknięte.', 'warn'); return; }
         initDefault();
         activateClass(state.currentClassId);
         uiSelectedSchool = null;

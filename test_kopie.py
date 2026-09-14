@@ -1,0 +1,182 @@
+# Test kopii zapasowych: kazdy plik, ktory ladunku z dziennika trafia na dysk,
+# ma byc zaszyfrowany. Kluczowa asercja: w pliku NIE MA nazwiska dziecka.
+import json
+import sys
+import threading
+import functools
+import http.server
+import socketserver
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+SHOTS = ROOT / "_zrzuty"
+SHOTS.mkdir(exist_ok=True)
+PORT = 8766
+HASLO = "tajne-haslo-2026"
+NAZWISKO = "Brzeczyszczykiewicz Grzegorz"
+
+handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(ROOT))
+socketserver.TCPServer.allow_reuse_address = True
+httpd = socketserver.TCPServer(("127.0.0.1", PORT), handler)
+threading.Thread(target=httpd.serve_forever, daemon=True).start()
+
+from playwright.sync_api import sync_playwright
+
+FAILS = []
+
+
+def check(name, cond, detail=""):
+    print(
+        "[%s] %s %s"
+        % ("PASS" if cond else "FAIL", name, ("- " + str(detail)) if detail else "")
+    )
+    if not cond:
+        FAILS.append(name + " :: " + str(detail))
+
+
+with sync_playwright() as pw:
+    browser = pw.chromium.launch()
+    ctx = browser.new_context(
+        service_workers="block",
+        accept_downloads=True,
+        viewport={"width": 1500, "height": 1000},
+    )
+    page = ctx.new_page()
+    errors = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+
+    page.goto("http://127.0.0.1:%d/dziennik_wf.html" % PORT)
+    page.wait_for_timeout(400)
+    page.evaluate(
+        "() => { state.students.length = 0; save(); renderStudents(); renderAttendance(); }"
+    )
+
+    # uczen z nazwiskiem, ktorego nie da sie pomylic z niczym innym w pliku
+    page.click('button:has-text("Uczniowie")')
+    page.click("#quickAddStudent")
+    page.keyboard.type(NAZWISKO)
+    page.keyboard.press("Enter")
+    page.keyboard.type("Nowak Piotr")
+    page.keyboard.press("Enter")
+
+    check(
+        "jawny przycisk 'Zapis JSON (backup)' zniknal z paska",
+        page.query_selector('button:has-text("Zapis JSON")') is None,
+    )
+
+    # ---------- 1. Auto-kopia przy pierwszym zapisie lekcji pyta o haslo RAZ ----------
+    page.click('button:has-text("Obecność")')
+    page.wait_for_timeout(200)
+    page.click("h1")
+    page.keyboard.press("n")  # status dla 1. ucznia
+    page.keyboard.press("Enter")  # zapisz lekcje
+    page.wait_for_timeout(200)
+    page.keyboard.press("Enter")  # potwierdz
+    page.wait_for_timeout(400)
+    check(
+        "auto-kopia prosi o ustawienie hasla przy pierwszym zapisie",
+        page.query_selector("#pwdPromptModal.modal-bg.active") is not None,
+    )
+
+    with page.expect_download(timeout=15000) as dl_info:
+        page.fill("#pwdPromptInput", HASLO)
+        page.click("#pwdPromptOk")
+    dl = dl_info.value
+    auto_path = SHOTS / "auto_kopia.json"
+    dl.save_as(str(auto_path))
+    raw = auto_path.read_text(encoding="utf-8")
+
+    check(
+        "auto-kopia: plik ma nazwe wskazujaca szyfrowanie",
+        "SZYFROWANA" in dl.suggested_filename,
+        dl.suggested_filename,
+    )
+    check(
+        "auto-kopia: NIE ZAWIERA nazwiska dziecka",
+        NAZWISKO not in raw and "Brzeczy" not in raw,
+    )
+    obj = json.loads(raw)
+    check(
+        "auto-kopia: format zaszyfrowany (AES-GCM + PBKDF2)",
+        obj.get("app") == "dziennik-wf-enc"
+        and obj.get("cipher") == "AES-GCM-256"
+        and len(obj.get("ct", "")) > 40,
+        {k: obj.get(k) for k in ("app", "cipher", "kdf")},
+    )
+
+    # ---------- 2. Kolejna kopia NIE pyta juz o haslo ----------
+    page.click('button:has-text("Uczniowie")')
+    page.wait_for_timeout(200)
+    with page.expect_download(timeout=15000) as dl2_info:
+        page.click('button:has-text("Zapisz kopię")')
+    dl2 = dl2_info.value
+    ręczna = SHOTS / "reczna_kopia.enc.json"
+    dl2.save_as(str(ręczna))
+    check(
+        "reczna kopia nie pyta ponownie o haslo",
+        page.query_selector("#pwdPromptModal.modal-bg.active") is None,
+    )
+    raw2 = ręczna.read_text(encoding="utf-8")
+    check("reczna kopia: NIE ZAWIERA nazwiska dziecka", NAZWISKO not in raw2)
+
+    # ---------- 3. Round-trip: kopie da sie odczytac haslem ----------
+    back = page.evaluate(
+        """async ([txt, pwd]) => {
+            const d = await decryptBackup(txt, pwd);
+            return d.classes[0].students.map(s => s.name);
+        }""",
+        [raw2, HASLO],
+    )
+    check(
+        "kopie da sie odszyfrowac wlasnym haslem (dane wracaja w calosci)",
+        NAZWISKO in back and "Nowak Piotr" in back,
+        back,
+    )
+
+    zle = page.evaluate(
+        """async ([txt]) => { try { await decryptBackup(txt, 'zle-haslo'); return 'ODCZYTANO'; }
+                              catch (e) { return 'ODRZUCONO'; } }""",
+        [raw2],
+    )
+    check("zle haslo nie otwiera kopii", zle == "ODRZUCONO", zle)
+
+    # ---------- 4. Haslo mozna podejrzec (gdyby user zapomnial) ----------
+    page.click('button:has-text("Hasło kopii")')
+    page.wait_for_timeout(300)
+    check(
+        "przycisk 'Haslo kopii' pokazuje zapamietane haslo",
+        page.input_value("#pwdPromptInput") == HASLO,
+    )
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(150)
+
+    # ---------- 5. Operacja niszczaca bez kopii NIE rusza danych ----------
+    page.evaluate("() => localStorage.removeItem('dziennik_wf_backup_pwd')")
+    page.click('button:has-text("Wyczyść wszystko")')
+    page.wait_for_timeout(200)
+    page.keyboard.press("Enter")  # pierwszy confirm
+    page.wait_for_timeout(200)
+    page.keyboard.press("Enter")  # ostatnia szansa
+    page.wait_for_timeout(400)
+    check(
+        "czyszczenie danych zada hasla do kopii",
+        page.query_selector("#pwdPromptModal.modal-bg.active") is not None,
+    )
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(400)
+    names = page.evaluate("() => state.students.map(s => s.name)")
+    check(
+        "anulowanie hasla przerywa czyszczenie — dane NIETKNIETE",
+        NAZWISKO in names,
+        names,
+    )
+
+    check("brak bledow JS", not errors, errors[:3])
+    browser.close()
+
+httpd.shutdown()
+print()
+print("WYNIK: %s" % ("WSZYSTKO PASS" if not FAILS else ("%d FAIL" % len(FAILS))))
+for f in FAILS:
+    print("  - " + f)
+sys.exit(1 if FAILS else 0)
