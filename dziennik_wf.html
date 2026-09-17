@@ -229,6 +229,12 @@
   }
   table.attendance tbody td.left { text-align: left; padding-left: 14px; }
   table.attendance tbody tr:hover { background: var(--bg); }
+  /* Zarys kolumn (2026-09-18): cienka pionowa linia między kolumnami liczb, żeby oko nie
+     gubiło, do której kolumny należy wartość w szerokim wierszu. Tylko tabele z wartościami
+     bez własnego obrysu (Obecność, Statystyki, Pomiary); Oceny mają tło kolumn, Uczniowie pola. */
+  table.attendance.kolumny thead th:not(.left):not(:first-child),
+  table.attendance.kolumny tbody td:not(.left):not(:first-child) { border-left: 1px solid var(--line-soft); }
+  table.attendance.kolumny thead th:not(.left) { border-left-color: var(--line); }
   table.attendance tbody tr.long-term-released { background: var(--bg); color: var(--ink-muted); font-style: italic; }
 
   .student-name {
@@ -1060,7 +1066,7 @@
     </details>
 
     <div class="table-wrap">
-      <table class="attendance" id="attendanceTable">
+      <table class="attendance kolumny" id="attendanceTable">
         <thead>
           <tr>
             <th class="left">#</th>
@@ -1171,7 +1177,7 @@
     </details>
 
     <div class="table-wrap">
-      <table class="attendance pomiary-table">
+      <table class="attendance pomiary-table kolumny">
         <thead>
           <tr>
             <th class="left">#</th>
@@ -1267,7 +1273,7 @@
     <h2>Frekwencja indywidualna</h2>
     <p style="font-size:13px;color:var(--ink-muted);margin:0 0 8px 0;">Kliknij nazwisko → karta ucznia (cała historia, oś czasu, krzywa, lista lekcji; do druku na rozmowę z rodzicem).</p>
     <div class="table-wrap">
-      <table class="attendance">
+      <table class="attendance kolumny">
         <thead>
           <tr>
             <th class="left">#</th>
@@ -1289,7 +1295,7 @@
 
     <h2>Lista wszystkich lekcji</h2>
     <div class="table-wrap">
-      <table class="attendance">
+      <table class="attendance kolumny">
         <thead>
           <tr>
             <th class="left">Data</th>
