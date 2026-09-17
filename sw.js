@@ -15,7 +15,8 @@
 // v5: mikrofon tylko lokalnie (processLocally) - poprawka prywatnosci, stary klient nie moze zostac.
 // v6: uklad - pasek gorny przyklejony, sciagi zwijane, tabela wysoko.
 // v7: zarys kolumn w Obecnosci/Statystykach/Pomiarach.
-const CACHE_VERSION = 'dziennik-wf-v7';
+// v8: naglowek tabeli przyklejony pod paskiem gornym.
+const CACHE_VERSION = 'dziennik-wf-v8';
 const SHELL = [
   './dziennik_wf.html',
   './manifest.webmanifest',

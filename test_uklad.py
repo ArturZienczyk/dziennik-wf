@@ -81,6 +81,23 @@ with sync_playwright() as pw:
         0 <= y_tabs < 120,
         y_tabs,
     )
+    page.click('button.tab:has-text("Obecno")')
+    page.wait_for_timeout(300)
+    # tabela musi byc dluzsza niz ekran, inaczej nie ma czego przewijac
+    page.evaluate(
+        "() => { for (let i = 0; i < 30; i++) state.students.push({ id: 't' + i, name: 'Uczen ' + i, longTermReleased: false, height: '', weight: '' }); renderAttendance(); }"
+    )
+    page.evaluate("() => window.scrollTo(0, 600)")
+    page.wait_for_timeout(200)
+    h_top = page.evaluate(
+        "() => Math.round(document.querySelector('.topbar').getBoundingClientRect().bottom)"
+    )
+    y_th = page.evaluate(TOP, "#attendanceTable thead th")
+    check(
+        "naglowek tabeli przyklejony tuz pod paskiem gornym po przewinieciu",
+        abs(y_th - h_top) <= 2,
+        (y_th, h_top),
+    )
 
     w_toolbar = page.evaluate(
         "() => !!document.querySelector('#tab-uczniowie .toolbar:not(.toolbar-niebezpieczne) button.danger')"
