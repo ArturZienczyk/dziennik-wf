@@ -388,6 +388,59 @@
   }
   .modal h3 { margin: 0 0 12px 0; }
 
+  /* ===== KARTA UCZNIA (historia ćwiczenia jednej osoby) ===== */
+  .modal.karta { max-width: 960px; padding: 28px 32px; }
+  .karta-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; }
+  .karta-head h3 { font-size: 24px; margin: 0; }
+  .karta-head .sub { color: var(--ink-muted); font-size: 13px; margin-top: 4px; }
+  .karta-actions { display:flex; gap:8px; }
+  .karta h4 { margin: 22px 0 8px 0; font-size: 15px; letter-spacing: .02em; text-transform: uppercase; color: var(--ink-soft); }
+  .karta-okna { display:grid; gap:14px; }
+  .karta-okno-tytul { font-weight: 600; margin-bottom: 6px; }
+  .karta-kafle { display:grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+  .kafel { border:1px solid var(--line); border-radius:8px; padding:8px 10px; background:var(--paper); text-align:left; cursor:pointer; font-family:inherit; }
+  .kafel:hover { border-color: var(--accent); }
+  .kafel.on { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .kafel.static { cursor: default; }
+  .kafel .n { font-size: 22px; font-weight: 700; line-height: 1.1; color: var(--ink); }
+  .kafel .l { font-size: 11px; color: var(--ink-muted); margin-top: 3px; }
+  .kafel .pill { display:inline-block; width:10px; height:10px; border-radius:3px; border:1px solid; margin-right:5px; vertical-align:-1px; }
+  .karta-filtr { font-size: 12px; color: var(--accent); margin-top: 6px; min-height: 16px; }
+  .os-czasu { display:flex; flex-wrap:wrap; gap:10px 14px; }
+  .os-miesiac { display:flex; flex-direction:column; gap:4px; }
+  .os-miesiac .m { font-size: 11px; color: var(--ink-muted); }
+  .os-kratki { display:flex; gap:2px; }
+  .kratka { width:22px; height:22px; border-radius:4px; border:1px solid; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; position:relative; cursor:default; }
+  .kratka.dim { opacity: .18; }
+  .kratka .sp { position:absolute; top:-3px; right:-3px; width:7px; height:7px; border-radius:50%; background:var(--accent); border:1px solid var(--paper); }
+  .karta-wykres { width:100%; height:auto; display:block; }
+  .karta-wykres .grid { stroke: var(--line); stroke-width: 1; }
+  .karta-wykres .ax { fill: var(--ink-muted); font-size: 11px; }
+  .karta-wykres .linia { fill:none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+  .karta-wykres .pkt { fill: var(--paper); stroke: var(--accent); stroke-width: 2; }
+  .karta-wykres .pkt.dim { opacity: .15; }
+  .karta-wykres .brk { stroke: var(--gold); stroke-dasharray: 4 3; stroke-width: 1.5; }
+  .karta-uwaga { font-size: 12px; color: var(--ink-muted); margin-top: 4px; }
+  .karta table.lista { width:100%; border-collapse: collapse; font-size: 13px; }
+  .karta table.lista th { text-align:left; font-size: 11px; text-transform: uppercase; color: var(--ink-muted); padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  .karta table.lista td { padding: 5px 8px; border-bottom: 1px solid var(--line-soft); }
+  .karta table.lista tr.dim td { opacity: .3; }
+  .karta table.lista .tag { display:inline-block; min-width: 26px; text-align:center; padding: 1px 6px; border-radius: 4px; border:1px solid; font-weight:700; font-size: 12px; margin-right: 6px; }
+  .karta .dwie { display:grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .stats-name-btn { background:none; border:0; padding:0; font:inherit; color: var(--accent); cursor:pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+  .stats-name-btn:hover { color: var(--accent-warm); }
+  @media (max-width: 700px) { .karta .dwie { grid-template-columns: 1fr; } .modal.karta { padding: 18px; } }
+  @media print {
+    body.karta-print > :not(#kartaUcznia) { display: none !important; }
+    body.karta-print #kartaUcznia { position: static; display: block; background: none; padding: 0; }
+    body.karta-print .modal.karta { max-width: none; max-height: none; overflow: visible; box-shadow: none; padding: 0; border-radius: 0; }
+    body.karta-print .karta-actions, body.karta-print .karta-filtr, body.karta-print .kafel:not(.static) { cursor: default; }
+    body.karta-print .karta-actions { display: none; }
+    body.karta-print .kafel.on { outline: none; }
+    .karta table.lista { page-break-inside: auto; }
+    .karta table.lista tr { page-break-inside: avoid; }
+  }
+
   footer {
     margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line);
     font-size: 12px; color: var(--ink-muted);
@@ -1118,6 +1171,7 @@
     <div class="summary-grid" id="summaryGrid"></div>
 
     <h2>Frekwencja indywidualna</h2>
+    <p style="font-size:13px;color:var(--ink-muted);margin:0 0 8px 0;">Kliknij nazwisko → karta ucznia (cała historia, oś czasu, krzywa, lista lekcji; do druku na rozmowę z rodzicem).</p>
     <div class="table-wrap">
       <table class="attendance">
         <thead>
@@ -1164,6 +1218,11 @@
     Wygenerowane w rozmowie z Claude · maj 2026
   </footer>
 
+</div>
+
+<!-- Karta ucznia: historia ćwiczenia jednej osoby (tylko odczyt, druk/PDF) -->
+<div class="modal-bg" id="kartaUcznia" onclick="if(event.target===this) closeKarta()">
+  <div class="modal karta" id="kartaBody"></div>
 </div>
 
 <!-- Picker statusów -->
@@ -2029,6 +2088,194 @@ function usprawiedliwDate(studentId, date) {
     }
   );
 }
+// =====================================================
+// KARTA UCZNIA — historia ćwiczenia jednej osoby w 4 odsłonach:
+// kafle (klik = filtr) → oś czasu → krzywa skumulowana → lista lekcji + oceny + pomiary.
+// Tylko odczyt. Druk: body.karta-print chowa resztę strony (@media print).
+// Kolory = te same co statusy w apce (tożsamość statusu), zawsze z literą w środku —
+// litera jest drugim kodowaniem, bo 6 pastelowych odcieni nie da się rozróżnić samym kolorem.
+// =====================================================
+const KARTA_KOLOR = {
+  C:  { bg: '#C0DD97', br: '#639922', ink: '#173404' },
+  NC: { bg: '#FAC775', br: '#BA7517', ink: '#412402' },
+  BS: { bg: '#F0997B', br: '#BA522F', ink: '#4A1B0C' },
+  NB: { bg: '#F7C1C1', br: '#C46666', ink: '#501313' },
+  NU: { bg: '#C7D9F0', br: '#6A8FBD', ink: '#1A2C50' },
+  ZW: { bg: '#B5D4F4', br: '#4A8BC7', ink: '#042C53' }
+};
+const KARTA_LITERA = { C: 'C', NC: 'NĆ', BS: 'BS', NB: 'NB', NU: 'NU', ZW: 'ZW' };
+const KARTA_NAZWA = { C: 'ćwiczył', NC: 'nie ćwiczył, bez papieru', BS: 'brak stroju', NB: 'nieobecny nieuspr.', NU: 'nieobecny uspr.', ZW: 'zwolnienie (z papierem)' };
+const KARTA_DNI = ['nd', 'pn', 'wt', 'śr', 'czw', 'pt', 'sb'];
+const KARTA_MIESIACE = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
+
+function kartaLekcje(studentId) {
+  return Object.keys(state.attendance).sort().map(date => {
+    const c = attRead((state.attendance[date] || {})[studentId]);
+    return c.s ? { date, s: c.s, sp: c.sp } : null;
+  }).filter(Boolean);
+}
+function kartaPasuje(l, f) {
+  if (!f) return true;
+  if (f === 'sp') return l.sp;
+  return l.s === f;
+}
+function kartaData(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  return iso.slice(8, 10) + '.' + iso.slice(5, 7) + '.' + iso.slice(0, 4) + ' (' + KARTA_DNI[d.getDay()] + ')';
+}
+function openKarta(studentId) {
+  state.kartaStudentId = studentId;
+  state.kartaFilter = null;
+  renderKarta();
+  document.getElementById('kartaUcznia').classList.add('active');
+}
+function closeKarta() {
+  document.getElementById('kartaUcznia').classList.remove('active');
+  state.kartaStudentId = null;
+}
+function kartaFiltruj(f) {
+  state.kartaFilter = (state.kartaFilter === f) ? null : f;
+  renderKarta();
+}
+function drukujKarte() {
+  document.body.classList.add('karta-print');
+  const off = () => document.body.classList.remove('karta-print');
+  window.addEventListener('afterprint', off, { once: true });
+  window.print();
+  setTimeout(off, 2000);
+}
+
+function kartaKafle(lekcje, tytul) {
+  const f = state.kartaFilter;
+  const st = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0 };
+  let sp = 0;
+  lekcje.forEach(l => { st[l.s]++; if (l.sp) sp++; });
+  const baza = st.C + st.NC + st.BS + st.NB;
+  const pct = baza ? Math.round(st.C / baza * 100) : null;
+  let h = '<div class="karta-okno-tytul">' + escapeHtml(tytul) + ' · lekcji: ' + lekcje.length + '</div><div class="karta-kafle">';
+  h += '<div class="kafel static"><div class="n">' + (pct === null ? '—' : pct + '%') + '</div><div class="l">ćwiczył (z ' + baza + ' liczonych)</div></div>';
+  Object.keys(st).forEach(k => {
+    const col = KARTA_KOLOR[k];
+    h += '<button type="button" class="kafel' + (f === k ? ' on' : '') + '" onclick="kartaFiltruj(\'' + k + '\')" title="' + escapeHtml(STATUS_INFO[k].desc) + '">'
+      + '<div class="n">' + st[k] + '</div><div class="l"><span class="pill" style="background:' + col.bg + ';border-color:' + col.br + '"></span>' + KARTA_LITERA[k] + ' — ' + KARTA_NAZWA[k] + '</div></button>';
+  });
+  h += '<button type="button" class="kafel' + (f === 'sp' ? ' on' : '') + '" onclick="kartaFiltruj(\'sp\')"><div class="n">' + sp + '</div><div class="l">⏱ spóźnień</div></button>';
+  h += '</div>';
+  return h;
+}
+
+function kartaOsCzasu(lekcje) {
+  const f = state.kartaFilter;
+  const byM = {};
+  lekcje.forEach(l => { const k = l.date.slice(0, 7); (byM[k] = byM[k] || []).push(l); });
+  let h = '<div class="os-czasu">';
+  Object.keys(byM).sort().forEach(m => {
+    h += '<div class="os-miesiac"><div class="m">' + KARTA_MIESIACE[+m.slice(5, 7) - 1] + ' ' + m.slice(0, 4) + '</div><div class="os-kratki">';
+    byM[m].forEach(l => {
+      const col = KARTA_KOLOR[l.s];
+      h += '<div class="kratka' + (kartaPasuje(l, f) ? '' : ' dim') + '" style="background:' + col.bg + ';border-color:' + col.br + ';color:' + col.ink + '" title="' + kartaData(l.date) + ' — ' + escapeHtml(STATUS_INFO[l.s].desc) + (l.sp ? ' + spóźniony' : '') + '">' + KARTA_LITERA[l.s] + (l.sp ? '<span class="sp"></span>' : '') + '</div>';
+    });
+    h += '</div></div>';
+  });
+  return h + '</div>';
+}
+
+// Krzywa skumulowana: % ćwiczył liczony narastająco po każdej lekcji wchodzącej do bazy.
+// NU i ZW nie ruszają krzywej (nie wchodzą do bazy) — punkt zostaje na poprzedniej wysokości.
+function kartaKrzywa(lekcje) {
+  const f = state.kartaFilter;
+  const W = 900, H = 220, L = 36, R = 12, T = 14, B = 28;
+  const pts = [];
+  let c = 0, baza = 0;
+  lekcje.forEach((l, i) => {
+    if (l.s !== 'NU' && l.s !== 'ZW') { baza++; if (l.s === 'C') c++; }
+    pts.push({ i, l, pct: baza ? c / baza * 100 : null });
+  });
+  const n = pts.length;
+  if (n < 2) return '<div class="karta-uwaga">Za mało lekcji na krzywą (min. 2).</div>';
+  const x = i => L + (W - L - R) * (n === 1 ? 0 : i / (n - 1));
+  const y = p => T + (H - T - B) * (1 - p / 100);
+  let s = '<svg class="karta-wykres" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Procent ćwiczył narastająco po każdej lekcji">';
+  [0, 25, 50, 75, 100].forEach(g => {
+    s += '<line class="grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '"/>';
+    s += '<text class="ax" x="' + (L - 6) + '" y="' + (y(g) + 4) + '" text-anchor="end">' + g + '%</text>';
+  });
+  const brk = getSemesterBreak();
+  if (brk) {
+    const bi = pts.findIndex(p => p.l.date >= brk);
+    if (bi > 0) s += '<line class="brk" x1="' + x(bi - 0.5) + '" x2="' + x(bi - 0.5) + '" y1="' + T + '" y2="' + (H - B) + '"/><text class="ax" x="' + (x(bi - 0.5) + 4) + '" y="' + (T + 10) + '">II półrocze</text>';
+  }
+  const path = pts.filter(p => p.pct !== null).map((p, k) => (k ? 'L' : 'M') + x(p.i).toFixed(1) + ' ' + y(p.pct).toFixed(1)).join(' ');
+  s += '<path class="linia" d="' + path + '"/>';
+  pts.forEach(p => {
+    if (p.pct === null) return;
+    s += '<circle class="pkt' + (kartaPasuje(p.l, f) ? '' : ' dim') + '" cx="' + x(p.i).toFixed(1) + '" cy="' + y(p.pct).toFixed(1) + '" r="4"><title>' + kartaData(p.l.date) + ' — ' + KARTA_LITERA[p.l.s] + (p.l.sp ? ' + sp' : '') + ' → ' + Math.round(p.pct) + '% ćwiczył</title></circle>';
+  });
+  // etykiety osi X: pierwsza, ostatnia i co ~6 lekcji
+  const step = Math.max(1, Math.round(n / 8));
+  pts.forEach(p => {
+    // ostatnia lekcja zawsze; regularne co `step`, ale nie tuż przed ostatnią (kolizja etykiet)
+    if (p.i === n - 1 || (p.i % step === 0 && (n - 1 - p.i) >= step * 0.6)) s += '<text class="ax" x="' + x(p.i).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle">' + p.l.date.slice(8, 10) + '.' + p.l.date.slice(5, 7) + '</text>';
+  });
+  return s + '</svg><div class="karta-uwaga">Każdy punkt = stan po tej lekcji. NU i ZW nie zmieniają krzywej (nie wchodzą do bazy). Najedź na punkt, żeby zobaczyć datę.</div>';
+}
+
+function kartaLista(lekcje) {
+  const f = state.kartaFilter;
+  let h = '<table class="lista"><thead><tr><th>#</th><th>Data</th><th>Status</th><th>Spóźnienie</th></tr></thead><tbody>';
+  lekcje.forEach((l, i) => {
+    const col = KARTA_KOLOR[l.s];
+    h += '<tr' + (kartaPasuje(l, f) ? '' : ' class="dim"') + '><td>' + (i + 1) + '</td><td>' + kartaData(l.date) + '</td><td><span class="tag" style="background:' + col.bg + ';border-color:' + col.br + ';color:' + col.ink + '">' + KARTA_LITERA[l.s] + '</span>' + KARTA_NAZWA[l.s] + '</td><td>' + (l.sp ? '⏱ tak' : '') + '</td></tr>';
+  });
+  return h + '</tbody></table>';
+}
+
+function kartaOceny(studentId) {
+  const cols = state.gradeColumns || [];
+  if (!cols.length) return '<div class="karta-uwaga">Brak kolumn ocen.</div>';
+  let h = '<table class="lista"><thead><tr><th>Data</th><th>Ocena</th><th>Pkt</th><th>Waga</th></tr></thead><tbody>';
+  cols.forEach(col => {
+    const v = (state.grades[col.id] || {})[studentId];
+    h += '<tr><td>' + (col.date ? kartaData(col.date) : '—') + '</td><td>' + escapeHtml(col.fullName || col.shortName || '') + '</td><td>' + (v === undefined || v === null ? '—' : v) + '</td><td>' + (col.weight === 0 ? 'info' : '×' + col.weight) + '</td></tr>';
+  });
+  const avg = calculateStudentAverage(studentId);
+  h += '</tbody></table><div class="karta-uwaga">Średnia ważona: <b>' + (avg === null ? '—' : avg) + '</b></div>';
+  return h;
+}
+
+function kartaPomiary(s) {
+  const m = state.measurements[s.id] || {};
+  const rows = [['Wzrost [cm]', s.height], ['Masa [kg]', s.weight], ['Skok w dal [cm]', m.jump], ['Bieg wahadłowy [s]', m.shuttle], ['Beep test [stage]', m.beep], ['Deska [s]', m.plank]];
+  return '<table class="lista"><tbody>' + rows.map(r => '<tr><td>' + r[0] + '</td><td><b>' + (r[1] || '—') + '</b></td></tr>').join('') + '</tbody></table>';
+}
+
+function renderKarta() {
+  const s = state.students.find(x => x.id === state.kartaStudentId);
+  const box = document.getElementById('kartaBody');
+  if (!s) { box.innerHTML = ''; return; }
+  const lekcje = kartaLekcje(s.id);
+  const brk = getSemesterBreak();
+  const cls = getCurrentClass();
+  const f = state.kartaFilter;
+  let h = '<div class="karta-head"><div><h3>' + (escapeHtml(s.name) || 'uczeń') + '</h3><div class="sub">' + escapeHtml((cls && cls.name) || '') + ' · karta ucznia · stan na ' + kartaData(new Date().toISOString().slice(0, 10)) + (s.longTermReleased ? ' · <b>zwolniony długoterminowo</b>' : '') + '</div></div>'
+    + '<div class="karta-actions"><button onclick="drukujKarte()">🖨 Drukuj / PDF</button><button onclick="closeKarta()">Zamknij</button></div></div>';
+  if (!lekcje.length) { box.innerHTML = h + '<p class="karta-uwaga">Brak zapisanych lekcji dla tej osoby.</p>'; return; }
+
+  h += '<h4>1 · Bilans</h4><div class="karta-okna">';
+  if (brk) {
+    h += '<div>' + kartaKafle(lekcje.filter(l => l.date < brk), 'I półrocze (do ' + kartaData(brk).slice(0, 10) + ')') + '</div>';
+    h += '<div>' + kartaKafle(lekcje.filter(l => l.date >= brk), 'II półrocze') + '</div>';
+  }
+  h += '<div>' + kartaKafle(lekcje, brk ? 'Cały rok' : 'Cała historia') + '</div></div>';
+  h += '<div class="karta-filtr">' + (f ? 'Filtr: <b>' + (f === 'sp' ? 'spóźnienia' : KARTA_LITERA[f]) + '</b> — kliknij kafel jeszcze raz, żeby zdjąć.' : 'Kliknij kafel, żeby podświetlić te lekcje niżej.') + '</div>';
+
+  h += '<h4>2 · Oś czasu</h4>' + kartaOsCzasu(lekcje);
+  h += '<h4>3 · Procent ćwiczył narastająco</h4>' + kartaKrzywa(lekcje);
+  h += '<h4>4 · Wszystkie lekcje</h4>' + kartaLista(lekcje);
+  h += '<div class="dwie"><div><h4>Oceny</h4>' + kartaOceny(s.id) + '</div><div><h4>Pomiary</h4>' + kartaPomiary(s) + '</div></div>';
+  box.innerHTML = h;
+}
+
 function closePicker() {
   document.getElementById('statusPicker').classList.remove('active');
   state.pickerStudentId = null;
@@ -2166,7 +2413,7 @@ function renderStats() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="left">${i + 1}</td>
-      <td class="left">${escapeHtml(s.name) || '<span style="color:var(--ink-muted);">—</span>'}</td>
+      <td class="left">${s.name ? '<button type="button" class="stats-name-btn" onclick="openKarta(\'' + s.id + '\')" title="Otwórz kartę ucznia: historia, oś czasu, krzywa, lista lekcji">' + escapeHtml(s.name) + '</button>' : '<span style="color:var(--ink-muted);">—</span>'}</td>
       <td>${stats.total}</td>
       <td>${stats.baza}</td>
       <td>${stats.C}</td>
