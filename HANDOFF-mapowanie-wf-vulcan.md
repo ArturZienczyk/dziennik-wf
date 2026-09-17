@@ -127,3 +127,77 @@ zmieni interfejs. Po sprzątnięciu panel = liczba uczniów, lista dopasowań, o
 1. User testuje przycisk + snippet v11 na żywym VULCAN z realnym dniem.
 2. A (usprawiedliwienia) — zmiana w mechanizmie, więc osobny commit + test.
 3. C + B razem (sprzątnięcie i bookmarklet) — jeden commit, podbić wersję w nagłówku panelu.
+
+## SZCZEBEL 3 (zapisany 2026-09-17 wieczór) — powiadomienia rodziców o NĆ przez Wiadomości VULCAN
+
+### Zadanie (słowami usera)
+„Czy jest możliwość skryptu, aby po tym jak uczeń jest niećwiczący, to automatycznie szła
+informacja do rodziców przez wiadomości w dzienniku?" Próg: **po jednym NĆ bez
+usprawiedliwienia** — wiadomość ma informować o NĆ i jednocześnie przypominać zasady (strój,
+usprawiedliwienia). Uwaga usera: „rodzice mogą przysłać info o usprawiedliwieniu przed lekcją
+i trzeba mieć to na uwadze".
+
+### Fakty ustalone (ze zrzutów usera, 2 obrazy w sesji)
+- Wiadomości żyją na OSOBNEJ domenie: `dziennik-wiadomoscip.vulcan.net.pl/lodz/App/odebrane`
+  → osobny userscript / bookmarklet, inny `@match` niż frekwencja.
+- Panel: Nowa wiadomość / Odebrane (licznik) / Wysłane / Kopie robocze / Archiwum / Ustawienia /
+  Grupy adresatów. Lista Odebrane ma kolumny: Nadawca (format `Nazwisko Imię - R - Nazwisko Imię
+  dziecka - (016197)`, czyli **rodzic jest opisany przez dziecko**), Temat, Załącznik, Otrzymano,
+  Odpowiedziano, Przekazano, Skrzynka, Przeczytano. Filtr tekstowy nad tabelą.
+- Formularz „Nowa wiadomość": Wyślij jako (select) · **Adresaci** (pole tekstowe z podpowiedziami
+  + 2 przyciski: książka adresowa, grupy) · Temat · edytor treści (toolbar Domyślny/Sans Serif/
+  B/I/U/listy — wygląda na Quill; zgaduję, nie sprawdzone) · Rodzaj kont · Wyślij / Anuluj.
+- Zwolnienia od rodziców przychodzą właśnie tu (na zrzucie 2 wiadomości „zwolnienie z ćwiczeń WF").
+
+### Zasada (ta sama co frekwencja + zakaz z CLAUDE.md nauczyciel)
+**Fill-only.** Skrypt wypełnia adresata/temat/treść, klik „Wyślij" ZAWSZE u nauczyciela.
+Zakaz „NIE wysyłaj wiadomości do rodziców automatycznie" dotyczy także tej drogi.
+
+### Kształt narzędzia (uzgodniony)
+1. Dziennik WF: przycisk „Powiadom rodziców" — lista uczniów z NĆ bez usprawiedliwienia z dnia
+   → schowek (nazwisko + dane do szablonu). Analog „Kopiuj dla VULCAN".
+2. Panel wiadomości (skrypt): Ctrl+V listy → **krok 0: skan „Odebrane"** z ostatnich N dni po
+   nadawcy (nazwisko dziecka w opisie rodzica) i temacie (`zwolnien|usprawiedliw|nie będzie
+   ćwicz`) → flaga „jest wiadomość od rodzica, sprawdź" przy uczniu; skrypt czyta tylko listę
+   (nadawca+temat), nie otwiera treści. → dla każdego ucznia bez flagi (lub po odklinięciu):
+   Nowa wiadomość → wpisz nazwisko w Adresaci (wybór rodzica z podpowiedzi = user, dopóki nie
+   znamy struktury podpowiedzi) → Temat → Treść z szablonu → user: Wyślij.
+3. Szablon treści: `szablony/rodzice/nc-informacja-przypomnienie.md` (do napisania; jeden dla
+   wszystkich, pola: data, imię dziecka, klasa; ton informacyjny, nie karcący).
+
+### Ryzyka nazwane
+- Fałszywy alarm: NĆ ze zwolnieniem, którego jeszcze nie ma w apce → krok 0 + decyzja usera.
+- Skala: kilkanaście „Wyślij" tygodniowo — akceptowalne przy gotowym formularzu; jeśli boli,
+  rozważyć „Grupy adresatów" (jedna zbiorcza wiadomość dzienna do kilku rodziców? — do sprawdzenia,
+  czy VULCAN pozwala na wielu adresatów i czy to nie ujawnia listy rodzicom nawzajem).
+- Edytor treści: jeśli Quill, to wpis przez `innerHTML` może nie odpalić modelu — sprawdzić
+  `quill.clipboard.dangerouslyPasteHTML` lub `execCommand('insertText')` na zrzucie DOM.
+
+### Do zebrania od usera PRZED kodem (DevTools, jak przy frekwencji; pliki na pulpit → `_zrzuty/`, NIE do gita — nazwiska rodziców)
+1. Zrzut pola „Adresaci" po wpisaniu kilku liter nazwiska — jak nazwany jest rodzic przy uczniu.
+2. outerHTML okna „Nowa wiadomość" → `D:/Users/Desktop/vulcan-wiadomosc.txt`.
+3. outerHTML jednego wiersza listy „Odebrane" → `D:/Users/Desktop/vulcan-odebrane.txt`.
+
+### Kolejność względem Szczebla 2
+Szczebel 2 (test przycisku, A, B+C) NADAL pierwszy — ten sam skrypt frekwencji. Szczebel 3 to
+nowy plik `vulcan-wiadomosci.user.js`; można równolegle, gdy przyjdą zrzuty 1–3.
+
+## Kandydaci do dalszej automatyzacji (burza 2026-09-17, NIE decyzje — do oceny przez usera)
+Kryterium goal.md: pain-driven, nie search-driven. Każdy punkt = ból, który ma ciągnąć.
+1. **Usprawiedliwienia z Odebranych → apka WF** (odwrotny kierunek niż Szczebel 2A): skan
+   Odebranych po temacie/nadawcy → propozycja „ustaw ZW/U dla X na daty…" w apce. Ból: ręczne
+   przepisywanie zwolnień z 2 miejsc. Ryzyko: daty w temacie wolnym tekstem (`16-18.09`).
+2. **Oceny WF → VULCAN** (fill-only jak frekwencja): apka ma oceny per uczeń, VULCAN ma siatkę
+   ocen. Ból: podwójne wpisywanie po każdym sprawdzianie. Wymaga rozpoznania DOM okna ocen.
+3. **Pomiary/testy sprawnościowe → wiadomość do rodzica** (karta ucznia z apki jako treść lub
+   PDF-załącznik OneDrive). Ból: rodzic pyta „jak idzie", nauczyciel klika ręcznie. Skala mała
+   (semestr), więc może zostać ręczne.
+4. **Przypomnienie o stroju dzień przed** dla klasy (Grupy adresatów) — cykliczne, jedna
+   wiadomość. Ból wątpliwy; łatwo przejść w spam. Raczej NIE.
+5. **Zebranie NĆ tygodniowe → wychowawca** (nie rodzic): jedna wiadomość do wychowawcy klasy z
+   listą uczniów z ≥2 NĆ. Ból: wychowawca dowiaduje się na radzie. Możliwe piggyback na tym samym
+   skrypcie wiadomości (adresat = nauczyciel).
+6. **Wykrywanie sprzeczności apka↔VULCAN** po „Zapisz" (odczyt siatki i porównanie ze statusem w
+   apce, raport różnic). Ból: rozjazd po ręcznych poprawkach w VULCAN. Read-only, bezpieczne.
+Najwięcej sensu na dziś (moja ocena): 1 i 5 — oba jadą na skrypcie wiadomości, który i tak
+powstaje w Szczeblu 3; 2 to osobne rozpoznanie DOM; 6 tanie, ale bez zgłoszonego bólu.
