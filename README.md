@@ -223,6 +223,28 @@ Czego zamek NIE robi: nie chroni przed kimś, kto zna hasło; nie chroni danych
 w pamięci strony przy odblokowanej apce (DevTools) — chroni dysk i oko przypadkowego
 przechodnia; mikrofon od 2026-09-17 rozpoznaje lokalnie („Mikrofon lokalny”).
 
+## Układ: praca wysoko, ściągi na żądanie (2026-09-18)
+
+Objaw (zrzut 1366×768 z klasą 20 uczniów): lista uczniów w Obecności zaczynała się na
+~710 px, czyli po otwarciu apki nie było widać ani jednego nazwiska. Nad tabelą stały
+tytuł, pasek klasy, „Szybki workflow” (na każdej zakładce, także w Ocenach i Pomiarach),
+zakładki, data, baner zapisu, mikrofon, legenda, ściąga klawiszy — pomoc na pierwszy
+tydzień wyświetlana przy każdej lekcji do końca roku (progressive disclosure: instrukcja
+na żądanie, nie stale).
+
+Zmiana: (1) tytuł + wybór klasy + zakładki w jednym **przyklejonym** pasku (`.topbar`,
+zostaje przy przewijaniu, na telefonie bez podtytułu); (2) wszystkie ściągi per zakładka
+zwinięte do jednej linii `❔ …` (`<details class="pomoc" data-pomoc=…>`): pierwsze
+otwarcie rozwinięte, potem tak, jak zostawisz — stan w `localStorage` pod
+`dziennik_wf_pomoc` (tylko 0/1 per zakładka, zero danych uczniów; test zamka dalej
+zielony); (3) w Ocenach granica półrocza została jako akcja poza ściągą; (4) „Wyczyść
+wszystko” zjechało z codziennego paska Uczniów do osobnego pola na dole zakładki;
+(5) stempel „— zwolniony —” bez zawijania (na telefonie nachodził na kółko statusu).
+
+Efekt: Obecność ze ściągą zwiniętą — tabela od ~350 px (9 uczniów widocznych od razu),
+z rozwiniętą ~600 px. Bramka: `test_uklad.py` (progi 400/450 px, pamięć stanu, sticky,
+miejsce „Wyczyść wszystko”). Ryzyko: przez pierwsze dni sięgasz do `❔` po klawisze.
+
 ## Mikrofon lokalny (2026-09-17)
 
 Do tej pory rozpoznawanie mowy w Chrome było serwerowe: nagranie z nazwiskami dzieci

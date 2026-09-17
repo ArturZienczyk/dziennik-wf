@@ -13,7 +13,8 @@
 // jest tu KONIECZNE - bez niego klient z cache serwowalby dziennik sprzed
 // wymuszonego szyfrowania kopii, czyli cofnalby poprawke bezpieczenstwa.
 // v5: mikrofon tylko lokalnie (processLocally) - poprawka prywatnosci, stary klient nie moze zostac.
-const CACHE_VERSION = 'dziennik-wf-v5';
+// v6: uklad - pasek gorny przyklejony, sciagi zwijane, tabela wysoko.
+const CACHE_VERSION = 'dziennik-wf-v6';
 const SHELL = [
   './dziennik_wf.html',
   './manifest.webmanifest',
