@@ -215,6 +215,22 @@ Kryterium goal.md: pain-driven, nie search-driven. Każdy punkt = ból, który m
 Najwięcej sensu na dziś (moja ocena): 1 i 5 — oba jadą na skrypcie wiadomości, który i tak
 powstaje w Szczeblu 3; 2 to osobne rozpoznanie DOM; 6 tanie, ale bez zgłoszonego bólu.
 
+## SZCZEBEL 4 — DOMKNIĘTY 2026-09-17 (3 commity, GitHub Pages = wdrożone; testy `test_pomiary_kolumny.py`, `test_pomiary_status.py`, `test_zwolnienie_od_do.py`)
+
+- **4.1 Przypinanie kolumny.** Przycisk `⇤` w nagłówku testu; przypięta kolumna stoi tuż za nazwiskiem
+  (przed Wzrost/Waga), podświetlona, fokus wskakuje w 1. kratkę; `⇥` odpina. Pole `cls.pinnedTest` (id),
+  kolejność `testFields` i dane pomiarów nietknięte.
+- **4.2 Status w kratce wyniku.** Pole tekstowe zamiast number: liczba ALBO `NB`/`NĆ` (w danych `NB`/`NC`
+  jak we frekwencji; `nc`, `nć`, `n.c.` → `NC`; `12,5` → `12.5`). Karta ucznia pokazuje status z opisem.
+  Średnich z pomiarów apka nie liczy — nie było czego omijać.
+- **4.3 Zwolnienie OD–DO.** `s.releases = [{od, do}]` (opcjonalne, stare kopie bez migracji). Uczniowie:
+  kolumna z chipami + od/do/`+`. W dniu z okresu: Obecność pokazuje `ZW?` (klik = inny status), pasek
+  i okno „Zapisz lekcję" wymieniają, kto dostanie ZW; zapis nadaje ZW zamiast C; „Kopiuj dla VULCAN"
+  eksportuje ZW; karta ucznia listuje okresy. Po DO uczeń wraca sam. **Nie zrobione:** oznaczanie
+  pomiarów w okresie — pomiar nie ma daty, nie ma czego porównać (użyj NĆ w kratce, 4.2).
+
+Oryginalny zapis szczebla (dla kontekstu):
+
 ## SZCZEBEL 4 (zapisany 2026-09-17 wieczór, słowa usera po udanym teście VULCAN) — apka WF, zakładka Pomiary
 
 Trzy bóle zgłoszone przez usera, wszystkie po stronie `dziennik_wf.html` (NIE userscriptu):
