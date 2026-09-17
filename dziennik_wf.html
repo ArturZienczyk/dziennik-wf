@@ -870,6 +870,7 @@
       <button onclick="dateOffset(1)">nast. ▶</button>
       <button onclick="setToday()">dziś</button>
       <button class="danger" onclick="deleteLesson()" title="usuń tę lekcję">🗑 usuń lekcję</button>
+      <button onclick="copyForVulcan()" title="Kopiuje do schowka wyjątki z tego dnia (bez „ćwiczył”) w formacie Nazwisko Imię + status, do wklejenia w panel skryptu VULCAN">📋 Kopiuj dla VULCAN</button>
       <span class="lesson-count" id="lessonCount"></span>
     </div>
 
@@ -2727,6 +2728,40 @@ function importEncrypted(event) {
   };
   reader.readAsText(file);
   event.target.value = '';
+}
+
+// Kopiuj dla VULCAN — JEDEN dzień (bieżący), surowe kody apki (C+sp, BS, NĆ…),
+// projekcję na symbole VULCANa robi skrypt vulcan-frekwencja.user.js (jedno miejsce mapy).
+// Pomija czyste „C” (VULCAN sam wstawia obecność po Zapisz), zwolnieni długoterminowo → ZW.
+function copyForVulcan() {
+  const date = state.currentDate;
+  const day = state.attendance[date] || {};
+  const lines = [];
+  let skippedC = 0, noStatus = 0;
+  state.students.forEach(s => {
+    if (!s.name || !s.name.trim()) return;
+    let token;
+    if (s.longTermReleased) token = 'ZW';
+    else {
+      const c = attRead(day[s.id]);
+      if (!c.s) { noStatus++; return; }
+      if (c.s === 'C' && !c.sp) { skippedC++; return; }
+      token = c.s + (c.sp ? '+sp' : '');
+    }
+    lines.push(s.name.trim() + '\t' + token);
+  });
+  if (!lines.length && !skippedC) { showToast('Brak wpisów na ' + date, 'warn'); return; }
+  const text = lines.join('\n');
+  const done = () => showToast('Skopiowano ' + lines.length + ' wyjątków z ' + date +
+    (skippedC ? ' (pominięto ' + skippedC + ' × ćwiczył)' : '') +
+    (noStatus ? ', bez statusu: ' + noStatus : ''), 'success');
+  const fallback = () => {
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta);
+    ta.select(); try { document.execCommand('copy'); done(); } catch (e) { showToast('Nie udało się skopiować', 'error'); }
+    ta.remove();
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback);
+  else fallback();
 }
 
 function exportCSV() {
