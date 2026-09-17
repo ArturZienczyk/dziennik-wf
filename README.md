@@ -224,6 +224,14 @@ Czego zamek NIE robi: nie chroni przed kimś, kto zna hasło; nie chroni danych
 w pamięci strony przy odblokowanej apce (DevTools) — chroni dysk i oko przypadkowego
 przechodnia; mikrofon nadal wysyła nagranie do Google (osobna decyzja).
 
+## Puste wiersze-widma (2026-09-17)
+
+Objaw: usunięty pusty uczeń w 4b wracał. Przyczyna: Enter w ostatnim wierszu tabeli Uczniowie
+dopisuje pustego ucznia (celowo, do wpisywania ciągiem), a porzucony wiersz zostawał na stałe.
+Lek: wiersz bez nazwiska i bez żadnych danych (obecność, pomiar, ocena) znika przy wyjściu
+z zakładki Uczniowie i przy otwarciu dziennika. Klasa bez żadnego nazwiska (świeży start)
+zostaje nietknięta. Bramka: `test_puste_wiersze.py`.
+
 ## Uwaga operacyjna: jedno miejsce uruchamiania
 
 Dane siedzą w `localStorage`, który jest **osobny dla pliku na dysku i dla adresu

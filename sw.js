@@ -12,7 +12,7 @@
 // v2: Fazy 5-7 (klawiatura, szyfrowane kopie, kroje w pliku). Podbicie wersji
 // jest tu KONIECZNE - bez niego klient z cache serwowalby dziennik sprzed
 // wymuszonego szyfrowania kopii, czyli cofnalby poprawke bezpieczenstwa.
-const CACHE_VERSION = 'dziennik-wf-v3';
+const CACHE_VERSION = 'dziennik-wf-v4';
 const SHELL = [
   './dziennik_wf.html',
   './manifest.webmanifest',
