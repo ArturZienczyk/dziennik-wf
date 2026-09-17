@@ -215,6 +215,18 @@
 
   /* Tabela obecności */
   .table-wrap { overflow-x: auto; background: var(--paper); border-radius: 4px; border: 1px solid var(--line); }
+  /* Nagłówek tabeli przyklejony pod paskiem górnym (2026-09-18): przy 20+ wierszach opisy
+     kolumn ginęły przy przewijaniu. Warunek: opakowanie tabeli NIE może mieć overflow ≠ visible
+     (stałoby się kontenerem sticky) — na laptopie tabele mieszczą się w 100%, więc overflow
+     zdejmujemy; na telefonie opakowanie samo przewija w pionie (max-height) i nagłówek
+     klei się do jego góry. --topbar-h ustawia JS (ResizeObserver na .topbar). */
+  @media (min-width: 701px) {
+    .container .table-wrap, .container .oceny-wrap { overflow: visible; }
+    table.attendance thead th, table.dziennik thead th {
+      position: sticky; top: var(--topbar-h, 0px); z-index: 4;
+      background: var(--line-soft); box-shadow: 0 2px 0 var(--ink);
+    }
+  }
   table.attendance { width: 100%; border-collapse: collapse; font-size: 13px; }
   table.attendance thead { background: var(--line-soft); border-bottom: 2px solid var(--ink); }
   table.attendance thead th {
@@ -853,7 +865,9 @@
     .topbar .subtitle { display: none; }
     .topbar .tabs { overflow-x: auto; }
     .tab { padding: 8px 10px; font-size: 13px; white-space: nowrap; }
-    .table-wrap, .oceny-wrap { -webkit-overflow-scrolling: touch; }
+    .table-wrap, .oceny-wrap { -webkit-overflow-scrolling: touch; max-height: calc(100vh - var(--topbar-h, 0px) - 16px); overflow: auto; }
+    table.attendance thead th, table.dziennik thead th { position: sticky; top: 0; z-index: 4; background: var(--line-soft); box-shadow: 0 2px 0 var(--ink); }
+    table.attendance thead th:nth-child(1), table.attendance thead th:nth-child(2) { z-index: 5; }
 
     /* Ciaśniejsze komórki — więcej mieści się bez przewijania */
     table.attendance { font-size: 12px; }
@@ -1937,6 +1951,17 @@ function pomocStart() {
   });
 }
 document.addEventListener('DOMContentLoaded', pomocStart);
+// Wysokość przyklejonego paska → --topbar-h (nagłówki tabel kleją się tuż pod nim)
+function topbarMierz() {
+  const t = document.querySelector('.topbar');
+  if (t) document.documentElement.style.setProperty('--topbar-h', t.offsetHeight + 'px');
+}
+document.addEventListener('DOMContentLoaded', () => {
+  topbarMierz();
+  const t = document.querySelector('.topbar');
+  if (t && 'ResizeObserver' in window) new ResizeObserver(topbarMierz).observe(t);
+  window.addEventListener('resize', topbarMierz);
+});
 
 function switchTab(name) {
   const zUczniow = document.getElementById('tab-uczniowie').classList.contains('active');

@@ -245,6 +245,24 @@ Efekt: Obecność ze ściągą zwiniętą — tabela od ~350 px (9 uczniów wido
 z rozwiniętą ~600 px. Bramka: `test_uklad.py` (progi 400/450 px, pamięć stanu, sticky,
 miejsce „Wyczyść wszystko”). Ryzyko: przez pierwsze dni sięgasz do `❔` po klawisze.
 
+## Nagłówek tabeli przyklejony (2026-09-18)
+
+Objaw: przy 20+ uczniach po przewinięciu znikał wiersz z opisami kolumn i nie było
+wiadomo, co oznacza liczba. Lek: `thead th { position: sticky; top: var(--topbar-h) }`
+we wszystkich tabelach (Obecność, Uczniowie, Pomiary, Oceny, Statystyki); `--topbar-h`
+ustawia JS z wysokości paska górnego (ResizeObserver), więc nagłówek klei się tuż pod
+paskiem także po zawinięciu paska klasy.
+
+Pułapka: element-opakowanie z `overflow` innym niż `visible` staje się kontenerem sticky
+i nagłówek „klei się" do niego, nie do strony. Na laptopie (≥701 px) `.table-wrap` i
+`.oceny-wrap` mają `overflow: visible` (tabele mieszczą się w 100%). Reguła musi mieć
+wyższą specyficzność (`.container .oceny-wrap`), bo `.oceny-wrap { overflow-x: auto }`
+stoi później w pliku i wygrywało — diagnoza: `getComputedStyle` + spacer po przodkach
+z overflow ≠ visible. Na telefonie opakowanie przewija samo (`max-height: 100vh −
+pasek`, `overflow: auto`) i nagłówek klei się do jego góry; przyklejone kolumny # i
+Uczeń dostają wyższy z-index w nagłówku. Bramka: `test_uklad.py` (nagłówek Obecności po
+przewinięciu ≤ 2 px pod paskiem, przy 40 wierszach).
+
 ## Zarys kolumn — gdzie wiersze wystarczą, a gdzie nie (2026-09-18)
 
 Pytanie Artura: w których tabelach same linie poziome wystarczą, a gdzie trzeba zarysu
