@@ -245,6 +245,23 @@ Efekt: Obecność ze ściągą zwiniętą — tabela od ~350 px (9 uczniów wido
 z rozwiniętą ~600 px. Bramka: `test_uklad.py` (progi 400/450 px, pamięć stanu, sticky,
 miejsce „Wyczyść wszystko”). Ryzyko: przez pierwsze dni sięgasz do `❔` po klawisze.
 
+## Zarys kolumn — gdzie wiersze wystarczą, a gdzie nie (2026-09-18)
+
+Pytanie Artura: w których tabelach same linie poziome wystarczą, a gdzie trzeba zarysu
+kolumn, żeby oko nie gubiło wartości. Diagnoza ze zrzutów 1366 px z klasą 20 uczniów:
+
+- **Wystarczą wiersze** tam, gdzie komórka sama ma obrys: **Uczniowie** (pola dat,
+  kratki, pola wzrost/waga) i **Oceny** (kolumny mają tło, ocena stoi w kafelku).
+  Także małe tabele w karcie ucznia (2–4 kolumny).
+- **Potrzebny zarys kolumn** tam, gdzie liczba stoi luzem w rzadkiej kolumnie:
+  **Obecność** (8 kolumn liczników, większość komórek pusta — „1” w NĆ czy BS?),
+  **Statystyki** (11 kolumn, obie tabele) i **Pomiary** (wynik bez obrysu, 150–200 px
+  między kolumnami).
+
+Rozwiązanie: klasa `kolumny` na tabeli → cienka pionowa linia (`var(--line-soft)`) po
+lewej każdej kolumny liczb, w nagłówku ciemniejsza. Bez zebry: na telefonie przyklejone
+kolumny # i Uczeń mają własne tło i pasy by się łamały. Hover wiersza zostaje.
+
 ## Mikrofon lokalny (2026-09-17)
 
 Do tej pory rozpoznawanie mowy w Chrome było serwerowe: nagranie z nazwiskami dzieci

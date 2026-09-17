@@ -14,7 +14,8 @@
 // wymuszonego szyfrowania kopii, czyli cofnalby poprawke bezpieczenstwa.
 // v5: mikrofon tylko lokalnie (processLocally) - poprawka prywatnosci, stary klient nie moze zostac.
 // v6: uklad - pasek gorny przyklejony, sciagi zwijane, tabela wysoko.
-const CACHE_VERSION = 'dziennik-wf-v6';
+// v7: zarys kolumn w Obecnosci/Statystykach/Pomiarach.
+const CACHE_VERSION = 'dziennik-wf-v7';
 const SHELL = [
   './dziennik_wf.html',
   './manifest.webmanifest',
