@@ -903,6 +903,7 @@
         <em>brak stroju</em> → BS ·
         <em>zwolnienie</em> → ZW ·
         <em>nie ćwiczył</em> → NĆ.<br>
+        <strong>NĆ vs BS vs ZW:</strong> wszyscy trzej są obecni i nie ćwiczą. NĆ i BS = bez papieru (różnią się tylko powodem: strój czy coś innego), oba obniżają % ćwiczył tak samo. ZW = z papierem (niećwiczący usprawiedliwiony), nie wchodzi do bazy.<br>
         <strong>Komenda usprawiedliwiania:</strong> <em>"usprawiedliw Kowalskiego"</em> — zmienia najnowsze NB tego ucznia na NU (zaległe nieobecności).<br>
         Wpisy oddzielaj przecinkami: <em>"Kowalski był, Nowak wagary, usprawiedliw Maciek"</em>.
       </div>
@@ -1172,11 +1173,11 @@
     <p style="font-size: 13px; color: var(--ink-muted); margin: 0 0 12px 0;">Kliknij wybrany status na dzień: <strong id="pickerDate"></strong></p>
     <div style="display: grid; gap: 8px;">
       <button class="status-btn status-c" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus('C')">C — ćwiczył</button>
-      <button class="status-btn status-nc" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus('NC')">NĆ — nie ćwiczył (bez zwolnienia)</button>
-      <button class="status-btn status-bs" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus('BS')">BS — brak stroju</button>
+      <button class="status-btn status-nc" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus('NC')" title="Obecny, bez papieru, powód inny niż strój. Liczy się jak BS — obniża % ćwiczył.">NĆ — nie ćwiczył (bez zwolnienia)<br><small style="font-weight:normal;opacity:.75">obecny, bez papieru, powód inny niż strój · obniża %</small></button>
+      <button class="status-btn status-bs" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus('BS')" title="Obecny, mógłby ćwiczyć, nie ma stroju. Liczy się jak NĆ — obniża % ćwiczył. Osobna kolumna tylko po to, żeby widzieć POWÓD.">BS — brak stroju<br><small style="font-weight:normal;opacity:.75">obecny, bez papieru, powód = strój · obniża % tak samo jak NĆ</small></button>
       <button class="status-btn status-nb" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus('NB')">NB — nieobecny nieusprawiedliwiony</button>
       <button class="status-btn status-nu" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus('NU')">NU — nieobecny usprawiedliwiony</button>
-      <button class="status-btn status-zw" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus('ZW')">ZW — zwolnienie jednorazowe</button>
+      <button class="status-btn status-zw" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus('ZW')" title="Obecny, nie ćwiczy Z PAPIEREM (rodzic/lekarz na tę lekcję). NIE wchodzi do bazy % ćwiczył. To jest „niećwiczący usprawiedliwiony”.">ZW — zwolnienie jednorazowe<br><small style="font-weight:normal;opacity:.75">obecny, nie ćwiczy Z PAPIEREM = niećwiczący usprawiedliwiony · nie obniża %</small></button>
       <button class="status-btn status-empty" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus(null)">— wyczyść —</button>
     </div>
 
@@ -1355,11 +1356,11 @@ const STORAGE_KEY = 'dziennik_wf_v1';
 // Statusy: C, NC, BS, NB (nieusprawiedliwiony), NU (usprawiedliwiony), ZW
 const STATUS_INFO = {
   C:  { label: 'C',  desc: 'ćwiczył',                       cls: 'status-c',  baza: true,  cwiczyl: true },
-  NC: { label: 'NĆ', desc: 'nie ćwiczył (bez zwolnienia)',  cls: 'status-nc', baza: true,  cwiczyl: false },
-  BS: { label: 'BS', desc: 'brak stroju',                   cls: 'status-bs', baza: true,  cwiczyl: false },
+  NC: { label: 'NĆ', desc: 'obecny, nie ćwiczył BEZ papieru z innego powodu niż strój (złe samopoczucie, odmowa, drobna kontuzja) — liczy się jak BS, obniża % ćwiczył',  cls: 'status-nc', baza: true,  cwiczyl: false },
+  BS: { label: 'BS', desc: 'obecny, mógłby ćwiczyć, ale nie ma stroju — liczy się jak NĆ, obniża % ćwiczył; osobna kolumna tylko po to, żeby widzieć POWÓD',                   cls: 'status-bs', baza: true,  cwiczyl: false },
   NB: { label: 'NB', desc: 'nieobecny nieusprawiedliwiony', cls: 'status-nb', baza: true,  cwiczyl: false },
   NU: { label: 'NU', desc: 'nieobecny usprawiedliwiony',    cls: 'status-nu', baza: false, cwiczyl: false },
-  ZW: { label: 'ZW', desc: 'zwolnienie jednorazowe',        cls: 'status-zw', baza: false, cwiczyl: false }
+  ZW: { label: 'ZW', desc: 'obecny, nie ćwiczy Z PAPIEREM (zwolnienie od rodzica/lekarza na tę lekcję) — NIE wchodzi do bazy % ćwiczył',        cls: 'status-zw', baza: false, cwiczyl: false }
 };
 
 // Wiele klas i szkół (szkoła = pole tekstowe klasy). Każda klasa ma własne dane.
