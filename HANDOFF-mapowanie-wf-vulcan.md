@@ -257,3 +257,48 @@ Trzy bóle zgłoszone przez usera, wszystkie po stronie `dziennik_wf.html` (NIE 
 Kolejność (propozycja): 1 (najmniejsze, czysty UI) → 2 (model kratki wyniku) → 3 (model ucznia +
 migracja kopii). Każdy punkt: próba na jednej klasie przed skalą, test w stylu istniejących
 `test_*.py` (Playwright, `py -3.14`).
+
+## SZCZEBEL 5 (zapisany 2026-09-17 wieczór, decyzja usera po sprawdzeniu regulaminów) — ZAMEK NA APCE
+
+### Skąd
+Research `research-notes/2026-09-17_regulamin-vulcan-automatyzacja.md`: skrypty do VULCAN literalnie
+nie podpadają pod jedyny znaleziony zapis dostawcy o automatyzacji (eduVULCAN pkt 15: auto-logowanie,
+scraping, inne oprogramowanie niż przeglądarka). Realne ryzyko regulaminowe leży w DANYCH DZIECI NA
+LAPTOPIE (wzorcowy regulamin szkolny §84: nośniki z danymi w sejfie; §13.1 nie udostępniać zasobów).
+Dziś: kto ma odblokowany laptop, otwiera dziennik i widzi wszystko (README „Brak zamka na apce").
+
+### Kształt (propozycja — do „pasuje / nie pasuje" na starcie sesji)
+1. **Ekran blokady przy otwarciu i po bezczynności.** Apka startuje zasłonięta; odblokowanie = hasło
+   (to samo co hasło kopii `dziennik_wf_backup_pwd`, żeby user pamiętał JEDNO; do rozstrzygnięcia:
+   osobny PIN 4–6 cyfr na szybkie odblokowanie na lekcji?). Po N minutach bez ruchu (domyślnie 10)
+   ekran wraca; `visibilitychange` (karta w tle) też blokuje.
+2. **Dane w pamięci przeglądarki ZASZYFROWANE tym hasłem** (localStorage + IndexedDB trzymają
+   ciphertext; jest już `encryptSnapshot` AES-GCM + PBKDF2 — reużyć). Bez tego zamek jest tylko
+   zasłoną: DevTools → Application → localStorage pokazuje nazwiska. To jest sedno, nie ekran.
+   Koszt: `save()` szyfruje przy każdym zapisie (PBKDF2 raz przy odblokowaniu, klucz w pamięci
+   strony; AES per zapis jest tani). Migracja: przy pierwszym uruchomieniu po aktualizacji apka
+   czyta jawne dane, prosi o hasło, zapisuje szyfrowane, kasuje jawne. Stare kopie `.enc.json`
+   działają bez zmian.
+3. **Zapomniane hasło = dane nie do odzyskania** (poza kopiami, które mają to samo hasło). Powiedzieć
+   to userowi wprost na ekranie ustawiania. Alternatywa: przycisk „🔑 Hasło kopii" dziś POKAZUJE
+   hasło — po zamku nie może (bo pokazałby je każdemu przy odblokowanym laptopie) → zamiast tego
+   „zmień hasło" po podaniu starego.
+4. **Nie ruszać:** kolejność zakładek, klawiatura, testy `test_*.py` (dopisać `test_zamek.py`:
+   start zasłonięty, złe hasło nie odsłania, po odblokowaniu dane są, localStorage nie zawiera
+   nazwiska, po bezczynności ekran wraca, migracja jawne→szyfrowane zachowuje wszystko).
+
+### Ryzyka nazwane
+- Blokada na lekcji = tarcie (hasło co 10 min przy wpisywaniu). Stąd PIN + timer liczony od
+  ostatniego klawisza, nie od otwarcia. User oceni po tygodniu.
+- Szyfrowanie storage podnosi koszt `test_pamiec.py` (pełna pamięć) — rozmiar ciphertextu ≈ jawny
+  +33% (base64). Sprawdzić limit 10 MB dla największej klasy.
+- Dyktowanie głosem i VULCAN „Kopiuj" — bez zmian (działają po odblokowaniu).
+
+### Kolejność względem 3
+Zamek (5) PRZED wiadomościami do rodziców (3): najpierw zabezpieczyć dane, które już są, potem
+dokładać kanał komunikacji. Szczebel 3 nadal czeka na 3 zrzuty DOM od usera.
+
+### Otwarte u usera (bez tego można zaczynać, ale warto wiedzieć)
+- Po zalogowaniu do UONET+: Pomoc → Regulamin → skopiować akapit o „oprogramowaniu/automatyzacji"
+  (regulaminu nauczyciela nie widać z zewnątrz).
+- Czy ZSS ma własny regulamin e-dziennika (na stronie szkoły go nie ma) — pytanie do administratora.
