@@ -104,7 +104,7 @@ nazwiska dziecka**, zła fraza go nie otwiera, własne hasło odtwarza dane w ca
 
 ### Czego to NIE załatwia
 
-- **Mikrofon** (dyktowanie) wysyła nagranie z imionami do Google — to osobna decyzja.
+- ~~**Mikrofon** (dyktowanie) wysyła nagranie z imionami do Google~~ — załatwione 2026-09-17 („Mikrofon lokalny” niżej).
 - ~~Brak zamka na apce~~ — załatwione w Szczeblu 5 („Zamek na apce” niżej).
 
 ## Nic nie wychodzi z laptopa (Faza 7)
@@ -137,9 +137,8 @@ zmianie, która dokłada bibliotekę, ikonę albo czcionkę.
 
 ### Co nadal wychodzi na zewnątrz — i kiedy
 
-- **Mikrofon** (dyktowanie): rozpoznawanie mowy w Chrome jest **serwerowe** — nagranie
-  z imionami dzieci trafia na serwery Google. Dopóki nie klikniesz mikrofonu, nic się
-  nie dzieje; ale to nie jest funkcja lokalna, mimo że tak wygląda.
+- **Mikrofon** (dyktowanie): od 2026-09-17 rozpoznawanie jest **lokalne** (Chrome 139+,
+  pakiet pl-PL pobierany raz); gdy pakietu nie ma, mikrofon nie rusza. Sekcja „Mikrofon lokalny”.
 - **Nic poza tym.** `localStorage` nie jest objęty synchronizacją konta Google
   (Chrome Sync obejmuje zakładki, historię, hasła, ustawienia, rozszerzenia — nie dane
   zapisane przez strony). Kopie lądują w `D:\Users\Downloads` — zwykłym folderze
@@ -222,7 +221,27 @@ PIN nie wystarcza. Pozostałe testy odblokowują apkę przez API
 
 Czego zamek NIE robi: nie chroni przed kimś, kto zna hasło; nie chroni danych
 w pamięci strony przy odblokowanej apce (DevTools) — chroni dysk i oko przypadkowego
-przechodnia; mikrofon nadal wysyła nagranie do Google (osobna decyzja).
+przechodnia; mikrofon od 2026-09-17 rozpoznaje lokalnie („Mikrofon lokalny”).
+
+## Mikrofon lokalny (2026-09-17)
+
+Do tej pory rozpoznawanie mowy w Chrome było serwerowe: nagranie z nazwiskami dzieci
+leciało do Google. Od Chrome 139 Web Speech API umie rozpoznawać na urządzeniu
+(`processLocally = true`, pakiet językowy SODA jak w Live Caption). Sprawdzone u Artura
+w konsoli: `available({langs:['pl-PL'], processLocally:true})` → `'downloadable'`,
+`install()` → `true`, potem `'available'`.
+
+Jak działa w dzienniku: przed startem mikrofonu `micLokalnieGotowy()` pyta Chrome o pakiet
+pl-PL. Jest → start z `processLocally`. Do pobrania → pobiera (raz, kilkadziesiąt MB, toast)
+i startuje. Nie ma / pobranie padło / stary Chrome bez `available()` → mikrofon **nie rusza**
+i mówi dlaczego (fail-closed). Chrome bez tej bramki domyślnie spada do chmury po cichu
+(udokumentowana pułapka: issues.chromium.org/521896368), dlatego bramka jest w kodzie,
+nie w ustawieniu. Status przy nagrywaniu: „słucham (lokalnie, bez internetu)”.
+
+Czego to NIE załatwia: Win+H (Windows) nadal wysyła do Microsoftu (Azure); Voice Access
+działa lokalnie, ale nie ma polskiego. Dyktuj mikrofonikiem w dzienniku. Jakość
+rozpoznawania lokalnego może być inna niż serwerowego — ocena po tygodniu na sali.
+Bramka: `test_mikrofon_lokalny.py`, 5/5 PASS (atrapa Chrome w 5 stanach pakietu).
 
 ## Puste wiersze-widma (2026-09-17)
 

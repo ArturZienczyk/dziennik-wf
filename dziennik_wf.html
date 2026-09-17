@@ -981,7 +981,7 @@
       <summary>🎤 Dyktowanie głosem — rozwiń, jeśli wolisz mówić niż pisać</summary>
     <!-- Pole dyktowania -->
     <div class="dictate-zone">
-      <textarea id="dictateField" placeholder="Tu możesz dyktować przez mikrofonik 🎤 albo przez Win+H / Superwhisper. Np: 'Kowalski obecny, Nowak nieobecny, Maciek brak stroju'"></textarea>
+      <textarea id="dictateField" placeholder="Tu możesz dyktować przez mikrofonik 🎤 (rozpoznawanie lokalne, nic nie idzie do Google; Win+H wysyła do Microsoftu). Np: 'Kowalski obecny, Nowak nieobecny, Maciek brak stroju'"></textarea>
       <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
         <button id="micBtnObecnosc" class="mic-btn" onclick="toggleMic('dictateField','micBtnObecnosc','micStatusObecnosc')">
           <span class="mic-icon">🎤</span> <span>Mikrofon</span>
@@ -3315,7 +3315,35 @@ function isSpeechSupported() {
 // targetInputId: ID textarea/input gdzie wpisywać tekst
 // btnId: ID przycisku mikrofonu (do animacji)
 // statusId: ID elementu na status (opcjonalnie)
-function toggleMic(targetInputId, btnId, statusId) {
+// Rozpoznawanie WYLACZNIE na laptopie (2026-09-17). Chrome domyslnie wysyla nagranie
+// (z imionami dzieci) na serwery Google; od Chrome 139 potrafi rozpoznawac lokalnie
+// (pakiet SODA pl-PL). Bramka fail-closed: gdy pakietu nie ma i nie da sie go pobrac,
+// mikrofon NIE rusza - zamiast po cichu spasc do chmury. Testowane u usera: pl-PL
+// 'downloadable' -> install() true -> 'available'.
+const MIC_LANG = 'pl-PL';
+async function micLokalnieGotowy() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR || typeof SR.available !== 'function') {
+    return { ok: false, msg: 'Ten Chrome nie umie rozpoznawać mowy lokalnie (potrzebny Chrome 139+). Mikrofon wyłączony, żeby nagranie nie poszło do Google.' };
+  }
+  let st;
+  try { st = await SR.available({ langs: [MIC_LANG], processLocally: true }); }
+  catch (e) { return { ok: false, msg: 'Nie udało się sprawdzić pakietu polskiego: ' + e.message }; }
+  if (st === 'available') return { ok: true };
+  if (st === 'downloadable' || st === 'downloading') {
+    showToast('Pobieram polski pakiet rozpoznawania mowy (raz, kilkadziesiąt MB)…', 'info');
+    let done = false;
+    try { done = await SR.install({ langs: [MIC_LANG], processLocally: true }); } catch (e) { done = false; }
+    if (done) {
+      try { st = await SR.available({ langs: [MIC_LANG], processLocally: true }); } catch (e) { st = 'unavailable'; }
+      if (st === 'available') return { ok: true };
+    }
+    return { ok: false, msg: 'Polski pakiet lokalny nie pobrał się. Mikrofon wyłączony (nagranie nie idzie do Google). Spróbuj z internetem.' };
+  }
+  return { ok: false, msg: 'Chrome nie ma polskiego rozpoznawania lokalnego na tym komputerze. Mikrofon wyłączony (nagranie nie idzie do Google).' };
+}
+
+async function toggleMic(targetInputId, btnId, statusId) {
   if (!isSpeechSupported()) {
     showToast('Twoja przeglądarka nie wspiera rozpoznawania mowy. Użyj Chrome lub Edge.', 'warn');
     return;
@@ -3332,9 +3360,13 @@ function toggleMic(targetInputId, btnId, statusId) {
     currentRecognition.stop();
   }
 
+  const gotowy = await micLokalnieGotowy();
+  if (!gotowy.ok) { showToast(gotowy.msg, 'error'); return; }
+
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const recognition = new SpeechRecognition();
-  recognition.lang = 'pl-PL';
+  recognition.lang = MIC_LANG;
+  recognition.processLocally = true;
   recognition.continuous = true;
   recognition.interimResults = true;
   recognition.maxAlternatives = 1;
@@ -3351,7 +3383,7 @@ function toggleMic(targetInputId, btnId, statusId) {
     btnEl.classList.add('recording');
     btnEl.innerHTML = '<span class="mic-icon">⏹</span> <span>Zatrzymaj</span>';
     if (statusEl) {
-      statusEl.textContent = '● słucham...';
+      statusEl.textContent = '● słucham (lokalnie, bez internetu)';
       statusEl.classList.add('live');
     }
   };
@@ -3376,7 +3408,8 @@ function toggleMic(targetInputId, btnId, statusId) {
     let msg = 'Błąd rozpoznawania mowy';
     if (event.error === 'not-allowed') msg = 'Brak dostępu do mikrofonu. Pozwól na dostęp w przeglądarce.';
     else if (event.error === 'no-speech') msg = 'Nie wykryto mowy. Spróbuj ponownie.';
-    else if (event.error === 'network') msg = 'Błąd sieci. Rozpoznawanie mowy wymaga internetu.';
+    else if (event.error === 'network') msg = 'Błąd sieci przy rozpoznawaniu (nie powinien wystąpić przy trybie lokalnym).';
+    else if (event.error === 'language-not-supported') msg = 'Polski pakiet lokalny zniknął z Chrome. Mikrofon zatrzymany, nagranie nie poszło do Google.';
     else if (event.error === 'audio-capture') msg = 'Brak mikrofonu.';
     else if (event.error === 'aborted') return; // anulowane przez nas - bez komunikatu
     showToast(msg, 'error');
