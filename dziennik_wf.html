@@ -375,6 +375,8 @@
   }
   .pomiary-table input:hover { border-color: var(--line); background: rgba(255,255,255,0.5); }
   .pomiary-table input:focus { outline: none; border-color: var(--ink); background: var(--paper); }
+  .test-del { border:0; background:none; color:var(--ink-muted); cursor:pointer; font-size:14px; padding:0 4px; }
+  .test-del:hover { color:var(--accent-warm); }
 
   /* Modal informacyjny przy starcie */
   .modal-bg {
@@ -406,6 +408,8 @@
   .kafel .l { font-size: 11px; color: var(--ink-muted); margin-top: 3px; }
   .kafel .pill { display:inline-block; width:10px; height:10px; border-radius:3px; border:1px solid; margin-right:5px; vertical-align:-1px; }
   .karta-filtr { font-size: 12px; color: var(--accent); margin-top: 6px; min-height: 16px; }
+  .karta-zakres { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px; font-size:13px; }
+  .karta-zakres input[type=date] { padding:4px 6px; border:1px solid var(--line); border-radius:5px; font-family:inherit; font-size:13px; }
   .os-czasu { display:flex; flex-wrap:wrap; gap:10px 14px; }
   .os-miesiac { display:flex; flex-direction:column; gap:4px; }
   .os-miesiac .m { font-size: 11px; color: var(--ink-muted); }
@@ -436,6 +440,7 @@
     body.karta-print .modal.karta { max-width: none; max-height: none; overflow: visible; box-shadow: none; padding: 0; border-radius: 0; }
     body.karta-print .karta-actions, body.karta-print .karta-filtr, body.karta-print .kafel:not(.static) { cursor: default; }
     body.karta-print .karta-actions { display: none; }
+    body.karta-print .karta-zakres { display: none; }
     body.karta-print .kafel.on { outline: none; }
     .karta table.lista { page-break-inside: auto; }
     .karta table.lista tr { page-break-inside: avoid; }
@@ -1068,6 +1073,14 @@
   <div id="tab-pomiary" class="tab-content">
     <div class="info-box">
       Wpisz wyniki testów dla każdego ucznia. Wzrost i waga pochodzą z karty ucznia (zakładka Uczniowie).
+      Kolumny testów są Twoje: dodaj własny test niżej, usuń niepotrzebny znakiem × w nagłówku (wyniki zostają w pamięci, wracają po ponownym dodaniu testu o tym samym id).
+    </div>
+
+    <div class="quick-add" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <label for="newTestName" style="margin:0;">Nowy test:</label>
+      <input type="text" id="newTestName" placeholder="np. Rzut piłką lekarską" autocomplete="off" style="flex:1;min-width:180px;" onkeydown="if(event.key==='Enter'){event.preventDefault();addTestField();}">
+      <input type="text" id="newTestUnit" placeholder="jednostka, np. m" autocomplete="off" style="width:140px;" onkeydown="if(event.key==='Enter'){event.preventDefault();addTestField();}">
+      <button class="primary" onclick="addTestField()">+ Dodaj test</button>
     </div>
 
     <div class="kbd-bar">
@@ -1086,10 +1099,7 @@
             <th class="left">Uczeń</th>
             <th>Wzrost [cm]</th>
             <th>Waga [kg]</th>
-            <th>Skok w dal [cm]</th>
-            <th>Bieg 10×5 [s]</th>
-            <th>Beep test [stage]</th>
-            <th>Deska [s]</th>
+            <!-- kolumny testów dopisuje renderPomiary() z getTestFields() -->
           </tr>
         </thead>
         <tbody id="pomiaryBody"></tbody>
@@ -2109,7 +2119,8 @@ const KARTA_DNI = ['nd', 'pn', 'wt', 'śr', 'czw', 'pt', 'sb'];
 const KARTA_MIESIACE = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
 
 function kartaLekcje(studentId) {
-  return Object.keys(state.attendance).sort().map(date => {
+  const od = state.kartaOd || '', do_ = state.kartaDo || '';
+  return Object.keys(state.attendance).sort().filter(d => (!od || d >= od) && (!do_ || d <= do_)).map(date => {
     const c = attRead((state.attendance[date] || {})[studentId]);
     return c.s ? { date, s: c.s, sp: c.sp } : null;
   }).filter(Boolean);
@@ -2126,12 +2137,17 @@ function kartaData(iso) {
 function openKarta(studentId) {
   state.kartaStudentId = studentId;
   state.kartaFilter = null;
+  state.kartaOd = ''; state.kartaDo = '';
   renderKarta();
   document.getElementById('kartaUcznia').classList.add('active');
 }
 function closeKarta() {
   document.getElementById('kartaUcznia').classList.remove('active');
   state.kartaStudentId = null;
+}
+function kartaZakres(od, do_) {
+  state.kartaOd = od || ''; state.kartaDo = do_ || '';
+  renderKarta();
 }
 function kartaFiltruj(f) {
   state.kartaFilter = (state.kartaFilter === f) ? null : f;
@@ -2245,7 +2261,7 @@ function kartaOceny(studentId) {
 
 function kartaPomiary(s) {
   const m = state.measurements[s.id] || {};
-  const rows = [['Wzrost [cm]', s.height], ['Masa [kg]', s.weight], ['Skok w dal [cm]', m.jump], ['Bieg wahadłowy [s]', m.shuttle], ['Beep test [stage]', m.beep], ['Deska [s]', m.plank]];
+  const rows = [['Wzrost [cm]', s.height], ['Masa [kg]', s.weight]].concat(getTestFields().map(f => [f.name + (f.unit ? ' [' + f.unit + ']' : ''), m[f.id]]));
   return '<table class="lista"><tbody>' + rows.map(r => '<tr><td>' + r[0] + '</td><td><b>' + (r[1] || '—') + '</b></td></tr>').join('') + '</tbody></table>';
 }
 
@@ -2258,15 +2274,19 @@ function renderKarta() {
   const cls = getCurrentClass();
   const f = state.kartaFilter;
   let h = '<div class="karta-head"><div><h3>' + (escapeHtml(s.name) || 'uczeń') + '</h3><div class="sub">' + escapeHtml((cls && cls.name) || '') + ' · karta ucznia · stan na ' + kartaData(new Date().toISOString().slice(0, 10)) + (s.longTermReleased ? ' · <b>zwolniony długoterminowo</b>' : '') + '</div></div>'
-    + '<div class="karta-actions"><button onclick="drukujKarte()">🖨 Drukuj / PDF</button><button onclick="closeKarta()">Zamknij</button></div></div>';
-  if (!lekcje.length) { box.innerHTML = h + '<p class="karta-uwaga">Brak zapisanych lekcji dla tej osoby.</p>'; return; }
+    + '<div class="karta-actions"><button onclick="drukujKarte()">🖨 Drukuj / PDF</button><button onclick="closeKarta()">Zamknij</button></div></div>'
+    + '<div class="karta-zakres"><label>Zakres: od <input type="date" id="kartaOd" value="' + (state.kartaOd || '') + '" onchange="kartaZakres(this.value, document.getElementById(\'kartaDo\').value)"></label>'
+    + '<label>do <input type="date" id="kartaDo" value="' + (state.kartaDo || '') + '" onchange="kartaZakres(document.getElementById(\'kartaOd\').value, this.value)"></label>'
+    + ((state.kartaOd || state.kartaDo) ? '<button type="button" onclick="kartaZakres(\'\', \'\')">✕ cała historia</button><span class="karta-uwaga">Bilans i krzywa liczone tylko z tego zakresu.</span>' : '<span class="karta-uwaga">Puste = cała historia. Wpisz np. ostatni miesiąc.</span>') + '</div>';
+  if (!lekcje.length) { box.innerHTML = h + '<p class="karta-uwaga">Brak zapisanych lekcji dla tej osoby' + ((state.kartaOd || state.kartaDo) ? ' w tym zakresie dat' : '') + '.</p>'; return; }
 
   h += '<h4>1 · Bilans</h4><div class="karta-okna">';
-  if (brk) {
+  const zakres = !!(state.kartaOd || state.kartaDo);
+  if (brk && !zakres) {
     h += '<div>' + kartaKafle(lekcje.filter(l => l.date < brk), 'I półrocze (do ' + kartaData(brk).slice(0, 10) + ')') + '</div>';
     h += '<div>' + kartaKafle(lekcje.filter(l => l.date >= brk), 'II półrocze') + '</div>';
   }
-  h += '<div>' + kartaKafle(lekcje, brk ? 'Cały rok' : 'Cała historia') + '</div></div>';
+  h += '<div>' + kartaKafle(lekcje, zakres ? ('Zakres ' + (state.kartaOd ? kartaData(state.kartaOd).slice(0, 10) : '…') + ' – ' + (state.kartaDo ? kartaData(state.kartaDo).slice(0, 10) : '…')) : (brk ? 'Cały rok' : 'Cała historia')) + '</div></div>';
   h += '<div class="karta-filtr">' + (f ? 'Filtr: <b>' + (f === 'sp' ? 'spóźnienia' : KARTA_LITERA[f]) + '</b> — kliknij kafel jeszcze raz, żeby zdjąć.' : 'Kliknij kafel, żeby podświetlić te lekcje niżej.') + '</div>';
 
   h += '<h4>2 · Oś czasu</h4>' + kartaOsCzasu(lekcje);
@@ -2370,9 +2390,58 @@ function deleteStudent(id) {
 // =====================================================
 // POMIARY
 // =====================================================
+// Testy sprawnościowe per klasa (cls.testFields). Brak pola = stare dane → domyślne 4
+// (te same id co dawniej: jump/shuttle/beep/plank, więc wyniki sprzed zmiany czytają się bez migracji).
+const DEFAULT_TEST_FIELDS = [
+  { id: 'jump',    name: 'Skok w dal', unit: 'cm' },
+  { id: 'shuttle', name: 'Bieg 10×5',  unit: 's' },
+  { id: 'beep',    name: 'Beep test',  unit: 'stage' },
+  { id: 'plank',   name: 'Deska',      unit: 's' }
+];
+function getTestFields() {
+  const c = getCurrentClass();
+  if (!c) return DEFAULT_TEST_FIELDS.slice();
+  if (!Array.isArray(c.testFields)) c.testFields = DEFAULT_TEST_FIELDS.map(f => Object.assign({}, f));
+  return c.testFields;
+}
+function addTestField() {
+  const nameEl = document.getElementById('newTestName');
+  const unitEl = document.getElementById('newTestUnit');
+  const name = (nameEl.value || '').trim();
+  const unit = (unitEl.value || '').trim();
+  if (!name) { showToast('Podaj nazwę testu.', 'warn'); nameEl.focus(); return; }
+  const fields = getTestFields();
+  // id z nazwy (bez PL znaków) — ten sam test dodany ponownie odzyskuje stare wyniki
+  const id = name.toLowerCase().replace(/[ąćęłńóśźż]/g, ch => ({ 'ą':'a','ć':'c','ę':'e','ł':'l','ń':'n','ó':'o','ś':'s','ź':'z','ż':'z' })[ch]).replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || ('t' + Date.now());
+  if (fields.some(f => f.id === id)) { showToast('Taki test już jest w tabeli.', 'warn'); return; }
+  fields.push({ id, name, unit });
+  nameEl.value = ''; unitEl.value = '';
+  save(); renderPomiary();
+  showToast('Dodano test: ' + name, 'success');
+  nameEl.focus();
+}
+function removeTestField(id) {
+  const fields = getTestFields();
+  const f = fields.find(x => x.id === id);
+  if (!f) return;
+  showConfirm('Usunąć kolumnę „' + f.name + '”?', 'Wyniki zostają w pamięci klasy — wrócą, jeśli dodasz test o tej samej nazwie.', () => {
+    const i = fields.findIndex(x => x.id === id);
+    if (i >= 0) fields.splice(i, 1);
+    save(); renderPomiary();
+  });
+}
 function renderPomiary() {
   const tbody = document.getElementById('pomiaryBody');
   tbody.innerHTML = '';
+  const fields = getTestFields();
+  const headRow = tbody.parentElement.querySelector('thead tr');
+  [].forEach.call(headRow.querySelectorAll('th.test-col'), th => th.remove());
+  fields.forEach(f => {
+    const th = document.createElement('th');
+    th.className = 'test-col';
+    th.innerHTML = escapeHtml(f.name) + (f.unit ? ' [' + escapeHtml(f.unit) + ']' : '') + ' <button type="button" class="test-del" title="Usuń kolumnę" onclick="removeTestField(\'' + f.id + '\')">×</button>';
+    headRow.appendChild(th);
+  });
   state.students.forEach((s, i) => {
     const tr = document.createElement('tr');
     if (s.longTermReleased) tr.classList.add('long-term-released');
@@ -2382,10 +2451,7 @@ function renderPomiary() {
       <td class="left">${escapeHtml(s.name) || '<span style="color:var(--ink-muted);">(brak nazwiska)</span>'}</td>
       <td>${s.height || '—'}</td>
       <td>${s.weight || '—'}</td>
-      <td><input type="number" value="${m.jump || ''}" min="50" max="300" oninput="updateMeasurement('${s.id}', 'jump', this.value)"></td>
-      <td><input type="number" value="${m.shuttle || ''}" min="10" max="30" step="0.1" oninput="updateMeasurement('${s.id}', 'shuttle', this.value)"></td>
-      <td><input type="number" value="${m.beep || ''}" min="1" max="15" step="0.5" oninput="updateMeasurement('${s.id}', 'beep', this.value)"></td>
-      <td><input type="number" value="${m.plank || ''}" min="5" max="600" oninput="updateMeasurement('${s.id}', 'plank', this.value)"></td>
+      ${fields.map(f => `<td><input type="number" step="any" value="${escapeHtml(m[f.id] || '')}" oninput="updateMeasurement('${s.id}', '${f.id}', this.value)"></td>`).join('')}
     `;
     tbody.appendChild(tr);
   });

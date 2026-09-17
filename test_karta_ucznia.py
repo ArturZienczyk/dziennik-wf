@@ -130,8 +130,66 @@ with sync_playwright() as pw:
     page.emulate_media(media="screen")
     page.evaluate("() => document.body.classList.remove('karta-print')")
 
+    # zakres dat: tylko październik (lekcje 11-20 wg seedu, daty 01.10-28.10)
+    page.evaluate("() => kartaZakres('2026-10-01', '2026-10-31')")
+    page.wait_for_timeout(200)
+    kr = page.locator("#kartaBody .kratka").count()
+    check("zakres: 11 kratek w październiku", kr == 11, kr)
+    okna = page.locator("#kartaBody .karta-okno-tytul").all_text_contents()
+    check(
+        "zakres: jedno okno bilansu z zakresem",
+        len(okna) == 1 and "Zakres" in okna[0],
+        okna,
+    )
+    page.locator("#kartaBody").screenshot(path=str(SHOTS / "karta_ucznia_zakres.png"))
+    page.evaluate("() => kartaZakres('', '')")
+    page.wait_for_timeout(200)
+    check("zakres zdjęty: 30 kratek", page.locator("#kartaBody .kratka").count() == 30)
+    page.evaluate("() => kartaZakres('2027-01-01', '')")
+    page.wait_for_timeout(200)
+    check(
+        "zakres pusty: komunikat",
+        "w tym zakresie dat" in page.locator("#kartaBody").text_content(),
+    )
+    page.evaluate("() => kartaZakres('', '')")
+
     # zamknięcie
     page.click('#kartaBody button:has-text("Zamknij")')
+
+    # testy sprawnościowe: domyślne 4 + własny + usunięcie
+    page.click('button:has-text("Pomiary")')
+    cols = page.locator("th.test-col").count()
+    check("pomiary: 4 domyślne kolumny testów", cols == 4, cols)
+    page.fill("#newTestName", "Rzut piłką lekarską")
+    page.fill("#newTestUnit", "m")
+    page.press("#newTestUnit", "Enter")
+    page.wait_for_timeout(200)
+    cols = page.locator("th.test-col").count()
+    check("pomiary: 5 kolumn po dodaniu", cols == 5, cols)
+    check(
+        "pomiary: nagłówek z jednostką",
+        "Rzut piłką lekarską [m]" in page.locator("th.test-col").last.text_content(),
+    )
+    page.locator("#pomiaryBody tr").first.locator("input").last.fill("7.5")
+    page.wait_for_timeout(200)
+    saved = page.evaluate("() => (state.measurements.u1 || {}).rzut_pilka_lekarska")
+    check("pomiary: wynik zapisany pod id z nazwy", saved == "7.5", saved)
+    tf = page.evaluate(
+        "() => JSON.parse(localStorage.getItem('dziennik_wf_v1')).classes[0].testFields.length"
+    )
+    check("pomiary: pola testów w localStorage", tf == 5, tf)
+    page.screenshot(path=str(SHOTS / "pomiary_wlasny_test.png"), full_page=False)
+    page.evaluate("() => { getTestFields().splice(4, 1); save(); renderPomiary(); }")
+    check("pomiary: po usunięciu 4 kolumny", page.locator("th.test-col").count() == 4)
+    check(
+        "pomiary: wynik po usunięciu zostaje",
+        page.evaluate("() => state.measurements.u1.rzut_pilka_lekarska") == "7.5",
+    )
+    check(
+        "pomiary: stare wyniki jump nadal widoczne",
+        page.locator("#pomiaryBody tr").first.locator("input").nth(0).input_value()
+        == "165",
+    )
     check(
         "modal zamknięty",
         not page.evaluate(
