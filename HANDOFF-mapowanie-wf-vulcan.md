@@ -3,8 +3,9 @@
 > **STAN 2026-09-17 wieczór (po 3. sesji, v18):** Szczebel 2 DOMKNIĘTY w kodzie: A (usprawiedliwienia
 > `u`/`ns`/`z` z VULCAN nie nadpisywane przez NB, lista do poprawki w apce; `test_vulcan_usprawiedliwienia.py`),
 > C (panel bez DEBUG/DIAG/ZNAKI), B (`build_bookmarklet.py` → `vulcan-frekwencja.bookmarklet.txt`).
-> Snippet i bookmarklet na pulpicie. **Do zrobienia przez usera:** (1) zainstalować bookmarklet w pasku
-> zakładek i sprawdzić, czy 26 tys. znaków adresu wchodzi — jeśli nie, zostaje snippet; (2) żywy test A:
+> Snippet i bookmarklet na pulpicie. Pełny bookmarklet urywał się w zakładce (~12 tys. zn.) → **zakładka-loader** z jsDelivr
+> (`vulcan-frekwencja.loader.txt`), DZIAŁA na żywo (user 09-17); aktualizacja skryptu = `git push`
+> (+ purge jsDelivr przy pilnej zmianie), zakładki nie ruszać. **Do zrobienia przez usera:** żywy test A:
 > kratka z `u` + apka `NB` → po Wypełnij kratka nadal `u`, log wymienia nazwisko.
 > Następny szczebel: 3 (wiadomości do rodziców, czeka na zrzuty 1–3 od usera) lub 4 (apka: Pomiary).
 > Szczegóły: `VULCAN-INTEGRACJA-USTALENIA.md` §„Szczebel 2 domknięty".
