@@ -902,8 +902,25 @@
   .dictate-fold > summary:hover { border-color: var(--ink-muted); color: var(--ink); }
   .dictate-fold[open] > summary { margin-bottom: 10px; }
 </style>
+<style>
+  /* ===== ZAMEK (Szczebel 5) ===== */
+  #zamek { position: fixed; inset: 0; z-index: 500; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 20px; }
+  #zamek .zamek-karta { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 28px 26px; max-width: 440px; width: 100%; box-shadow: 0 8px 30px rgba(30,45,79,0.10); }
+  #zamek h2 { margin: 0 0 10px 0; font-size: 20px; color: var(--accent); }
+  #zamek .zamek-hint { font-size: 13px; line-height: 1.5; color: var(--ink-muted); margin: 0 0 12px 0; }
+  #zamek .zamek-uwaga { color: var(--accent-warm); }
+  #zamek .zamek-pole { position: relative; margin: 6px 0 10px 0; }
+  #zamek .zamek-pole input { width: 100%; padding: 10px 70px 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-family: inherit; font-size: 15px; box-sizing: border-box; }
+  #zamek .zamek-pole input.zamek-pin { padding-right: 12px; letter-spacing: 8px; font-size: 22px; text-align: center; }
+  #zamek .zamek-pokaz { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); padding: 4px 8px; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; font-family: inherit; font-size: 12px; cursor: pointer; }
+  #zamek .zamek-blad { min-height: 18px; font-size: 13px; color: var(--accent-warm); margin-bottom: 10px; }
+  #zamek .zamek-akcje { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  #zamek .zamek-btn { padding: 10px 18px; background: var(--accent); color: white; border: 1px solid var(--accent); border-radius: 6px; font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer; }
+  #zamek .zamek-btn-cichy { padding: 10px 14px; background: var(--paper); color: var(--ink-soft); border: 1px solid var(--line); border-radius: 6px; font-family: inherit; font-size: 13px; cursor: pointer; }
+</style>
 </head>
 <body>
+<div id="zamek"><div class="zamek-karta"><h2>Dziennik WF</h2><p class="zamek-hint">Otwieram…</p></div></div>
 <div class="container">
 
   <h1>Dziennik WF</h1>
@@ -933,6 +950,7 @@
     <button class="tab" onclick="switchTab('pomiary')">📏 Pomiary</button>
     <button class="tab" onclick="switchTab('oceny')">📝 Oceny</button>
     <button class="tab" onclick="switchTab('statystyki')">📊 Statystyki</button>
+    <button class="tab tab-zamek" onclick="zamekZablokuj('ręcznie')" title="Zasłoń dziennik (odsłania PIN albo hasło)">🔒 Zablokuj</button>
   </div>
 
   <!-- =================================================== -->
@@ -1045,7 +1063,8 @@
     <div class="toolbar">
       <button class="primary" onclick="addStudent()">+ Dodaj ucznia</button>
       <button class="primary" onclick="exportEncrypted()" title="Kopia zaszyfrowana hasłem — tę można wysłać mailem">🔒 Zapisz kopię (szyfrowana)</button>
-      <button onclick="manageBackupPassword()" title="Pokaż lub zmień hasło, którym szyfrowane są kopie">🔑 Hasło kopii</button>
+      <button onclick="zmienHaslo()" title="Zmień hasło dziennika i kopii (wymaga obecnego). Apka nie pokazuje hasła — zapomniane = dane nie do odzyskania poza kopiami.">🔑 Zmień hasło</button>
+      <button onclick="zamekUI_pinZmien()" title="PIN 4 cyfry do szybkiego odblokowania po bezczynności na lekcji">🔢 PIN</button>
       <button id="btnFolderKopii" onclick="wybierzFolderKopii(event)" title="Wskaż folder, do którego mają trafiać kopie (zamiast Pobranych). Shift+klik = wróć do Pobranych.">📁 Kopie: Pobrane</button>
       <button onclick="document.getElementById('fileImport').click()" title="Wczytaj STARĄ, nieszyfrowaną kopię (sprzed września 2026)">📂 Wczytaj stary JSON</button>
       <input type="file" id="fileImport" accept=".json" style="display:none" onchange="importJSON(event)">
@@ -1248,7 +1267,7 @@
   </div>
 
   <footer>
-    Dane zapisywane lokalnie w przeglądarce (localStorage). Nie są wysyłane na żaden serwer. Kopie zapasowe są szyfrowane hasłem — raz dziennie same, ręcznie przyciskiem „Zapisz kopię”.<br>
+    Dane zapisywane lokalnie w przeglądarce, zaszyfrowane hasłem dziennika (pamięć przeglądarki trzyma tylko szyfrogram). Nie są wysyłane na żaden serwer. Kopie zapasowe szyfruje to samo hasło — raz dziennie same, ręcznie przyciskiem „Zapisz kopię”. Po 10 min bez ruchu dziennik się zasłania (PIN albo hasło).<br>
     Wygenerowane w rozmowie z Claude · maj 2026
   </footer>
 
@@ -1657,54 +1676,7 @@ function usunZaznaczonePamiec() {
     });
 }
 
-function load() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    try {
-      const data = JSON.parse(saved);
-      if (Array.isArray(data.classes) && data.classes.length) {
-        state.classes = data.classes;
-        state.currentClassId = data.currentClassId || data.classes[0].id;
-      } else if (data.students) {
-        migrateFlat(data);            // nic nie ginie — stare dane → klasa "Bez przypisania"
-      } else {
-        initDefault();
-      }
-    } catch(e) {
-      console.error('load error', e);
-      initDefault();
-    }
-  } else {
-    initDefault();
-  }
-  activateClass(state.currentClassId);
-  wczytajZapasowyMagazyn(saved);
-}
-
-// IndexedDB czyta się asynchronicznie, więc dociera chwilę po pierwszym renderze.
-// Bierzemy go, gdy jest NOWSZY niż to, co leży w localStorage (albo gdy tam pusto —
-// dokładnie przypadek pełnego limitu: ostatnie lekcje są tylko w zapasowym magazynie).
-function wczytajZapasowyMagazyn(surowyLS) {
-  if (!window.indexedDB) return;
-  let stempelLS = 0;
-  try { stempelLS = (JSON.parse(surowyLS || '{}') || {}).savedAt || 0; } catch (e) { stempelLS = 0; }
-
-  idbCzytaj().then(zapas => {
-    magazyn.idbOk = true;
-    if (!zapas || !Array.isArray(zapas.classes) || !zapas.classes.length) return;
-    if ((zapas.savedAt || 0) <= stempelLS) return;         // localStorage ma nowsze albo tyle samo
-    state.classes = zapas.classes;
-    state.currentClassId = zapas.currentClassId || zapas.classes[0].id;
-    activateClass(state.currentClassId);
-    uiSelectedSchool = null;
-    refreshAll();
-    showToast('Przywrócono nowszą wersję danych z magazynu zapasowego.', 'info');
-  }).catch(e => {
-    magazyn.idbOk = false;
-    magazyn.ostatniBlad = (e && e.name) || String(e);
-    odswiezBanerMagazynu();
-  });
-}
+// load() i wczytajZapasowyMagazyn() zastąpił zamek: zamekStart() → zamekZastosujDane().
 
 function initDefault() {
   const students = [];
@@ -1716,23 +1688,44 @@ function initDefault() {
   state.currentClassId = c.id;
 }
 
-function save() {
+// save() szyfruje (Szczebel 5): do magazynów trafia wyłącznie szyfrogram.
+// Zwraca Promise<bool>. natychmiast=true → czeka też na zapis do IndexedDB
+// (migracja, zmiana hasła, PIN — momenty, w których jawne dane muszą zniknąć od razu).
+let _saveNr = 0, _saveZapisany = 0;
+function save(natychmiast) {
   // state.students itd. są referencjami do state.classes[i], więc to wystarcza.
   const dane = {
     classes: state.classes,
     currentClassId: state.currentClassId,
+    pin: zamek.pin,
     savedAt: Date.now()          // rozstrzyga, który magazyn ma nowszą wersję
   };
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(dane));
-    if (magazyn.lsPelna) { magazyn.lsPelna = false; odswiezBanerMagazynu(); }  // miejsce wróciło
-  } catch (e) {
-    // Pełny wspólny limit file:// — NIE przerywamy pracy, idziemy drugą drogą.
-    magazyn.lsPelna = true;
-    magazyn.ostatniBlad = (e && e.name) || String(e);
-    odswiezBanerMagazynu();
-  }
-  idbZapiszZOpoznieniem(dane, magazyn.lsPelna);   // przy pełnym localStorage nie zwlekamy
+  if (!zamek.klucz) { magazyn.ostatniBlad = 'brak klucza'; return Promise.resolve(false); }
+  const nr = ++_saveNr;
+  return zamekSzyfruj(dane).then(env => {
+    if (nr < _saveZapisany) return true;        // nowszy zapis już poszedł
+    _saveZapisany = nr;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(env));
+      if (magazyn.lsPelna) { magazyn.lsPelna = false; odswiezBanerMagazynu(); }  // miejsce wróciło
+    } catch (e) {
+      // Pełny wspólny limit file:// — NIE przerywamy pracy, idziemy drugą drogą.
+      magazyn.lsPelna = true;
+      magazyn.ostatniBlad = (e && e.name) || String(e);
+      odswiezBanerMagazynu();
+    }
+    if (natychmiast) {
+      clearTimeout(idbTimer); idbOczekujace = null;
+      return idbZapisz(env).then(() => { magazyn.idbOk = true; return true; })
+        .catch(e => { magazyn.idbOk = false; magazyn.ostatniBlad = (e && e.name) || String(e); odswiezBanerMagazynu(); return !magazyn.lsPelna; });
+    }
+    idbZapiszZOpoznieniem(env, magazyn.lsPelna);   // przy pełnym localStorage nie zwlekamy
+    return true;
+  }).catch(e => {
+    magazyn.ostatniBlad = 'szyfrowanie: ' + ((e && e.message) || String(e));
+    showToast('Błąd zapisu (szyfrowanie): ' + magazyn.ostatniBlad, 'error');
+    return false;
+  });
 }
 
 // =====================================================
@@ -2868,60 +2861,22 @@ function exportJSON() {
 // taki plik wysłany mailem albo skopiowany na pendrive to wyciek danych dzieci.
 // Teraz każda kopia jest szyfrowana jednym hasłem, ustawianym raz.
 //
-// Hasło żyje w localStorage tej przeglądarki. To świadomy kompromis: kto ma
-// odblokowany laptop, ma i tak dostęp do samych danych w dzienniku — więc
-// trzymanie hasła obok nich niczego nie osłabia. Chroniony jest PLIK, który
-// wychodzi z laptopa. Dzięki temu auto-kopia nie pyta o hasło przy każdej lekcji.
+// Hasło kopii = hasło dziennika (Szczebel 5). Do września 2026 leżało jawnie w
+// localStorage (kompromis: „kto ma laptop, ma i dane"). Odkąd magazyn jest
+// szyfrowany, hasło żyje TYLKO w pamięci strony po odblokowaniu — klucz
+// BACKUP_PWD_KEY zostaje wyłącznie po to, żeby migracja go przejęła i skasowała.
 const BACKUP_PWD_KEY = 'dziennik_wf_backup_pwd';
 
-function getBackupPassword() {
-  try { return localStorage.getItem(BACKUP_PWD_KEY) || ''; } catch (e) { return ''; }
-}
+function getBackupPassword() { return zamek.haslo || ''; }
 
-// Zwraca hasło (Promise). Gdy go jeszcze nie ma — pyta raz. null = user anulował.
+// Zwraca hasło (Promise). Po odblokowaniu zawsze jest; null tylko gdy apka zamknięta.
 function ensureBackupPassword() {
-  const cur = getBackupPassword();
-  if (cur) return Promise.resolve(cur);
-  return new Promise(resolve => {
-    showPasswordPrompt(
-      'Ustaw hasło kopii zapasowych',
-      'Kopie danych zapisują się same (raz dziennie i przed każdą operacją, która kasuje dane). '
-      + 'Od teraz są szyfrowane tym hasłem — plik, który wyjdzie z laptopa, bez niego jest nieczytelny. '
-      + 'Hasło pamięta ta przeglądarka; podejrzysz je przyciskiem „Hasło kopii”. Min. 6 znaków.',
-      'Ustaw hasło',
-      (v) => {
-        if (!v || v.length < 6) {
-          showToast('Hasło za krótkie (min. 6 znaków) — kopia NIE powstała.', 'warn');
-          resolve(null);
-          return;
-        }
-        localStorage.setItem(BACKUP_PWD_KEY, v);
-        showToast('Hasło ustawione. Od teraz kopie są szyfrowane.', 'success');
-        resolve(v);
-      },
-      () => { showToast('Bez hasła nie powstanie żadna kopia. Ustaw je przyciskiem „Hasło kopii”.', 'warn'); resolve(null); }
-    );
-  });
+  if (zamek.haslo) return Promise.resolve(zamek.haslo);
+  showToast('Dziennik nie jest odblokowany — kopia nie powstała.', 'warn');
+  return Promise.resolve(null);
 }
 
-function manageBackupPassword() {
-  const cur = getBackupPassword();
-  showPasswordPrompt(
-    cur ? 'Hasło kopii zapasowych' : 'Ustaw hasło kopii zapasowych',
-    cur
-      ? 'Tym hasłem szyfrowane są wszystkie kopie. Kliknięcie „pokaż” odkrywa je, gdybyś go zapomniał. Wpisz nowe, żeby zmienić (stare kopie nadal otwiera się starym hasłem).'
-      : 'Jeszcze nie masz hasła — bez niego kopie nie powstają. Min. 6 znaków.',
-    'Zapisz hasło',
-    (v) => {
-      if (!v || v.length < 6) { showToast('Hasło za krótkie (min. 6 znaków). Nie zmieniono.', 'warn'); return; }
-      localStorage.setItem(BACKUP_PWD_KEY, v);
-      showToast('Hasło kopii zapisane.', 'success');
-    }
-  );
-  // podstawiam biezące hasło, żeby działało „pokaż”
-  const inp = document.getElementById('pwdPromptInput');
-  if (inp) inp.value = cur;
-}
+function manageBackupPassword() { zmienHaslo(); }
 
 // Jedyna droga zapisu kopii na dysk. Zwraca true, gdy plik faktycznie powstał.
 // Folder kopii (2026-09-17, prośba usera: „żeby było łatwiejsze w obserwacji"). Raz wskazany
@@ -4139,9 +4094,365 @@ function showToast(message, type) {
 }
 
 // =====================================================
+// ZAMEK NA APCE (Szczebel 5) — hasło + PIN, magazyn szyfrowany
+// =====================================================
+// Po co: wzorcowy regulamin szkolny (§84 nośniki z danymi w sejfie, §13.1 nie
+// udostępniać zasobów) — do września 2026 kto miał odblokowany laptop, otwierał
+// dziennik i widział nazwiska. Sama zasłona byłaby dekoracją: DevTools →
+// Application → localStorage pokazałby wszystko. Dlatego sedno to punkt 2:
+// 1. Ekran blokady: przy otwarciu HASŁO (klucz nie przeżywa przeładowania strony),
+//    po bezczynności / karcie w tle PIN (klucz siedzi w pamięci strony).
+// 2. localStorage i IndexedDB trzymają WYŁĄCZNIE szyfrogram (AES-GCM 256, klucz
+//    z hasła przez PBKDF2 — te same prymitywy co kopie .enc.json). PBKDF2 liczy
+//    się raz przy odblokowaniu, AES przy każdym save() (milisekundy).
+// 3. Hasło dziennika = hasło kopii (jedno do zapamiętania). Nie leży już jawnie
+//    w localStorage — żyje w pamięci strony po odblokowaniu. Zapomniane = dane
+//    nie do odzyskania poza kopiami (te otwiera to samo hasło). Stąd „Zmień
+//    hasło" zamiast dawnego „pokaż".
+// 4. PIN chroni tylko ekran (4 cyfry to nie tajemnica) — jego hash leży W ŚRODKU
+//    szyfrogramu, więc na dysku nic jawnego nie przybywa. 5 złych PIN-ów → hasło.
+// Testy: `test_zamek.py`. API dla testów: zamekPierwszeHaslo(h), zamekOdblokuj(h),
+// zamekStanZapisany(), zamekCfg.minuty.
+const ZAMEK_MAGIC = 'dziennik-wf-magazyn';
+const ZAMEK_MAX_ZLE_PINY = 5;
+const zamekCfg = { minuty: 10 };   // od ostatniego klawisza / dotknięcia, nie od otwarcia
+const zamek = {
+  haslo: '', klucz: null, saltB64: '', pin: null,
+  otwarty: false, wystartowal: false, timer: null, zlePiny: 0, tryb: '',
+  oczekujacy: null, jawne: null, stareHaslo: '', pinProponowany: false
+};
+
+function zamekJestSzyfrogram(x) { return !!(x && typeof x === 'object' && x.app === ZAMEK_MAGIC && x.ct); }
+function zamekMaDane(x) { return !!(x && ((Array.isArray(x.classes) && x.classes.length) || x.students)); }
+function zamekNowszy(a, b) { if (!a) return b; if (!b) return a; return ((b.savedAt || 0) > (a.savedAt || 0)) ? b : a; }
+
+const _zamekKlucze = {};   // saltB64 → CryptoKey (drugi magazyn może mieć inną sól po zmianie hasła)
+async function zamekKluczDla(haslo, saltB64) {
+  if (haslo === zamek.haslo && _zamekKlucze[saltB64]) return _zamekKlucze[saltB64];
+  const k = await _deriveKey(haslo, _unb64(saltB64));
+  if (haslo === zamek.haslo) _zamekKlucze[saltB64] = k;
+  return k;
+}
+
+async function zamekSzyfruj(dane) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const pt = new TextEncoder().encode(JSON.stringify(dane));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, zamek.klucz, pt);
+  return { app: ZAMEK_MAGIC, v: 1, kdf: 'PBKDF2-SHA256-150000', cipher: 'AES-GCM-256',
+           salt: zamek.saltB64, iv: _b64(iv), ct: _b64(ct), savedAt: dane.savedAt || 0 };
+}
+
+async function zamekOdszyfruj(env, haslo) {
+  const klucz = await zamekKluczDla(haslo, env.salt);
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: _unb64(env.iv) }, klucz, _unb64(env.ct));
+  return { dane: JSON.parse(new TextDecoder().decode(pt)), klucz };
+}
+
+async function zamekNowaSol(haslo) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  zamek.saltB64 = _b64(salt);
+  zamek.haslo = haslo;
+  zamek.klucz = await _deriveKey(haslo, salt);
+  for (const k in _zamekKlucze) delete _zamekKlucze[k];
+  _zamekKlucze[zamek.saltB64] = zamek.klucz;
+}
+
+function zamekCzytajLS() {
+  try { const s = localStorage.getItem(STORAGE_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; }
+}
+async function zamekCzytajIDB() {
+  if (!window.indexedDB) return null;
+  try { const z = await idbCzytaj(); magazyn.idbOk = true; return z; }
+  catch (e) { magazyn.idbOk = false; magazyn.ostatniBlad = (e && e.name) || String(e); return null; }
+}
+
+// Dane z magazynu → state (wspólne dla odblokowania i migracji)
+function zamekZastosujDane(data) {
+  if (data && Array.isArray(data.classes) && data.classes.length) {
+    state.classes = data.classes;
+    state.currentClassId = data.currentClassId || data.classes[0].id;
+  } else if (data && data.students) {
+    migrateFlat(data);            // nic nie ginie — stare dane → klasa "Bez przypisania"
+  } else {
+    initDefault();
+  }
+  zamek.pin = (data && data.pin) || null;
+  activateClass(state.currentClassId);
+}
+
+async function zamekStart() {
+  if (!cryptoAvailable()) { zamekPokaz('brak-crypto'); return; }
+  const ls = zamekCzytajLS();
+  const idb = await zamekCzytajIDB();
+  const jawne = zamekNowszy(
+    (zamekMaDane(ls) && !zamekJestSzyfrogram(ls)) ? ls : null,
+    (zamekMaDane(idb) && !zamekJestSzyfrogram(idb)) ? idb : null);
+  const szyfr = zamekNowszy(zamekJestSzyfrogram(ls) ? ls : null, zamekJestSzyfrogram(idb) ? idb : null);
+  if (szyfr && !(jawne && (jawne.savedAt || 0) > (szyfr.savedAt || 0))) {
+    zamek.oczekujacy = szyfr;
+    zamekPokaz('haslo');
+    return;
+  }
+  // Jawne dane (sprzed zamka) albo pusty dziennik → ustawianie hasła.
+  zamek.jawne = jawne;
+  try { zamek.stareHaslo = localStorage.getItem(BACKUP_PWD_KEY) || ''; } catch (e) { zamek.stareHaslo = ''; }
+  zamekPokaz('ustaw');
+}
+
+// Pierwsze hasło (migracja jawne → szyfrowane albo pusty dziennik). true = otwarte.
+async function zamekPierwszeHaslo(haslo) {
+  if (zamek.oczekujacy || zamek.klucz) return false;          // magazyn już szyfrowany — użyj zamekOdblokuj
+  if (!haslo || haslo.length < 6) return false;
+  await zamekNowaSol(haslo);
+  zamekZastosujDane(zamek.jawne);
+  zamek.jawne = null;
+  try { localStorage.removeItem(BACKUP_PWD_KEY); } catch (e) {}
+  const ok = await save(true);                                 // nadpisuje jawne w OBU magazynach
+  if (!ok && !magazyn.lsPelna) return false;
+  zamekOtworz();
+  return true;
+}
+
+// Odblokowanie hasłem. Po przeładowaniu: odszyfrowuje magazyn. Po bezczynności:
+// klucz jest, wystarczy porównać. true = otwarte.
+async function zamekOdblokuj(haslo) {
+  if (zamek.klucz) {
+    if (haslo !== zamek.haslo) return false;
+    zamekOtworz();
+    return true;
+  }
+  const env = zamek.oczekujacy;
+  if (!env) return false;
+  let r;
+  try { r = await zamekOdszyfruj(env, haslo); } catch (e) { return false; }
+  zamek.haslo = haslo; zamek.klucz = r.klucz; zamek.saltB64 = env.salt;
+  _zamekKlucze[env.salt] = r.klucz;
+  zamekZastosujDane(r.dane);
+  zamek.oczekujacy = null;
+  zamekOtworz();
+  return true;
+}
+
+async function zamekHashPin(pin, saltB64) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(saltB64 + ':' + pin));
+  return _b64(buf);
+}
+async function zamekUstawPin(pin) {
+  if (!/^\d{4}$/.test(pin || '')) return false;
+  const saltB64 = _b64(crypto.getRandomValues(new Uint8Array(8)));
+  zamek.pin = { salt: saltB64, hash: await zamekHashPin(pin, saltB64) };
+  await save(true);
+  return true;
+}
+async function zamekSprawdzPin(pin) {
+  if (!zamek.pin) return false;
+  return (await zamekHashPin(pin, zamek.pin.salt)) === zamek.pin.hash;
+}
+async function zamekUsunPin() { zamek.pin = null; zamek.zlePiny = 0; await save(true); }
+
+// Zmiana hasła: nowa sól, nowy klucz, magazyn przepisany od razu. Kopie od teraz
+// szyfrowane nowym; stare kopie nadal otwiera stare hasło.
+async function zamekZmienHaslo(stare, nowe) {
+  if (stare !== zamek.haslo) return 'zle-stare';
+  if (!nowe || nowe.length < 6) return 'za-krotkie';
+  await zamekNowaSol(nowe);
+  await save(true);
+  return 'ok';
+}
+
+// Co faktycznie leży w localStorage (dla testów i diagnozy) — odszyfrowane.
+async function zamekStanZapisany() {
+  const env = zamekCzytajLS();
+  if (!env) return null;
+  if (!zamekJestSzyfrogram(env)) return env;          // jawne = błąd, test to zobaczy
+  return (await zamekOdszyfruj(env, zamek.haslo)).dane;
+}
+
+// --- ekran blokady -------------------------------------------------------
+function zamekEl() { return document.getElementById('zamek'); }
+function zamekInert(wlacz) {
+  Array.from(document.body.children).forEach(el => { if (el.id !== 'zamek') el.inert = !!wlacz; });
+}
+
+function zamekOtworz() {
+  zamek.otwarty = true;
+  zamek.zlePiny = 0;
+  zamekEl().style.display = 'none';
+  zamekInert(false);
+  if (!zamek.wystartowal) { zamek.wystartowal = true; startPoOdblokowaniu(); }
+  zamekAktywnosc();
+}
+// Raz na sesję, tylko po odblokowaniu z ekranu (nie z API testów): zaproponuj PIN.
+function zamekZaproponujPin() {
+  if (zamek.pin || zamek.pinProponowany) return;
+  zamek.pinProponowany = true;
+  zamekPokaz('pin-ustaw');
+}
+
+function zamekZablokuj(powod) {
+  if (!zamek.wystartowal) return;
+  clearTimeout(zamek.timer);
+  zamek.otwarty = false;
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  zamekPokaz(zamek.pin ? 'pin' : 'haslo');
+}
+
+function zamekAktywnosc() {
+  if (!zamek.otwarty) return;
+  clearTimeout(zamek.timer);
+  zamek.timer = setTimeout(() => zamekZablokuj('bezczynność'), Math.max(1, zamekCfg.minuty * 60000));
+}
+['keydown', 'pointerdown', 'touchstart', 'input', 'wheel'].forEach(ev =>
+  document.addEventListener(ev, zamekAktywnosc, { capture: true, passive: true }));
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && zamek.otwarty) zamekZablokuj('karta w tle');
+});
+// Klawisze nie docierają do zasłoniętej apki (skróty 1–9, strzałki, Enter…).
+document.addEventListener('keydown', (e) => {
+  if (zamek.otwarty) return;
+  const z = zamekEl();
+  if (z && z.contains(e.target)) return;
+  e.stopImmediatePropagation();
+  e.preventDefault();
+}, true);
+
+function zamekBlad(txt) {
+  const b = document.getElementById('zamekBlad');
+  if (b) b.textContent = txt || '';
+}
+function zamekPolePokaz() {
+  const i = document.getElementById('zamekInput');
+  if (!i) return;
+  i.type = i.type === 'password' ? 'text' : 'password';
+  i.focus();
+}
+
+const ZAMEK_HTML = {
+  'brak-crypto': () => `
+    <h2>Dziennik WF</h2>
+    <p class="zamek-hint">Ta przeglądarka nie udostępnia szyfrowania (Web Crypto), a dziennik trzyma dane wyłącznie zaszyfrowane.
+    Otwórz go w Chrome albo Edge — z pliku na dysku lub z adresu https://.</p>`,
+  'ustaw': () => `
+    <h2>Zamknij dziennik hasłem</h2>
+    <p class="zamek-hint">${zamek.stareHaslo
+      ? 'Od teraz dziennik jest zamknięty <b>tym samym hasłem, co kopie</b> — jedno do zapamiętania. Poniżej jest wpisane Twoje dotychczasowe hasło kopii (kliknij „pokaż”, żeby je zobaczyć — to <b>ostatni raz</b>, gdy apka je pokazuje). Możesz je tu zmienić.'
+      : 'Dziennik i kopie zapasowe będą zamknięte jednym hasłem (min. 6 znaków).'}</p>
+    <p class="zamek-hint zamek-uwaga">Zapomniane hasło = dane nie do odzyskania. Nikt (ani ta apka) nie może go odtworzyć. Zapisz je w bezpiecznym miejscu.</p>
+    <div class="zamek-pole"><input type="password" id="zamekInput" autocomplete="new-password" placeholder="hasło (min. 6 znaków)"><button type="button" class="zamek-pokaz" onclick="zamekPolePokaz()">pokaż</button></div>
+    <div id="zamekBlad" class="zamek-blad"></div>
+    <div class="zamek-akcje"><button class="zamek-btn" onclick="zamekUI_ustaw()">Zamknij dziennik tym hasłem</button></div>`,
+  'haslo': () => `
+    <h2>Dziennik WF jest zamknięty</h2>
+    <p class="zamek-hint">Podaj hasło dziennika (to samo, co hasło kopii).</p>
+    <div class="zamek-pole"><input type="password" id="zamekInput" autocomplete="current-password" placeholder="hasło"><button type="button" class="zamek-pokaz" onclick="zamekPolePokaz()">pokaż</button></div>
+    <div id="zamekBlad" class="zamek-blad"></div>
+    <div class="zamek-akcje"><button class="zamek-btn" onclick="zamekUI_haslo()">Otwórz</button></div>`,
+  'pin': () => `
+    <h2>Dziennik WF jest zamknięty</h2>
+    <p class="zamek-hint">Podaj PIN.</p>
+    <div class="zamek-pole"><input type="password" id="zamekInput" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="••••" class="zamek-pin" oninput="zamekUI_pinInput()"></div>
+    <div id="zamekBlad" class="zamek-blad"></div>
+    <div class="zamek-akcje"><button class="zamek-btn" onclick="zamekUI_pin()">Otwórz</button><button class="zamek-btn-cichy" onclick="zamekPokaz('haslo')">Użyj hasła</button></div>`,
+  'pin-ustaw': () => `
+    <h2>${zamek.pin ? 'Zmień PIN' : 'Ustaw PIN na lekcję'}</h2>
+    <p class="zamek-hint">Po ${zamekCfg.minuty} min bez ruchu (albo gdy karta zejdzie w tło) dziennik się zasłania. PIN — 4 cyfry — odsłania go szybciej niż hasło. Po 5 złych PIN-ach apka poprosi o hasło.</p>
+    <div class="zamek-pole"><input type="password" id="zamekInput" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="4 cyfry" class="zamek-pin"></div>
+    <div id="zamekBlad" class="zamek-blad"></div>
+    <div class="zamek-akcje"><button class="zamek-btn" onclick="zamekUI_pinUstaw()">Zapisz PIN</button>
+      ${zamek.pin ? '<button class="zamek-btn-cichy" onclick="zamekUI_pinUsun()">Usuń PIN</button>' : ''}
+      <button class="zamek-btn-cichy" onclick="zamekUI_pinPomin()">${zamek.pin ? 'Anuluj' : 'Bez PIN-u (samo hasło)'}</button></div>`
+};
+
+function zamekPokaz(tryb) {
+  zamek.tryb = tryb;
+  const z = zamekEl();
+  z.querySelector('.zamek-karta').innerHTML = ZAMEK_HTML[tryb]();
+  z.style.display = '';
+  if (tryb !== 'pin-ustaw') zamekInert(true);
+  const inp = document.getElementById('zamekInput');
+  if (inp) {
+    inp.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      ({ ustaw: zamekUI_ustaw, haslo: zamekUI_haslo, pin: zamekUI_pin, 'pin-ustaw': zamekUI_pinUstaw }[zamek.tryb] || (() => {}))();
+    });
+    if (tryb === 'ustaw' && zamek.stareHaslo) inp.value = zamek.stareHaslo;
+    setTimeout(() => inp.focus(), 50);
+  }
+}
+function zamekPoleWartosc() { const i = document.getElementById('zamekInput'); return i ? i.value : ''; }
+
+async function zamekUI_ustaw() {
+  const h = zamekPoleWartosc();
+  if (!h || h.length < 6) { zamekBlad('Hasło za krótkie — min. 6 znaków.'); return; }
+  zamekBlad('Szyfruję…');
+  const ok = await zamekPierwszeHaslo(h);
+  if (!ok) { zamekBlad('Nie udało się zapisać zaszyfrowanego dziennika. Sprawdź pamięć przeglądarki.'); return; }
+  showToast('Dziennik zamknięty hasłem. Od teraz pamięć przeglądarki trzyma tylko szyfrogram.', 'success');
+  zamekZaproponujPin();
+}
+async function zamekUI_haslo() {
+  const h = zamekPoleWartosc();
+  if (!h) { zamekBlad('Wpisz hasło.'); return; }
+  zamekBlad('Sprawdzam…');
+  const ok = await zamekOdblokuj(h);
+  if (!ok) { zamekBlad('Złe hasło.'); const i = document.getElementById('zamekInput'); if (i) { i.value = ''; i.focus(); } return; }
+  zamekZaproponujPin();
+}
+function zamekUI_pinInput() { if (zamekPoleWartosc().length === 4) zamekUI_pin(); }
+async function zamekUI_pin() {
+  const p = zamekPoleWartosc();
+  if (!/^\d{4}$/.test(p)) { zamekBlad('PIN to 4 cyfry.'); return; }
+  if (await zamekSprawdzPin(p)) { zamekOtworz(); return; }
+  zamek.zlePiny++;
+  const i = document.getElementById('zamekInput'); if (i) { i.value = ''; i.focus(); }
+  if (zamek.zlePiny >= ZAMEK_MAX_ZLE_PINY) { zamekPokaz('haslo'); zamekBlad('5 złych PIN-ów — podaj hasło.'); return; }
+  zamekBlad('Zły PIN (' + zamek.zlePiny + '/' + ZAMEK_MAX_ZLE_PINY + ').');
+}
+async function zamekUI_pinUstaw() {
+  const p = zamekPoleWartosc();
+  if (!/^\d{4}$/.test(p)) { zamekBlad('PIN to dokładnie 4 cyfry.'); return; }
+  await zamekUstawPin(p);
+  zamekEl().style.display = 'none';
+  showToast('PIN ustawiony. Po bezczynności odblokujesz nim dziennik.', 'success');
+}
+async function zamekUI_pinUsun() {
+  await zamekUsunPin();
+  zamekEl().style.display = 'none';
+  showToast('PIN usunięty — po bezczynności apka poprosi o hasło.', 'info');
+}
+function zamekUI_pinPomin() { zamekEl().style.display = 'none'; }
+function zamekUI_pinZmien() { zamekPokaz('pin-ustaw'); }
+
+// Przycisk „Zmień hasło" (dawniej „Hasło kopii" — pokazywał hasło każdemu przy odblokowanej apce).
+function zmienHaslo() {
+  showPasswordPrompt('Zmień hasło dziennika i kopii',
+    'Najpierw podaj OBECNE hasło.',
+    'Dalej',
+    (stare) => {
+      if (stare !== zamek.haslo) { showToast('Złe obecne hasło. Nic nie zmieniono.', 'warn'); return; }
+      showPasswordPrompt('Nowe hasło',
+        'Min. 6 znaków. Od teraz dziennik i nowe kopie zamyka NOWE hasło; stare kopie nadal otwiera stare. Zapomniane hasło = dane nie do odzyskania.',
+        'Zmień hasło',
+        async (nowe) => {
+          const r = await zamekZmienHaslo(stare, nowe);
+          if (r === 'za-krotkie') { showToast('Hasło za krótkie (min. 6 znaków). Nie zmieniono.', 'warn'); return; }
+          if (r !== 'ok') { showToast('Nie udało się zmienić hasła.', 'error'); return; }
+          showToast('Hasło zmienione. Magazyn przepisany nowym hasłem.', 'success');
+        });
+    });
+}
+
+// =====================================================
 // START
 // =====================================================
-load();
+// Rendery czekają na odblokowanie (state jest pusty, dopóki magazyn nie odszyfrowany).
+function startPoOdblokowaniu() {
+  document.getElementById('lessonDate').value = state.currentDate;
+  renderClassBar();
+  renderAttendance();
+  odswiezBanerMagazynu();
+}
 // Próbny zapis na starcie: user ma wiedzieć o pełnej pamięci ZANIM wpisze lekcję,
 // nie po tym, jak jego wpisy cicho przepadną.
 try {
@@ -4153,10 +4464,7 @@ try {
 }
 state.currentDate = new Date().toISOString().slice(0, 10);
 folderKopiiCzytaj().then(odswiezFolderKopii);
-document.getElementById('lessonDate').value = state.currentDate;
-renderClassBar();
-renderAttendance();
-odswiezBanerMagazynu();
+zamekStart();
 
 // =====================================================
 // PWA — rejestracja service workera + przycisk instalacji

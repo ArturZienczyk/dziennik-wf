@@ -20,11 +20,12 @@ with sync_playwright() as pw:
     page.on("request", lambda r: zapytania.append(r.url))
     page.goto(FILE)
     page.wait_for_timeout(1500)
+    page.evaluate("() => zamekPierwszeHaslo('x-haslo-123')")  # zamek (Szczebel 5): pusty magazyn -> pierwsze haslo
 
     # typowa praca: uczen + status + zapis lekcji (haslo kopii podstawione z gory)
     page.evaluate(
         "() => { state.students.length = 0; save();"
-        " localStorage.setItem('dziennik_wf_backup_pwd', 'x-haslo-123'); }"
+        " }"
     )
     page.click('button:has-text("Uczniowie")')
     page.click("#quickAddStudent")

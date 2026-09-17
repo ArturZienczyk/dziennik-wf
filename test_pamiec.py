@@ -45,6 +45,7 @@ with sync_playwright() as pw:
     page.on("pageerror", lambda e: bledy.append(str(e)))
     page.goto("http://127.0.0.1:%d/dziennik_wf.html" % PORT)
     page.wait_for_timeout(500)
+    page.evaluate("() => zamekPierwszeHaslo('haslo-x1')")  # zamek (Szczebel 5): pusty magazyn -> pierwsze haslo
 
     # --- zapychamy wspolny magazyn, jak robia to inne pliki HTML z dysku ---
     page.evaluate(
@@ -99,6 +100,8 @@ with sync_playwright() as pw:
     # --- najwazniejsze: dane przezywaja ponowne otwarcie ---
     page.reload()
     page.wait_for_timeout(1200)
+    page.evaluate("() => zamekOdblokuj('haslo-x1')")  # zamek: po przeladowaniu klucz nie zyje
+    page.wait_for_timeout(300)
     po = page.evaluate("() => state.classes.map(c => c.name)")
     check("klasa jest po ponownym otwarciu (magazyn zapasowy dziala)", "7b" in po, po)
 
@@ -118,7 +121,7 @@ with sync_playwright() as pw:
     page.wait_for_timeout(500)
     wrocilo = page.evaluate(
         "() => { const s = localStorage.getItem('dziennik_wf_v1');"
-        " return !!(s && JSON.parse(s).classes.length); }"
+        " return !!(s && JSON.parse(s).ct); }"  # zamek: w LS lezy szyfrogram
     )
     check("po zwolnieniu miejsca zapis wraca do localStorage", wrocilo)
     baner2 = page.evaluate(

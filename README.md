@@ -11,7 +11,7 @@ na żaden serwer.
 ## Dane i backup
 
 - Dane żyją w `localStorage` **i** w IndexedDB tej przeglądarki — per przeglądarka,
-  per komputer. Drugi magazyn jest po to, by wpisy nie ginęły, gdy wspólny limit
+  per komputer — **wyłącznie jako szyfrogram** (hasło dziennika; patrz „Zamek”). Drugi magazyn jest po to, by wpisy nie ginęły, gdy wspólny limit
   plików otwieranych z dysku się zapełni (patrz „Pełna pamięć przeglądarki").
 - Kopia zapasowa: **zawsze zaszyfrowana hasłem** — auto raz dziennie przy zapisie
   lekcji, przed każdą operacją kasującą i ręcznie przyciskiem „Zapisz kopię".
@@ -105,7 +105,7 @@ nazwiska dziecka**, zła fraza go nie otwiera, własne hasło odtwarza dane w ca
 ### Czego to NIE załatwia
 
 - **Mikrofon** (dyktowanie) wysyła nagranie z imionami do Google — to osobna decyzja.
-- **Brak zamka na apce**: kto ma odblokowany laptop, otwiera dziennik i widzi dane.
+- ~~Brak zamka na apce~~ — załatwione w Szczeblu 5 („Zamek na apce” niżej).
 
 ## Nic nie wychodzi z laptopa (Faza 7)
 
@@ -184,6 +184,46 @@ i sprawdza, że przy pełnej pamięci klasa się dodaje, jest widoczna, użytkow
 dostaje komunikat, a **klasa i wpis frekwencji przeżywają ponowne otwarcie**.
 Na koniec zwalnia miejsce i sprawdza, że zapis wraca do `localStorage`, a baner znika.
 
+## Zamek na apce (Szczebel 5, 2026-09-17) — hasło + PIN, magazyn szyfrowany
+
+Skąd: research regulaminów (`research-notes/2026-09-17_regulamin-vulcan-automatyzacja.md`)
+— realne ryzyko to nie skrypty do VULCAN, tylko **dane dzieci na laptopie**: kto miał
+odblokowany komputer, otwierał dziennik i widział nazwiska.
+
+Trzy warstwy, z których pierwsza jest tylko zasłoną, a sednem jest druga:
+
+1. **Ekran blokady.** Przy otwarciu dziennika — hasło (klucz nie przeżywa
+   przeładowania strony). Po 10 min bez klawisza/dotknięcia albo gdy karta zejdzie
+   w tło — PIN (4 cyfry; klucz siedzi w pamięci strony). 5 złych PIN-ów → hasło.
+   Przycisk „🔒 Zablokuj” w pasku zakładek zasłania od ręki. Klawisze i kliknięcia
+   nie docierają do zasłoniętej apki (`inert` + przechwycenie `keydown`).
+2. **Magazyn szyfrowany.** `localStorage` i IndexedDB trzymają WYŁĄCZNIE szyfrogram
+   (AES-GCM 256, klucz z hasła PBKDF2 150 000 — te same prymitywy co kopie
+   `.enc.json`). DevTools → Application → localStorage pokazuje `ct: "…"`, nie
+   nazwiska. PBKDF2 liczy się raz przy odblokowaniu, AES przy każdym `save()`.
+3. **Jedno hasło.** Hasło dziennika = hasło kopii. Nie leży już jawnie w
+   `localStorage` (do 09-2026 leżało — świadomy kompromis z Fazy 6, który zamek
+   unieważnił). Przycisk „🔑 Hasło kopii” (pokazywał hasło) → „🔑 Zmień hasło”
+   (wymaga obecnego; magazyn przepisany nowym od razu; stare kopie otwiera stare
+   hasło). **Zapomniane hasło = dane nie do odzyskania** poza kopiami — apka mówi to
+   wprost na ekranie ustawiania.
+
+Migracja: pierwsze uruchomienie po aktualizacji pokazuje ekran „Zamknij dziennik
+hasłem” z podstawionym dotychczasowym hasłem kopii (ostatni raz, gdy apka je
+pokazuje); klik szyfruje magazyn, kasuje jawne dane i jawne hasło. PIN — propozycja
+raz po odblokowaniu, opcjonalny („🔢 PIN” w Uczniowie zmienia/usuwa). Hash PIN-u
+leży W ŚRODKU szyfrogramu — na dysku nie przybywa nic jawnego.
+
+Bramka: `py -3.14 test_zamek.py` — 35 sprawdzeń, kluczowe: **localStorage ani
+IndexedDB nie zawierają nazwiska**, skróty klawiszowe nie przechodzą przez
+zasłonę, migracja zachowuje wszystko i kasuje jawne hasło kopii, po przeładowaniu
+PIN nie wystarcza. Pozostałe testy odblokowują apkę przez API
+(`zamekPierwszeHaslo` / `zamekOdblokuj`) i czytają magazyn przez `zamekStanZapisany()`.
+
+Czego zamek NIE robi: nie chroni przed kimś, kto zna hasło; nie chroni danych
+w pamięci strony przy odblokowanej apce (DevTools) — chroni dysk i oko przypadkowego
+przechodnia; mikrofon nadal wysyła nagranie do Google (osobna decyzja).
+
 ## Uwaga operacyjna: jedno miejsce uruchamiania
 
 Dane siedzą w `localStorage`, który jest **osobny dla pliku na dysku i dla adresu
@@ -234,13 +274,16 @@ Adoptowany do projektu `nauczyciel` 2026-05-18 (był prototypem w Downloads).
 - Faza 6 (wdrożona, przetestowana e2e): wymuszone szyfrowanie kopii — auto-kopia
   dzienna, kopia przed operacją niszczącą i kopia ręczna idą jedną drogą przez
   AES-GCM z hasłem ustawianym raz; operacja kasująca nie rusza danych, gdy kopia
-  nie powstała. Bramka: `test_kopie.py`, 13/13 PASS. Zostaje otwarte: mikrofon
-  (nagranie do Google) i brak zamka na samej aplikacji.
+  nie powstała. Bramka: `test_kopie.py`. Zostaje otwarte: mikrofon
+  (nagranie do Google); zamek na aplikacji → Szczebel 5.
 - Faza 7 (wdrożona, zmierzona): kroje pisma wklejone do pliku — dziennik nie wykonuje
   żadnego zapytania poza laptop (było 6 do Google po czcionki przy każdym otwarciu)
   i wygląda tak samo bez internetu. Bramka: `test_siec.py`. Otwarte zostaje: mikrofon
-  (rozpoznawanie mowy po stronie Google) i brak zamka na aplikacji.
+  (rozpoznawanie mowy po stronie Google); zamek na aplikacji → Szczebel 5.
 - Faza 8 (wdrożona, odtworzona kontrolą): drugi magazyn (IndexedDB) + głośny baner
   + podgląd zajętości pamięci. Powód: wspólny limit `file://` był pełny, `save()`
   nie miał obsługi błędu i każdy zapis cicho przepadał — objaw „nie mogę dopisać
   klasy". Bramka: `test_pamiec.py`, 9/9 PASS.
+- Szczebel 5 (wdrożony 2026-09-17): zamek — ekran blokady (hasło / PIN 4 cyfry / 10 min
+  bezczynności / karta w tle) + magazyn przeglądarki wyłącznie jako szyfrogram + jedno
+  hasło dla dziennika i kopii (bez podglądu, ze zmianą). Bramka: `test_zamek.py`, 35/35.

@@ -48,16 +48,17 @@ with sync_playwright() as pw:
 
     page.goto("http://127.0.0.1:%d/dziennik_wf.html" % PORT)
     page.wait_for_timeout(400)
+    page.evaluate("() => zamekPierwszeHaslo('test-haslo-123')")  # zamek (Szczebel 5): pusty magazyn -> pierwsze haslo
     # czysta klasa: kasuje 10 pustych wierszy startowych
     # + haslo kopii ustawione z gory, zeby auto-kopia nie przerywala testu
     #   (sama mechanika kopii ma wlasny test: test_kopie.py)
     page.evaluate(
         "() => { state.students.length = 0; save(); renderStudents(); renderAttendance();"
-        " localStorage.setItem('dziennik_wf_backup_pwd', 'test-haslo-123'); }"
+        " }"
     )
 
     def state():
-        return page.evaluate('() => JSON.parse(localStorage.getItem("dziennik_wf_v1"))')
+        return page.evaluate('() => zamekStanZapisany()')
 
     def cls():
         return state()["classes"][0]

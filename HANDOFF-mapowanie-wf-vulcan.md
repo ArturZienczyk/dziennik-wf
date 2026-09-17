@@ -1,5 +1,12 @@
 # HANDOFF — projekcja statusów Dziennik WF → VULCAN
 
+> **STAN 2026-09-17 noc (po 4. sesji, v19): Szczebel 5 (zamek) DOMKNIĘTY** — decyzje usera: hasło kopii
+> + PIN 4 cyfry, 10 min od ostatniego klawisza, „Zmień hasło” zamiast podglądu. Magazyn (localStorage +
+> IndexedDB) trzyma wyłącznie szyfrogram; migracja jawne→szyfrowane przejmuje stare hasło kopii i kasuje
+> je z localStorage. `test_zamek.py` 35/35, pozostałe 10 testów przerobione (odblokowanie przez API).
+> Sekcja „Zamek na apce” w README. **U usera po aktualizacji:** ekran „Zamknij dziennik hasłem” z
+> podstawionym hasłem kopii → klik → propozycja PIN-u. Następny: Szczebel 3 (zrzuty DOM 1–3 od usera).
+>
 > **STAN 2026-09-17 wieczór (po 3. sesji, v18):** Szczebel 2 DOMKNIĘTY w kodzie: A (usprawiedliwienia
 > `u`/`ns`/`z` z VULCAN nie nadpisywane przez NB, lista do poprawki w apce; `test_vulcan_usprawiedliwienia.py`),
 > C (panel bez DEBUG/DIAG/ZNAKI), B (`build_bookmarklet.py` → `vulcan-frekwencja.bookmarklet.txt`).
@@ -258,7 +265,15 @@ Kolejność (propozycja): 1 (najmniejsze, czysty UI) → 2 (model kratki wyniku)
 migracja kopii). Każdy punkt: próba na jednej klasie przed skalą, test w stylu istniejących
 `test_*.py` (Playwright, `py -3.14`).
 
-## SZCZEBEL 5 (zapisany 2026-09-17 wieczór, decyzja usera po sprawdzeniu regulaminów) — ZAMEK NA APCE
+## SZCZEBEL 5 — DOMKNIĘTY 2026-09-17 noc (v19; `test_zamek.py` 35/35; sekcja „Zamek na apce” w README)
+
+Zrealizowane wg kształtu niżej z decyzjami usera: (1) hasło kopii + PIN 4 cyfry, (2) 10 min od
+ostatniego klawisza + `visibilitychange`, (3) „Zmień hasło” po podaniu starego, bez podglądu.
+Odstępstwa od planu: hash PIN-u w środku szyfrogramu (nie osobno); 5 złych PIN-ów → hasło;
+przycisk „🔒 Zablokuj” w pasku zakładek; testy odblokowują przez API zamiast bypassu.
+Ryzyko „PIN co 10 min na lekcji” — user ocenia po tygodniu; `zamekCfg.minuty` to jedna liczba.
+
+### Kształt pierwotny (dla historii)
 
 ### Skąd
 Research `research-notes/2026-09-17_regulamin-vulcan-automatyzacja.md`: skrypty do VULCAN literalnie

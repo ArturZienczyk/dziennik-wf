@@ -34,7 +34,6 @@ def check(name, cond, detail=""):
 
 SEED = """() => {
   state.students.length = 0;
-  localStorage.setItem('dziennik_wf_backup_pwd', 'x-1');
   state.students.push({id:'u1', name:'Jan Kowalski', longTermReleased:false});            // bez pola releases (stare dane)
   state.students.push({id:'u2', name:'Piotr Nowak', longTermReleased:false, releases:[{od:'2026-09-10', do:'2026-09-20'}]});
   state.students.push({id:'u3', name:'Adam Lis', longTermReleased:false, releases:[{od:'2026-09-10', do:'2026-09-20'}]});
@@ -57,6 +56,7 @@ with sync_playwright() as pw:
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.goto("http://127.0.0.1:%d/dziennik_wf.html" % PORT)
     page.wait_for_timeout(400)
+    page.evaluate("() => zamekPierwszeHaslo('haslo-x1')")  # zamek (Szczebel 5): pusty magazyn -> pierwsze haslo
     page.evaluate(SEED)
     page.wait_for_timeout(200)
 
@@ -185,6 +185,8 @@ with sync_playwright() as pw:
     # trwałość po reload
     page.reload()
     page.wait_for_timeout(400)
+    page.evaluate("() => zamekOdblokuj('haslo-x1')")  # zamek: po przeladowaniu klucz nie zyje
+    page.wait_for_timeout(300)
     check(
         "po reload releases u2 zachowane",
         page.evaluate("() => state.students[1].releases[0].do") == "2026-09-20",

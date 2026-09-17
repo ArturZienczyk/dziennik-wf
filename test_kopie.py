@@ -48,6 +48,9 @@ with sync_playwright() as pw:
     page.goto("http://127.0.0.1:%d/dziennik_wf.html" % PORT)
     page.wait_for_timeout(400)
     page.evaluate(
+        "() => zamekPierwszeHaslo('tajne-haslo-2026')"
+    )  # zamek (Szczebel 5): pusty magazyn -> pierwsze haslo
+    page.evaluate(
         "() => { state.students.length = 0; save(); renderStudents(); renderAttendance(); }"
     )
 
@@ -64,23 +67,21 @@ with sync_playwright() as pw:
         page.query_selector('button:has-text("Zapis JSON")') is None,
     )
 
-    # ---------- 1. Auto-kopia przy pierwszym zapisie lekcji pyta o haslo RAZ ----------
+    # ---------- 1. Auto-kopia przy pierwszym zapisie lekcji NIE pyta o haslo ----------
+    # (Szczebel 5: haslo dziennika = haslo kopii, apka zna je po odblokowaniu)
     page.click('button:has-text("Obecność")')
     page.wait_for_timeout(200)
     page.click("h1")
     page.keyboard.press("n")  # status dla 1. ucznia
     page.keyboard.press("Enter")  # zapisz lekcje
     page.wait_for_timeout(200)
-    page.keyboard.press("Enter")  # potwierdz
+    with page.expect_download(timeout=15000) as dl_info:
+        page.keyboard.press("Enter")  # potwierdz -> auto-kopia
     page.wait_for_timeout(400)
     check(
-        "auto-kopia prosi o ustawienie hasla przy pierwszym zapisie",
-        page.query_selector("#pwdPromptModal.modal-bg.active") is not None,
+        "auto-kopia nie pyta o haslo (haslo dziennika = haslo kopii)",
+        page.query_selector("#pwdPromptModal.modal-bg.active") is None,
     )
-
-    with page.expect_download(timeout=15000) as dl_info:
-        page.fill("#pwdPromptInput", HASLO)
-        page.click("#pwdPromptOk")
     dl = dl_info.value
     auto_path = SHOTS / "auto_kopia.json"
     dl.save_as(str(auto_path))
@@ -140,30 +141,75 @@ with sync_playwright() as pw:
     )
     check("zle haslo nie otwiera kopii", zle == "ODRZUCONO", zle)
 
-    # ---------- 4. Haslo mozna podejrzec (gdyby user zapomnial) ----------
-    page.click('button:has-text("Hasło kopii")')
+    # ---------- 4. Hasla NIE da sie podejrzec; da sie zmienic po podaniu starego ----------
+    # (Szczebel 5: dawny przycisk „Hasło kopii" pokazywal haslo kazdemu przy odblokowanej apce)
+    check(
+        "przycisk 'Haslo kopii' (pokaz haslo) zniknal",
+        page.query_selector('button:has-text("Hasło kopii")') is None,
+    )
+    page.click('button:has-text("Zmień hasło")')
     page.wait_for_timeout(300)
     check(
-        "przycisk 'Haslo kopii' pokazuje zapamietane haslo",
-        page.input_value("#pwdPromptInput") == HASLO,
+        "'Zmien haslo' nie podstawia biezacego hasla do pola",
+        page.input_value("#pwdPromptInput") == "",
     )
-    page.keyboard.press("Escape")
-    page.wait_for_timeout(150)
+    page.fill("#pwdPromptInput", "zle-stare-haslo")
+    page.click("#pwdPromptOk")
+    page.wait_for_timeout(300)
+    check(
+        "zle stare haslo: nic nie zmieniono",
+        page.evaluate("() => zamek.haslo") == HASLO
+        and page.query_selector("#pwdPromptModal.modal-bg.active") is None,
+    )
+    page.click('button:has-text("Zmień hasło")')
+    page.wait_for_timeout(200)
+    page.fill("#pwdPromptInput", HASLO)
+    page.click("#pwdPromptOk")
+    page.wait_for_timeout(200)
+    page.fill("#pwdPromptInput", "nowe-haslo-777")
+    page.click("#pwdPromptOk")
+    page.wait_for_timeout(800)
+    check(
+        "po zmianie apka szyfruje nowym haslem",
+        page.evaluate("() => zamek.haslo") == "nowe-haslo-777",
+    )
+    check(
+        "magazyn przepisany nowym haslem (dane w calosci)",
+        NAZWISKO
+        in page.evaluate(
+            "() => zamekStanZapisany().then(d => d.classes[0].students.map(s => s.name))"
+        ),
+    )
+    with page.expect_download(timeout=15000) as dl3_info:
+        page.click('#tab-uczniowie button:has-text("Zapisz kopię")')
+    dl3 = dl3_info.value
+    raw3 = SHOTS / "kopia_po_zmianie.enc.json"
+    dl3.save_as(str(raw3))
+    zle_stare = page.evaluate(
+        """async ([txt, pwd]) => { try { await decryptBackup(txt, pwd); return 'ODCZYTANO'; }
+                                   catch (e) { return 'ODRZUCONO'; } }""",
+        [raw3.read_text(encoding="utf-8"), HASLO],
+    )
+    check(
+        "nowa kopia NIE otwiera sie starym haslem", zle_stare == "ODRZUCONO", zle_stare
+    )
 
     # ---------- 5. Operacja niszczaca bez kopii NIE rusza danych ----------
-    page.evaluate("() => localStorage.removeItem('dziennik_wf_backup_pwd')")
+    page.evaluate(
+        "() => { zamek.haslo = ''; }"
+    )  # zamek: bez hasla w pamieci kopia nie powstaje
     page.click('button:has-text("Wyczyść wszystko")')
     page.wait_for_timeout(200)
     page.keyboard.press("Enter")  # pierwszy confirm
     page.wait_for_timeout(200)
     page.keyboard.press("Enter")  # ostatnia szansa
-    page.wait_for_timeout(400)
+    page.wait_for_timeout(600)
+    toast = page.evaluate("() => document.getElementById('toast').textContent")
     check(
-        "czyszczenie danych zada hasla do kopii",
-        page.query_selector("#pwdPromptModal.modal-bg.active") is not None,
+        "czyszczenie bez mozliwej kopii przerwane z komunikatem",
+        "kopia" in toast.lower(),
+        toast,
     )
-    page.keyboard.press("Escape")
-    page.wait_for_timeout(400)
     names = page.evaluate("() => state.students.map(s => s.name)")
     check(
         "anulowanie hasla przerywa czyszczenie — dane NIETKNIETE",

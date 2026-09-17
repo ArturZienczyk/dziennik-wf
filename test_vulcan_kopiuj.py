@@ -54,8 +54,9 @@ with sync_playwright() as pw:
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.goto("http://127.0.0.1:%d/dziennik_wf.html" % PORT)
     page.wait_for_timeout(400)
+    page.evaluate("() => zamekPierwszeHaslo('haslo-x1')")  # zamek (Szczebel 5): pusty magazyn -> pierwsze haslo
     page.evaluate(
-        "() => { state.students.length = 0; localStorage.setItem('dziennik_wf_backup_pwd', 'x-1'); "
+        "() => { state.students.length = 0; "
         "state.students.push("
         " {id:'u1', name:'Jan Kowalski', longTermReleased:false},"
         " {id:'u2', name:'Nowak Piotr', longTermReleased:false},"
