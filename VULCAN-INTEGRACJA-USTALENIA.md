@@ -204,3 +204,11 @@ wkleić CAŁĄ treść pliku. Użycie: otwórz okno edycji frekwencji → klik z
 = edycja adresu zakładki. **NIE sprawdzone na żywo** (limit długości adresu zakładki w Chrome/Edge
 — zgaduję, że 26 tys. mieści się; jeśli zakładka się ucina, wracamy do snippetu, który działa).
 Kopie na pulpicie: `vulcan-frekwencja.txt` (snippet) + `vulcan-frekwencja-bookmarklet.txt`.
+
+**B′ (2026-09-17, po teście usera): pełny bookmarklet się URYWA.** Zakładka Chrome/Edge przyjęła
+ok. 11–12 tys. znaków z 26 tys. — kod obcięty w połowie, klik nic nie robi. Rozwiązanie:
+`vulcan-frekwencja.loader.txt` (747 znaków) — zakładka dociąga aktualny skrypt z publicznego repo
+(`<script>` z jsDelivr `@main`, awaryjnie `fetch` z raw.githubusercontent + `Function`).
+Aktualizacja = `git push` (zakładki nie ruszać); jsDelivr cache'uje do ~12 h — pilna zmiana:
+otwórz w przeglądarce `https://purge.jsdelivr.net/gh/ArturZienczyk/dziennik-wf@main/vulcan-frekwencja.user.js`.
+Ryzyko niesprawdzone: CSP VULCANa może blokować obce skrypty — wtedy alert i powrót do snippetu.
