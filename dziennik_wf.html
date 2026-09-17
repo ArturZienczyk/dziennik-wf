@@ -383,6 +383,10 @@
   .pomiary-table th.pinned, .pomiary-table td.pinned { background: rgba(176,143,78,0.14); }
   .pomiary-table th.pinned { color: var(--accent); }
   .pomiary-table th.pinned .test-pin { color: var(--accent); }
+  /* Status zamiast wyniku (Szczebel 4.2): NB = nieobecny na teście, NĆ = był, nie ćwiczył */
+  .pomiary-table input.wynik-nb, .pomiary-table input.wynik-nc { text-align:center; font-weight:600; letter-spacing:0.5px; }
+  .pomiary-table input.wynik-nb { color: var(--accent-warm); }
+  .pomiary-table input.wynik-nc { color: var(--ink-muted); }
 
   /* Modal informacyjny przy starcie */
   .modal-bg {
@@ -1096,6 +1100,7 @@
       <span><kbd>Tab</kbd> w bok</span>
       <span style="color:var(--ink-muted)">Klikasz raz w pierwszą komórkę testu i lecisz całą klasą.</span>
       <span><kbd>⇤</kbd> w nagłówku testu przypina kolumnę tuż za nazwiskiem na czas wpisywania</span>
+      <span>W kratce wyniku zamiast liczby: <kbd>NB</kbd> nieobecny na teście · <kbd>NĆ</kbd> był, nie ćwiczył</span>
     </div>
 
     <div class="table-wrap">
@@ -2269,7 +2274,7 @@ function kartaOceny(studentId) {
 function kartaPomiary(s) {
   const m = state.measurements[s.id] || {};
   const rows = [['Wzrost [cm]', s.height], ['Masa [kg]', s.weight]].concat(getTestFields().map(f => [f.name + (f.unit ? ' [' + f.unit + ']' : ''), m[f.id]]));
-  return '<table class="lista"><tbody>' + rows.map(r => '<tr><td>' + r[0] + '</td><td><b>' + (r[1] || '—') + '</b></td></tr>').join('') + '</tbody></table>';
+  return '<table class="lista"><tbody>' + rows.map(r => '<tr><td>' + r[0] + '</td><td><b>' + (pomiarIsStatus(r[1]) ? pomiarLabel(r[1]) + '</b> <span class="karta-uwaga">' + POMIAR_STATUS[r[1]] + '</span><b>' : (r[1] || '—')) + '</b></td></tr>').join('') + '</tbody></table>';
 }
 
 function renderKarta() {
@@ -2476,7 +2481,7 @@ function renderPomiary() {
   };
   pinned.forEach(f => nameTh.insertAdjacentElement('afterend', makeTh(f, true)));
   rest.forEach(f => headRow.appendChild(makeTh(f, false)));
-  const cell = (s, m, f, isPinned) => `<td${isPinned ? ' class="pinned"' : ''} data-field="${f.id}"><input type="number" step="any" value="${escapeHtml(m[f.id] || '')}" oninput="updateMeasurement('${s.id}', '${f.id}', this.value)"></td>`;
+  const cell = (s, m, f, isPinned) => `<td${isPinned ? ' class="pinned"' : ''} data-field="${f.id}"><input type="text" inputmode="decimal" autocomplete="off" class="${pomiarClass(m[f.id]).trim()}" value="${escapeHtml(pomiarLabel(m[f.id]))}" title="liczba albo NB (nieobecny) / NĆ (nie ćwiczył)" oninput="updateMeasurement('${s.id}', '${f.id}', this.value, this)" onblur="pomiarBlur('${s.id}', '${f.id}', this)"></td>`;
   state.students.forEach((s, i) => {
     const tr = document.createElement('tr');
     if (s.longTermReleased) tr.classList.add('long-term-released');
@@ -2493,10 +2498,31 @@ function renderPomiary() {
   });
 }
 
-function updateMeasurement(studentId, field, val) {
+// Kratka wyniku przyjmuje liczbę ALBO status (Szczebel 4.2): NB = nieobecny na teście,
+// NĆ = był, nie ćwiczył. W danych kody jak we frekwencji ('NB' / 'NC'), na ekranie 'NĆ'.
+// Puste = jeszcze nie wpisano. Karta ucznia pokazuje etykietę zamiast liczby.
+const POMIAR_STATUS = { NB: 'nieobecny na teście', NC: 'był, nie ćwiczył' };
+function pomiarNorm(v) {
+  const t = (v === undefined || v === null) ? '' : String(v).trim();
+  const u = t.toUpperCase().replace(/Ć/g, 'C').replace(/[\s.]+/g, '');
+  if (u === 'NB' || u === 'NC') return u;
+  return t.replace(',', '.');
+}
+function pomiarIsStatus(v) { return v === 'NB' || v === 'NC'; }
+function pomiarLabel(v) { return v === 'NC' ? 'NĆ' : (v || ''); }
+function pomiarClass(v) { return pomiarIsStatus(v) ? ' wynik-' + v.toLowerCase() : ''; }
+function updateMeasurement(studentId, field, val, el) {
   if (!state.measurements[studentId]) state.measurements[studentId] = {};
-  state.measurements[studentId][field] = val;
+  const v = pomiarNorm(val);
+  state.measurements[studentId][field] = v;
+  if (el) el.className = pomiarClass(v).trim();
   save();
+}
+// po wyjściu z kratki: pokaż kanoniczną etykietę (nb -> NB, nc -> NĆ, 12,5 -> 12.5)
+function pomiarBlur(studentId, field, el) {
+  const v = (state.measurements[studentId] || {})[field];
+  el.value = pomiarLabel(v);
+  el.className = pomiarClass(v).trim();
 }
 
 // =====================================================
