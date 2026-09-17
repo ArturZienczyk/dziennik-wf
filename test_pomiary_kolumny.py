@@ -33,7 +33,6 @@ def check(name, cond, detail=""):
 
 SEED = """() => {
   state.students.length = 0;
-  localStorage.setItem('dziennik_wf_backup_pwd', 'x-1');
   state.students.push({id:'u1', name:'Jan Kowalski', longTermReleased:false, height:'152', weight:'44'});
   state.students.push({id:'u2', name:'Piotr Nowak', longTermReleased:false});
   state.students.push({id:'u3', name:'Adam Lis', longTermReleased:false});
@@ -56,6 +55,7 @@ with sync_playwright() as pw:
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.goto("http://127.0.0.1:%d/dziennik_wf.html" % PORT)
     page.wait_for_timeout(400)
+    page.evaluate("() => zamekPierwszeHaslo('haslo-x1')")  # zamek (Szczebel 5): pusty magazyn -> pierwsze haslo
     page.evaluate(SEED)
     page.click('button.tab:has-text("Pomiary")')
     page.wait_for_timeout(200)
@@ -136,6 +136,8 @@ with sync_playwright() as pw:
     # przeładowanie: przypięcie przeżywa (per klasa, w save)
     page.reload()
     page.wait_for_timeout(400)
+    page.evaluate("() => zamekOdblokuj('haslo-x1')")  # zamek: po przeladowaniu klucz nie zyje
+    page.wait_for_timeout(300)
     page.click('button.tab:has-text("Pomiary")')
     page.wait_for_timeout(200)
     check(

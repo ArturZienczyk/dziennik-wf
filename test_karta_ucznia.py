@@ -32,7 +32,6 @@ def check(name, cond, detail=""):
 
 SEED = """() => {
   state.students.length = 0;
-  localStorage.setItem('dziennik_wf_backup_pwd', 'x-1');
   state.students.push({id:'u1', name:'Jan Kowalski', longTermReleased:false, height:'152', weight:'44'});
   state.students.push({id:'u2', name:'Piotr Nowak', longTermReleased:false});
   const seq = ['C','C','BS','C','C','NB','C','NC','C','C','NU','C','C','BS','C','ZW','C','C','C','NB','C','C','BS','C','C','C','NC','C','C','C'];
@@ -59,6 +58,7 @@ with sync_playwright() as pw:
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.goto("http://127.0.0.1:%d/dziennik_wf.html" % PORT)
     page.wait_for_timeout(400)
+    page.evaluate("() => zamekPierwszeHaslo('haslo-x1')")  # zamek (Szczebel 5): pusty magazyn -> pierwsze haslo
     page.evaluate(SEED)
     page.click('button:has-text("Statystyki")')
     page.click('button.stats-name-btn:has-text("Jan Kowalski")')
@@ -175,7 +175,7 @@ with sync_playwright() as pw:
     saved = page.evaluate("() => (state.measurements.u1 || {}).rzut_pilka_lekarska")
     check("pomiary: wynik zapisany pod id z nazwy", saved == "7.5", saved)
     tf = page.evaluate(
-        "() => JSON.parse(localStorage.getItem('dziennik_wf_v1')).classes[0].testFields.length"
+        "() => zamekStanZapisany().then(d => d.classes[0].testFields.length)"
     )
     check("pomiary: pola testów w localStorage", tf == 5, tf)
     page.screenshot(path=str(SHOTS / "pomiary_wlasny_test.png"), full_page=False)

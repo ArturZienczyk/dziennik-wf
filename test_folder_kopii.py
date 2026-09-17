@@ -46,7 +46,6 @@ MOCK = """() => {
 
 SEED = """() => {
   state.students.length = 0;
-  localStorage.setItem('dziennik_wf_backup_pwd', 'x-1');
   state.students.push({id:'u1', name:'Jan Kowalski', longTermReleased:false});
   save();
 }"""
@@ -62,6 +61,7 @@ with sync_playwright() as pw:
     page.add_init_script("(" + MOCK + ")()")
     page.goto("http://127.0.0.1:%d/dziennik_wf.html" % PORT)
     page.wait_for_timeout(500)
+    page.evaluate("() => zamekPierwszeHaslo('haslo-x1')")  # zamek (Szczebel 5): pusty magazyn -> pierwsze haslo
     page.evaluate(SEED)
     page.click('button.tab:has-text("Uczniowie")')
     page.wait_for_timeout(200)
