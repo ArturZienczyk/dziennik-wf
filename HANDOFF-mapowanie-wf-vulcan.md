@@ -1,9 +1,13 @@
 # HANDOFF — projekcja statusów Dziennik WF → VULCAN
 
-> **STAN 2026-09-17 (po sesji):** decyzje 1–4 ROZSTRZYGNIĘTE i wdrożone (tabela kanoniczna w
-> `VULCAN-INTEGRACJA-USTALENIA.md`), przycisk „Kopiuj dla VULCAN" w apce przy dacie lekcji,
-> test `py -3.14 test_vulcan_kopiuj.py` OK. Zostało: weryfikacja na żywym VULCAN z realnym dniem;
-> sprzątnięcie bloków DEBUG w skrypcie + bookmarklet.
+> **STAN 2026-09-17 wieczór (po 3. sesji, v18):** Szczebel 2 DOMKNIĘTY w kodzie: A (usprawiedliwienia
+> `u`/`ns`/`z` z VULCAN nie nadpisywane przez NB, lista do poprawki w apce; `test_vulcan_usprawiedliwienia.py`),
+> C (panel bez DEBUG/DIAG/ZNAKI), B (`build_bookmarklet.py` → `vulcan-frekwencja.bookmarklet.txt`).
+> Snippet i bookmarklet na pulpicie. **Do zrobienia przez usera:** (1) zainstalować bookmarklet w pasku
+> zakładek i sprawdzić, czy 26 tys. znaków adresu wchodzi — jeśli nie, zostaje snippet; (2) żywy test A:
+> kratka z `u` + apka `NB` → po Wypełnij kratka nadal `u`, log wymienia nazwisko.
+> Następny szczebel: 3 (wiadomości do rodziców, czeka na zrzuty 1–3 od usera) lub 4 (apka: Pomiary).
+> Szczegóły: `VULCAN-INTEGRACJA-USTALENIA.md` §„Szczebel 2 domknięty".
 
 **Data:** 2026-09-17. Dla: czysta sesja, która ma zaprojektować i wdrożyć mapowanie.
 **Powiązane:** `VULCAN-INTEGRACJA-USTALENIA.md` (mechanizm zapisu — DZIAŁA e2e, v11).
@@ -49,7 +53,7 @@ szkolne · `z` zwolniony · `#` obecność zdalna · `nc` nie ćwiczy na zajęci
 | BS | `nc` | VULCAN nie ma BS → scala z NĆ (decyzja 3) |
 | NB | `—` | |
 | NU | `u` | |
-| ZW | `z` | |
+| ZW | `nc` | decyzja 09-17: `z` w VULCAN = nieobecny z powodu zwolnienia, u nas martwy; nc niewidoczne dla rodzica, ale Artur ma prawdę w dzienniku WF |
 | *cokolwiek*+sp | `s` | obecnie spóźnienie WYGRYWA nad bazą (decyzja 2) |
 Prześledzone 2026-09-17: wszystkie kody bazowe appki `symbolFor` już rozumie (Ć→C w środku).
 
@@ -85,6 +89,14 @@ v11: dopasowanie (dedup po `data-key`, 46 fantomów DOM → 23 realnych), zapis 
 arm→paint + `PointerEvent`), sprzątanie obwódek (`clearMarks`). Potwierdzone na żywym VULCAN:
 `wpisano 3`, trzy różne symbole przełączone, obwódki znikają. **Mechanizmu NIE ruszać** —
 następna sesja pracuje wyłącznie nad PROJEKCJĄ STATUSÓW i eksportem z appki.
+
+**v16 (2026-09-17 wieczór, żywy test PRZESZEDŁ — „wszystko zagrało"):** żywy test v11 wykrył
+przesunięcie o jednego ucznia (klik legendy uzbraja pędzel ORAZ wpisuje do zaznaczonej kratki).
+Fix: kratka → legenda → kratka + `armedName` + wzorzec glifu z legendy + kontrola końcowa
+wszystkich kratek. ZW → `nc` (decyzja usera). Szczegóły: `VULCAN-INTEGRACJA-USTALENIA.md`
+§„Poprawki 2026-09-17". Snippet usera = `D:/Users/Desktop/vulcan-frekwencja.txt` — każda zmiana
+skryptu MUSI tam trafić (`pulpit ... --name vulcan-frekwencja.txt`) + `vNN` w nagłówku panelu.
+Kolejność Szczebla 2: punkt 1 (test) DOMKNIĘTY → następne A, potem B+C.
 
 ---
 
@@ -201,3 +213,30 @@ Kryterium goal.md: pain-driven, nie search-driven. Każdy punkt = ból, który m
    apce, raport różnic). Ból: rozjazd po ręcznych poprawkach w VULCAN. Read-only, bezpieczne.
 Najwięcej sensu na dziś (moja ocena): 1 i 5 — oba jadą na skrypcie wiadomości, który i tak
 powstaje w Szczeblu 3; 2 to osobne rozpoznanie DOM; 6 tanie, ale bez zgłoszonego bólu.
+
+## SZCZEBEL 4 (zapisany 2026-09-17 wieczór, słowa usera po udanym teście VULCAN) — apka WF, zakładka Pomiary
+
+Trzy bóle zgłoszone przez usera, wszystkie po stronie `dziennik_wf.html` (NIE userscriptu):
+
+1. **Ruchome kolumny w Pomiarach.** Przy wpisywaniu wyników danego testu kolumna jest daleko od
+   nazwisk i łatwo zgubić wiersz. Cel: przesunąć wybraną kolumnę testu na początek (tuż za
+   nazwisko) na czas wpisywania — przycisk „na początek" w nagłówku kolumny albo drag nagłówka.
+   Kolejność nazwisk niezmienna. Gdzie: tabela `.pomiary-table` (HTML ~1095), kolumny dopisuje
+   `renderPomiary()` z `getTestFields()`. Propozycja: pole `pomiaryColOrder` w stanie (lista id
+   testów), render czyta kolejność z niego; zero zmian w danych pomiarów.
+2. **Status na teście: nieobecny / niećwiczący.** Dziś kratka wyniku jest tylko liczbą; brak
+   rozróżnienia „nie było go" od „był, nie ćwiczył" od „nie wpisano jeszcze". Cel: w kratce
+   wyniku obok liczby dopuszczalne `NB` / `NĆ` (klawiaturą, jak statusy frekwencji), render
+   pokazuje etykietę zamiast liczby, karta ucznia i średnie pomijają takie wpisy. Sprawdzić
+   kolizję z rubrykami/karta ucznia (`test_karta_ucznia.py`).
+3. **Zwolnienie lekarskie w określonym terminie.** Dziś jest tylko `longTermReleased` (flaga
+   bez dat, uczeń znika z listy) i ZW per lekcja. Cel: zwolnienie z datą OD–DO per uczeń
+   (lista okresów); w dniach z okresu apka podpowiada/wymusza ZW przy frekwencji i oznacza
+   pomiary; po dacie DO uczeń wraca sam. Projekcja do VULCAN bez zmian (ZW → `nc`). Gdzie:
+   model `students[]` (`longTermReleased` linie ~1688/1793/1879/1961), setStatus dla ZW (~1249).
+   Uwaga na zgodność ze starymi kopiami (szyfrowane JSON) — pole nowe, opcjonalne, migracja
+   przy wczytaniu.
+
+Kolejność (propozycja): 1 (najmniejsze, czysty UI) → 2 (model kratki wyniku) → 3 (model ucznia +
+migracja kopii). Każdy punkt: próba na jednej klasie przed skalą, test w stylu istniejących
+`test_*.py` (Playwright, `py -3.14`).

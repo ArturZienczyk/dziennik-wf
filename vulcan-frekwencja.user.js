@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dziennik WF -> VULCAN frekwencja
 // @namespace    dziennik-wf
-// @version      0.2
+// @version      0.3
 // @description  Wypelnia kolumne frekwencji WF w VULCAN z danych z Dziennika WF. FILL-ONLY, nie zapisuje.
 // @match        https://dziennik-dziennik.vulcan.net.pl/lodz/016197/*
 // @grant        none
@@ -126,7 +126,7 @@ function keepExcused(symbolName,cellTexts){
 var P=document.createElement('div');
 P.style.cssText='position:fixed;top:10px;right:10px;z-index:2147483647;width:340px;background:#fff;border:2px solid #1E2D4F;border-radius:8px;font:13px/1.4 Arial,sans-serif;color:#1A1A1A;box-shadow:0 6px 24px rgba(0,0,0,.3)';
 P.innerHTML=''
-+'<div style="background:#1E2D4F;color:#fff;padding:8px 10px;font-weight:bold;border-radius:5px 5px 0 0;display:flex;justify-content:space-between">Dziennik WF -> VULCAN <span style="opacity:.6;font-weight:normal">v17</span><span id="wfX" style="cursor:pointer">✕</span></div>'
++'<div style="background:#1E2D4F;color:#fff;padding:8px 10px;font-weight:bold;border-radius:5px 5px 0 0;display:flex;justify-content:space-between">Dziennik WF -> VULCAN <span style="opacity:.6;font-weight:normal">v18</span><span id="wfX" style="cursor:pointer">✕</span></div>'
 +'<div style="padding:10px">'
 +'<div style="font-size:12px;color:#4A4543;margin-bottom:6px">Wklej statusy dnia: <b>Nazwisko Imię</b> [tab / ; / 2 spacje] <b>status</b> (C, NĆ, BS, NB, NU, ZW, SP)</div>'
 +'<textarea id="wfIn" style="width:100%;height:120px;box-sizing:border-box;font:12px monospace" placeholder="Nowak Jan\tC\nKowalska Zofia\tNU"></textarea>'
@@ -153,22 +153,11 @@ function preview(){
   var noInput=m.rows.filter(function(r){return r.status===null;});
   var badStatus=m.rows.filter(function(r){return r.status!==null && !r.symbol;});
   var _eds=editableCells().length,_ncs=nameCells().length;
-  // --- DEBUG na gorze (bez scrollowania) ---
-  var _uniq={}; pairs.forEach(function(p){var s=norm(p.name).split(' ')[0]; _uniq[s]=(_uniq[s]||0)+1;});
-  var _dups=Object.keys(_uniq).filter(function(s){return _uniq[s]>1;});
-  var _dbg='DEBUG: par '+pairs.length+' / unikalnych nazwisk '+Object.keys(_uniq).length+(_dups.length?(' | ⚠DUPLIKATY: '+esc(_dups.slice(0,8).join(', '))):' | bez duplikatow')+'\n';
-  Object.keys(inp).forEach(function(k){
-    var f4=k.slice(0,4),hit=pairs.filter(function(p){return norm(p.name).split(' ')[0]===k || p.name.toLowerCase().indexOf(f4)>=0;});
-    _dbg+='"'+esc(k)+'" ('+hit.length+'x): '+(hit.length?hit.map(function(p){return 'key='+esc(p.cell.getAttribute('data-key')||'?')+'/vis='+(p.cell.offsetParent!==null&&p.cell.getBoundingClientRect().height>0?'T':'N');}).join(' ; '):'BRAK')+'\n';
-  });
-  var html=_dbg+'\n'+'Uczniów w kolumnie: '+pairs.length+' (kratki '+_eds+' / nazwiska '+_ncs+', '+(_eds&&_eds===_ncs?'po kolejności':'geometria')+')  |  do wpisania: <b>'+ok.length+'</b>\n';
+  var html='Uczniów w kolumnie: '+pairs.length+' (kratki '+_eds+' / nazwiska '+_ncs+', '+(_eds&&_eds===_ncs?'po kolejności':'geometria')+')  |  do wpisania: <b>'+ok.length+'</b>\n';
   if(ok.length) html+='\nSPRAWDŹ dopasowania:\n'+ok.map(function(r){var k=r.pair.cell.getAttribute('data-key')||'';var uid=k?k.split('-').pop():'?';return '• '+esc(r.pair.name)+' → '+esc(r.status)+'  [uid '+esc(uid)+']';}).join('\n')+'\n';
   if(badStatus.length) html+='\n⚠ nieznany status ('+badStatus.length+'): '+esc(badStatus.map(function(r){return r.pair.name+'='+r.status;}).join(', '))+'\n';
   if(m.unmatchedInput.length) html+='\n⚠ z wklejonych nie znalazłem ('+m.unmatchedInput.length+'): '+esc(m.unmatchedInput.join(', '))+'\n';
   if(noInput.length) html+='\n(bez danych, pominę: '+noInput.length+')\n';
-  html+='\n— DIAG, siatka widzi ('+pairs.length+'):\n'+esc(pairs.map(function(p){return p.name;}).join(' · '))+'\n';
-  var _bad=pairs.map(function(p){var r=p.name,b=[];for(var i=0;i<r.length;i++){if(!/[a-zA-Z0-9ąćęłńóśźżĄĆĘŁŃÓŚŹŻ .'\-]/.test(r[i]))b.push(i+':'+r.charCodeAt(i));}return b.length?(r+' ['+b.join(',')+']'):null;}).filter(Boolean);
-  html+='— ZNAKI SPECJALNE: '+(_bad.length?esc(_bad.join(' | ')):'brak')+'\n';
   log(html);
   return m;
 }

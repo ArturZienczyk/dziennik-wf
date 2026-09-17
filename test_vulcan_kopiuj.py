@@ -110,7 +110,7 @@ with sync_playwright() as pw:
         "Wiśniewski Adam": "nc",
         "Zieliński Marek": "s",
         "Lis Tomasz": "—",
-        "Bąk Karol": "z",
+        "Bąk Karol": "nc",  # decyzja 09-17: ZW -> nc, "zwolniony" VULCAN nieuzywany
         "Mazur Filip": "u",
         "Obcy Uczeń": None,
     }
