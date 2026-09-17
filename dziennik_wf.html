@@ -110,7 +110,23 @@
     font-family: 'Source Serif 4', Georgia, serif;
     font-size: 16px; font-weight: 500; margin: 1.5rem 0 0.75rem 0;
   }
-  .subtitle { font-size: 14px; color: var(--ink-muted); margin: 0 0 1.5rem 0; font-style: italic; }
+  .subtitle { font-size: 13px; color: var(--ink-muted); margin: 0; font-style: italic; }
+  /* Pasek górny przyklejony: tytuł + klasa + zakładki zostają przy przewijaniu (2026-09-18) */
+  .topbar { position: sticky; top: 0; z-index: 20; background: var(--bg); margin: -1.5rem -1.5rem 14px -1.5rem; padding: 10px 1.5rem 0 1.5rem; box-shadow: 0 1px 0 var(--line); }
+  .topbar-row { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; margin-bottom: 4px; }
+  .topbar h1 { font-size: 22px; margin: 0; }
+  #classBar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-left: auto; }
+  .topbar .tabs { margin-bottom: 0; border-bottom: none; }
+  /* Ściąga per zakładka: zwinięta linia, rozwijana na żądanie; stan pamiętany */
+  details.pomoc { margin: 0 0 10px 0; }
+  details.pomoc > summary { cursor: pointer; font-size: 13px; color: var(--ink-muted); padding: 6px 10px; border: 1px dashed var(--line); border-radius: 6px; list-style: none; user-select: none; }
+  details.pomoc > summary::-webkit-details-marker { display: none; }
+  details.pomoc > summary:hover { background: var(--paper); color: var(--ink); }
+  details.pomoc[open] > summary { border-style: solid; border-radius: 6px 6px 0 0; color: var(--ink); margin-bottom: 10px; }
+  details.pomoc .info-box, details.pomoc .kbd-bar, details.pomoc .legend-row { margin-top: 0; }
+  details.pomoc .oceny-intro { margin-bottom: 10px; }
+  .oceny-polrocze { padding-top: 0; }
+  .toolbar-niebezpieczne { margin-top: 28px; justify-content: space-between; font-size: 12.5px; color: var(--ink-muted); border-style: dashed; }
   code { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 0.9em; }
 
   /* Toolbar */
@@ -194,7 +210,7 @@
   .status-nu { background: #C7D9F0; border-color: #6A8FBD; color: #1A2C50; }
   .status-nb { background: #F7C1C1; border-color: #C46666; color: #501313; }
   .status-empty { background: var(--bg); border-color: var(--line); color: var(--ink-muted); }
-  .status-blocked { background: var(--line); border-color: var(--line); color: var(--ink-muted); }
+  .status-blocked { background: var(--line); border-color: var(--line); color: var(--ink-muted); white-space: nowrap; }
   .late-mark { font-size: 11px; opacity: 0.85; }
 
   /* Tabela obecności */
@@ -826,6 +842,11 @@
 
     /* Odzyskać szerokość ekranu na telefonie (było 1.5rem z obu stron) */
     .container { padding: 0.6rem; }
+    .topbar { margin: -0.6rem -0.6rem 10px -0.6rem; padding: 6px 0.6rem 0 0.6rem; }
+    .topbar h1 { font-size: 18px; }
+    .topbar .subtitle { display: none; }
+    .topbar .tabs { overflow-x: auto; }
+    .tab { padding: 8px 10px; font-size: 13px; white-space: nowrap; }
     .table-wrap, .oceny-wrap { -webkit-overflow-scrolling: touch; }
 
     /* Ciaśniejsze komórki — więcej mieści się bez przewijania */
@@ -923,8 +944,24 @@
 <div id="zamek"><div class="zamek-karta"><h2>Dziennik WF</h2><p class="zamek-hint">Otwieram…</p></div></div>
 <div class="container">
 
-  <h1>Dziennik WF</h1>
-  <p class="subtitle">Obecność, pomiary, statystyki · dane zapisują się lokalnie</p>
+  <!-- Pasek górny (2026-09-18): tytuł + klasa + zakładki w jednym przyklejonym pasku, żeby
+       tabela zaczynała się wysoko. Ściągi (workflow, legenda, klawisze) zwinięte do
+       <details class="pomoc"> per zakładka — stan pamiętany w localStorage, pierwsze otwarcie rozwinięte. -->
+  <div class="topbar">
+    <div class="topbar-row">
+      <h1>Dziennik WF</h1>
+      <p class="subtitle">dane zapisują się lokalnie</p>
+      <div id="classBar"></div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('obecnosc')">📋 Obecność</button>
+      <button class="tab" onclick="switchTab('uczniowie')">👥 Uczniowie</button>
+      <button class="tab" onclick="switchTab('pomiary')">📏 Pomiary</button>
+      <button class="tab" onclick="switchTab('oceny')">📝 Oceny</button>
+      <button class="tab" onclick="switchTab('statystyki')">📊 Statystyki</button>
+      <button class="tab tab-zamek" onclick="zamekZablokuj('ręcznie')" title="Zasłoń dziennik (odsłania PIN albo hasło)">🔒 Zablokuj</button>
+    </div>
+  </div>
 
   <div id="magazynBaner" style="display:none;background:#FFF0F0;border:1px solid #E0A0A0;border-left:4px solid #C0392B;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13.5px;line-height:1.6;">
     <strong style="color:#C0392B;">⚠ Pamięć przeglądarki jest pełna — dziennik pisze do magazynu zapasowego.</strong>
@@ -935,23 +972,6 @@
     </div>
   </div>
 
-  <div id="classBar" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:14px"></div>
-
-  <div class="info-box">
-    <strong>Szybki workflow:</strong> Zaznaczasz tylko <em>wyjątki</em> (kto dziś nie ćwiczył / nieobecny / brak stroju) — z klawiatury: <kbd>↑</kbd><kbd>↓</kbd> wybierasz ucznia, litera nadaje status. Pozostali dostaną <strong>C (ćwiczył)</strong> po <kbd>Enter</kbd>. Mysz i dyktowanie nadal działają, ale nie są potrzebne.
-    <br><br>
-    <strong>Procent ćwiczył</strong> liczy się ze wzoru: <code>C / (C + NĆ + BS + NB)</code>. NU (usprawiedliwiony) i ZW (zwolnienie) wypadają z bazy. Wagary (NB) liczą się jak "nie ćwiczył".
-  </div>
-
-  <!-- Zakładki -->
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('obecnosc')">📋 Obecność</button>
-    <button class="tab" onclick="switchTab('uczniowie')">👥 Uczniowie</button>
-    <button class="tab" onclick="switchTab('pomiary')">📏 Pomiary</button>
-    <button class="tab" onclick="switchTab('oceny')">📝 Oceny</button>
-    <button class="tab" onclick="switchTab('statystyki')">📊 Statystyki</button>
-    <button class="tab tab-zamek" onclick="zamekZablokuj('ręcznie')" title="Zasłoń dziennik (odsłania PIN albo hasło)">🔒 Zablokuj</button>
-  </div>
 
   <!-- =================================================== -->
   <!-- ZAKŁADKA: OBECNOŚĆ -->
@@ -976,6 +996,39 @@
         💾 Zapisz lekcję — pozostali jako "ćwiczył"
       </button>
     </div>
+
+    <details class="pomoc" data-pomoc="obecnosc">
+      <summary>❔ Jak to działa — klawisze, statusy, procent</summary>
+      <div class="info-box">
+        <strong>Szybki workflow:</strong> Zaznaczasz tylko <em>wyjątki</em> (kto dziś nie ćwiczył / nieobecny / brak stroju) — z klawiatury: <kbd>↑</kbd><kbd>↓</kbd> wybierasz ucznia, litera nadaje status. Pozostali dostaną <strong>C (ćwiczył)</strong> po <kbd>Enter</kbd>. Mysz i dyktowanie nadal działają, ale nie są potrzebne.
+        <br><br>
+        <strong>Procent ćwiczył</strong> liczy się ze wzoru: <code>C / (C + NĆ + BS + NB)</code>. NU (usprawiedliwiony) i ZW (zwolnienie) wypadają z bazy. Wagary (NB) liczą się jak "nie ćwiczył".
+      </div>
+      <div class="legend-row">
+        <span style="font-size:12px; color:var(--ink-muted); margin-right:8px;">Statusy (klawisz w nawiasie niżej):</span>
+        <span class="status-btn status-c">C — ćwiczył</span>
+        <span class="status-btn status-nc">NĆ — nie ćwiczył (bez zwolnienia)</span>
+        <span class="status-btn status-bs">BS — brak stroju</span>
+        <span class="status-btn status-nb">NB — nieobecny nieusprawiedliwiony</span>
+        <span class="status-btn status-nu">NU — nieobecny usprawiedliwiony</span>
+        <span class="status-btn status-zw">ZW — zwolnienie jednorazowe</span>
+      </div>
+      <div class="kbd-bar">
+        <strong>Klawiatura (nie klikaj myszą):</strong>
+        <span><kbd>↑</kbd><kbd>↓</kbd> wybór ucznia</span>
+        <span><kbd>c</kbd> ćwiczył</span>
+        <span><kbd>n</kbd> nie ćwiczył</span>
+        <span><kbd>b</kbd> brak stroju</span>
+        <span><kbd>w</kbd> wagary (NB)</span>
+        <span><kbd>u</kbd> usprawiedliwiony</span>
+        <span><kbd>z</kbd> zwolnienie</span>
+        <span>albo <kbd>1</kbd>–<kbd>6</kbd> w kolejności legendy</span>
+        <span><kbd>s</kbd> spóźnienie</span>
+        <span><kbd>0</kbd> wyczyść</span>
+        <span><kbd>Enter</kbd> zapisz lekcję</span>
+        <span style="color:var(--ink-muted)">Po nadaniu statusu kursor sam schodzi niżej.</span>
+      </div>
+    </details>
 
     <details class="dictate-fold">
       <summary>🎤 Dyktowanie głosem — rozwiń, jeśli wolisz mówić niż pisać</summary>
@@ -1005,33 +1058,6 @@
     </div>
 
     </details>
-
-    <!-- Legenda statusów -->
-    <div class="legend-row">
-      <span style="font-size:12px; color:var(--ink-muted); margin-right:8px;">Statusy (klawisz w nawiasie niżej):</span>
-      <span class="status-btn status-c">C — ćwiczył</span>
-      <span class="status-btn status-nc">NĆ — nie ćwiczył (bez zwolnienia)</span>
-      <span class="status-btn status-bs">BS — brak stroju</span>
-      <span class="status-btn status-nb">NB — nieobecny nieusprawiedliwiony</span>
-      <span class="status-btn status-nu">NU — nieobecny usprawiedliwiony</span>
-      <span class="status-btn status-zw">ZW — zwolnienie jednorazowe</span>
-    </div>
-
-    <div class="kbd-bar">
-      <strong>Klawiatura (nie klikaj myszą):</strong>
-      <span><kbd>↑</kbd><kbd>↓</kbd> wybór ucznia</span>
-      <span><kbd>c</kbd> ćwiczył</span>
-      <span><kbd>n</kbd> nie ćwiczył</span>
-      <span><kbd>b</kbd> brak stroju</span>
-      <span><kbd>w</kbd> wagary (NB)</span>
-      <span><kbd>u</kbd> usprawiedliwiony</span>
-      <span><kbd>z</kbd> zwolnienie</span>
-      <span>albo <kbd>1</kbd>–<kbd>6</kbd> w kolejności legendy</span>
-      <span><kbd>s</kbd> spóźnienie</span>
-      <span><kbd>0</kbd> wyczyść</span>
-      <span><kbd>Enter</kbd> zapisz lekcję</span>
-      <span style="color:var(--ink-muted)">Po nadaniu statusu kursor sam schodzi niżej.</span>
-    </div>
 
     <div class="table-wrap">
       <table class="attendance" id="attendanceTable">
@@ -1071,7 +1097,6 @@
       <button onclick="document.getElementById('fileImportEnc').click()" title="Wczytaj kopię zaszyfrowaną hasłem">🔓 Wczytaj szyfrowaną</button>
       <input type="file" id="fileImportEnc" accept=".enc.json,.json" style="display:none" onchange="importEncrypted(event)">
       <button onclick="exportCSV()">📥 Eksport CSV (obecność)</button>
-      <button class="danger" onclick="clearAll()">🗑 Wyczyść wszystko</button>
       <button id="btnInstall" class="primary" style="display:none" onclick="installPWA()" title="Zainstaluj jako aplikację na telefonie">📲 Zainstaluj na telefonie</button>
     </div>
 
@@ -1085,10 +1110,13 @@
       </div>
     </div>
 
-    <div class="info-box">
-      <strong>Uwaga:</strong> "Zwolniony długoterminowo" oznacza ucznia ze zwolnieniem lekarskim na pół roku lub cały rok. Taki uczeń pokazuje się na liście, ale nie ma statystyk i nie można mu wpisywać obecności.
-      <br><strong>Zwolnienie OD–DO</strong> to zwolnienie na określony termin (np. 2 tygodnie po kontuzji): w tych dniach „Zapisz lekcję" nadaje uczniowi <strong>ZW</strong> zamiast C (możesz nadpisać ręcznie), a po dacie DO uczeń wraca sam. Statystyki liczą się normalnie.
-    </div>
+    <details class="pomoc" data-pomoc="uczniowie">
+      <summary>❔ Zwolniony długoterminowo a zwolnienie OD–DO</summary>
+      <div class="info-box">
+        <strong>Uwaga:</strong> "Zwolniony długoterminowo" oznacza ucznia ze zwolnieniem lekarskim na pół roku lub cały rok. Taki uczeń pokazuje się na liście, ale nie ma statystyk i nie można mu wpisywać obecności.
+        <br><strong>Zwolnienie OD–DO</strong> to zwolnienie na określony termin (np. 2 tygodnie po kontuzji): w tych dniach „Zapisz lekcję" nadaje uczniowi <strong>ZW</strong> zamiast C (możesz nadpisać ręcznie), a po dacie DO uczeń wraca sam. Statystyki liczą się normalnie.
+      </div>
+    </details>
 
     <div class="table-wrap">
       <table class="attendance">
@@ -1106,16 +1134,17 @@
         <tbody id="studentsBody"></tbody>
       </table>
     </div>
+
+    <div class="toolbar toolbar-niebezpieczne">
+      <span>Operacja nieodwracalna — najpierw kopia. Kasuje wszystkie klasy i wpisy z tej przeglądarki.</span>
+      <button class="danger" onclick="clearAll()">🗑 Wyczyść wszystko</button>
+    </div>
   </div>
 
   <!-- =================================================== -->
   <!-- ZAKŁADKA: POMIARY -->
   <!-- =================================================== -->
   <div id="tab-pomiary" class="tab-content">
-    <div class="info-box">
-      Wpisz wyniki testów dla każdego ucznia. Wzrost i waga pochodzą z karty ucznia (zakładka Uczniowie).
-      Kolumny testów są Twoje: dodaj własny test niżej, usuń niepotrzebny znakiem × w nagłówku (wyniki zostają w pamięci, wracają po ponownym dodaniu testu o tym samym id).
-    </div>
 
     <div class="quick-add" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
       <label for="newTestName" style="margin:0;">Nowy test:</label>
@@ -1124,15 +1153,22 @@
       <button class="primary" onclick="addTestField()">+ Dodaj test</button>
     </div>
 
-    <div class="kbd-bar">
-      <strong>Jak w arkuszu:</strong>
-      <span><kbd>Enter</kbd> zapisuje i schodzi <em>w dół tej samej kolumny</em></span>
-      <span><kbd>Shift</kbd>+<kbd>Enter</kbd> w górę</span>
-      <span><kbd>Tab</kbd> w bok</span>
-      <span style="color:var(--ink-muted)">Klikasz raz w pierwszą komórkę testu i lecisz całą klasą.</span>
-      <span><kbd>⇤</kbd> w nagłówku testu przypina kolumnę tuż za nazwiskiem na czas wpisywania</span>
-      <span>W kratce wyniku zamiast liczby: <kbd>NB</kbd> nieobecny na teście · <kbd>NĆ</kbd> był, nie ćwiczył</span>
-    </div>
+    <details class="pomoc" data-pomoc="pomiary">
+      <summary>❔ Jak wpisywać — klawisze, przypinanie kolumny, NB/NĆ</summary>
+      <div class="info-box">
+        Wpisz wyniki testów dla każdego ucznia. Wzrost i waga pochodzą z karty ucznia (zakładka Uczniowie).
+        Kolumny testów są Twoje: dodaj własny test wyżej, usuń niepotrzebny znakiem × w nagłówku (wyniki zostają w pamięci, wracają po ponownym dodaniu testu o tym samym id).
+      </div>
+      <div class="kbd-bar">
+        <strong>Jak w arkuszu:</strong>
+        <span><kbd>Enter</kbd> zapisuje i schodzi <em>w dół tej samej kolumny</em></span>
+        <span><kbd>Shift</kbd>+<kbd>Enter</kbd> w górę</span>
+        <span><kbd>Tab</kbd> w bok</span>
+        <span style="color:var(--ink-muted)">Klikasz raz w pierwszą komórkę testu i lecisz całą klasą.</span>
+        <span><kbd>⇤</kbd> w nagłówku testu przypina kolumnę tuż za nazwiskiem na czas wpisywania</span>
+        <span>W kratce wyniku zamiast liczby: <kbd>NB</kbd> nieobecny na teście · <kbd>NĆ</kbd> był, nie ćwiczył</span>
+      </div>
+    </details>
 
     <div class="table-wrap">
       <table class="attendance pomiary-table">
@@ -1155,11 +1191,26 @@
   <!-- =================================================== -->
   <div id="tab-oceny" class="tab-content">
 
-    <div class="oceny-intro">
-      <h2>Oceny i średnia ważona</h2>
-      <p>Tworzysz <strong>kolumnę oceny</strong> (nazwa, skrót, waga, data) — pojawia się dla wszystkich uczniów. Klikasz w komórkę i wpisujesz wartość 0–100. Patrząc na kolumnę widzisz kto ma braki.</p>
-      <div class="formula">średnia ucznia = Σ(ocena × waga) / Σ(wag)</div>
-      <div style="margin-top:12px; padding:10px 12px; background:var(--bg); border:1px solid var(--line); border-radius:6px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:13px;">
+    <details class="pomoc" data-pomoc="oceny">
+      <summary>❔ Jak działają oceny — kolumny, waga, średnia, klawisze</summary>
+      <div class="oceny-intro">
+        <p>Tworzysz <strong>kolumnę oceny</strong> (nazwa, skrót, waga, data) — pojawia się dla wszystkich uczniów. Klikasz w komórkę i wpisujesz wartość 0–100. Patrząc na kolumnę widzisz kto ma braki.</p>
+        <div class="formula">średnia ucznia = Σ(ocena × waga) / Σ(wag)</div>
+      </div>
+      <div class="kbd-bar">
+        <strong>Wpisywanie kolumny:</strong>
+        <span>klik w pierwszą komórkę, wpisz liczbę 0–100</span>
+        <span><kbd>Enter</kbd> zapisuje i schodzi do następnego ucznia</span>
+        <span><kbd>Shift</kbd>+<kbd>Enter</kbd> w górę</span>
+        <span><kbd>Tab</kbd> następna kolumna</span>
+        <span><kbd>Esc</kbd> anuluj</span>
+        <span>puste pole + <kbd>Enter</kbd> = kasuje ocenę</span>
+        <span style="color:var(--ink-muted)">Dwuklik = stare okienko z suwakiem.</span>
+      </div>
+    </details>
+
+    <div class="oceny-intro oceny-polrocze">
+      <div style="padding:10px 12px; background:var(--bg); border:1px solid var(--line); border-radius:6px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:13px;">
         <span>📅 <strong>Granica półrocza</strong> (1. dzień II półrocza):</span>
         <input type="date" id="semesterBreakInput" onchange="setSemesterBreak(this.value)" style="padding:6px 8px; border:1px solid var(--line); border-radius:5px; font-family:inherit; font-size:13px;">
         <button class="btn-oceny" onclick="setSemesterBreak('')" style="font-size:12px;">Wyczyść</button>
@@ -1191,16 +1242,6 @@
 
     </details>
 
-    <div class="kbd-bar">
-      <strong>Wpisywanie kolumny:</strong>
-      <span>klik w pierwszą komórkę, wpisz liczbę 0–100</span>
-      <span><kbd>Enter</kbd> zapisuje i schodzi do następnego ucznia</span>
-      <span><kbd>Shift</kbd>+<kbd>Enter</kbd> w górę</span>
-      <span><kbd>Tab</kbd> następna kolumna</span>
-      <span><kbd>Esc</kbd> anuluj</span>
-      <span>puste pole + <kbd>Enter</kbd> = kasuje ocenę</span>
-      <span style="color:var(--ink-muted)">Dwuklik = stare okienko z suwakiem.</span>
-    </div>
 
     <div class="oceny-toolbar">
       <button class="btn-oceny primary" onclick="openGradeColumnModal()">+ Dodaj kolumnę ocen</button>
@@ -1873,6 +1914,23 @@ function sprzatnijPusteWierszeWszedzie() {
   if (n) save();
   return n;
 }
+
+// Ściągi (details.pomoc): pierwsze otwarcie rozwinięte, potem tak, jak user zostawił.
+// Klucz w localStorage trzyma tylko '0'/'1' per zakładka — zero danych uczniów.
+const POMOC_KEY = 'dziennik_wf_pomoc';
+function pomocStart() {
+  let st = {};
+  try { st = JSON.parse(localStorage.getItem(POMOC_KEY) || '{}') || {}; } catch (e) { st = {}; }
+  document.querySelectorAll('details.pomoc').forEach(d => {
+    const k = d.dataset.pomoc;
+    d.open = (k in st) ? st[k] === 1 : true;
+    d.addEventListener('toggle', () => {
+      st[k] = d.open ? 1 : 0;
+      try { localStorage.setItem(POMOC_KEY, JSON.stringify(st)); } catch (e) {}
+    });
+  });
+}
+document.addEventListener('DOMContentLoaded', pomocStart);
 
 function switchTab(name) {
   const zUczniow = document.getElementById('tab-uczniowie').classList.contains('active');
