@@ -225,6 +225,15 @@
   .long-term-checkbox {
     cursor: pointer;
   }
+  /* Zwolnienie lekarskie OD–DO (Szczebel 4.3): chipy okresów + formularz inline w zakładce Uczniowie */
+  .rel-chip { display:inline-block; background: #B5D4F4; color:#042C53; border:1px solid #4A8BC7; border-radius: 12px; padding: 1px 8px; font-size: 12px; margin: 1px 4px 1px 0; white-space: nowrap; }
+  .rel-chip.active { font-weight: 600; }
+  .rel-chip button { border:0; background:none; color:#042C53; cursor:pointer; padding:0 0 0 4px; font-size:12px; }
+  .rel-form { display:inline-flex; gap:4px; align-items:center; margin-top:2px; }
+  .rel-form input[type="date"] { font-family: inherit; font-size: 12px; padding: 2px 4px; border:1px solid var(--line); border-radius:4px; }
+  .rel-form button { font-size: 12px; padding: 2px 8px; }
+  .status-suggest { border-style: dashed; }
+  table.attendance tbody tr.released-period td:nth-child(2) { font-style: italic; color: var(--ink-muted); }
 
   /* Status cells (klikalne w widoku obecności) */
   .status-cell {
@@ -1058,6 +1067,7 @@
 
     <div class="info-box">
       <strong>Uwaga:</strong> "Zwolniony długoterminowo" oznacza ucznia ze zwolnieniem lekarskim na pół roku lub cały rok. Taki uczeń pokazuje się na liście, ale nie ma statystyk i nie można mu wpisywać obecności.
+      <br><strong>Zwolnienie OD–DO</strong> to zwolnienie na określony termin (np. 2 tygodnie po kontuzji): w tych dniach „Zapisz lekcję" nadaje uczniowi <strong>ZW</strong> zamiast C (możesz nadpisać ręcznie), a po dacie DO uczeń wraca sam. Statystyki liczą się normalnie.
     </div>
 
     <div class="table-wrap">
@@ -1067,6 +1077,7 @@
             <th class="left">#</th>
             <th class="left">Uczeń</th>
             <th>Zwolniony długoterminowo</th>
+            <th class="left">Zwolnienie lekarskie OD–DO</th>
             <th>Wzrost [cm]</th>
             <th>Waga [kg]</th>
             <th></th>
@@ -1885,12 +1896,43 @@ function deleteLesson() {
   });
 }
 
+// Zwolnienie lekarskie OD–DO (Szczebel 4.3): s.releases = [{od:'YYYY-MM-DD', do:'YYYY-MM-DD'}], pole
+// opcjonalne (stare kopie bez niego czytają się bez migracji). W dniu z okresu: „Zapisz lekcję" nadaje ZW
+// zamiast C, Obecność podpowiada „ZW?", „Kopiuj dla VULCAN" eksportuje ZW; po dacie DO uczeń wraca sam.
+function getReleases(s) { return Array.isArray(s.releases) ? s.releases : []; }
+function isReleasedOn(s, date) {
+  if (!s || !date) return false;
+  return getReleases(s).some(r => r.od && r.do && r.od <= date && date <= r.do);
+}
+function releaseOn(s, date) { return getReleases(s).find(r => r.od && r.do && r.od <= date && date <= r.do) || null; }
+function relData(d) { return d ? d.slice(8, 10) + '.' + d.slice(5, 7) : '?'; }
+function addRelease(id) {
+  const s = state.students.find(x => x.id === id);
+  const od = document.getElementById('relOd_' + id).value;
+  const doD = document.getElementById('relDo_' + id).value;
+  if (!s) return;
+  if (!od || !doD) { showToast('Podaj obie daty: OD i DO.', 'warn'); return; }
+  if (od > doD) { showToast('Data OD jest późniejsza niż DO.', 'warn'); return; }
+  if (!Array.isArray(s.releases)) s.releases = [];
+  s.releases.push({ od, do: doD });
+  s.releases.sort((a, b) => a.od < b.od ? -1 : 1);
+  save(); renderStudents();
+  showToast('Zwolnienie ' + relData(od) + '–' + relData(doD) + ' zapisane.', 'success');
+}
+function removeRelease(id, idx) {
+  const s = state.students.find(x => x.id === id);
+  if (!s || !Array.isArray(s.releases)) return;
+  s.releases.splice(idx, 1);
+  save(); renderStudents();
+}
+
 function finalizeLesson() {
   // Liczę kto już ma status, kto jeszcze nie, ilu jest aktywnych
   const day = state.attendance[state.currentDate] || {};
   const activeStudents = state.students.filter(s => !s.longTermReleased);
 
   const withoutStatus = activeStudents.filter(s => !attRead(day[s.id]).s);
+  const toZW = withoutStatus.filter(s => isReleasedOn(s, state.currentDate));
   const exceptions = activeStudents.filter(s => { const st = attRead(day[s.id]).s; return st && st !== 'C'; });
   const alreadyC = activeStudents.filter(s => attRead(day[s.id]).s === 'C');
 
@@ -1906,7 +1948,8 @@ function finalizeLesson() {
 
   // Krótki komunikat
   const msg = `Lekcja ${state.currentDate}\n\n` +
-              `• ${withoutStatus.length} uczniów dostanie status C (ćwiczył)\n` +
+              `• ${withoutStatus.length - toZW.length} uczniów dostanie status C (ćwiczył)\n` +
+              (toZW.length ? `• ${toZW.length} ze zwolnieniem OD–DO dostanie ZW: ${toZW.map(s => s.name || '?').join(', ')}\n` : '') +
               `• ${exceptions.length} wyjątków zachowanych\n` +
               `• Razem aktywnych: ${activeStudents.length}\n\n` +
               `Zapisać?`;
@@ -1915,13 +1958,13 @@ function finalizeLesson() {
     // Zapisz C dla wszystkich bez statusu (aktywnych)
     if (!state.attendance[state.currentDate]) state.attendance[state.currentDate] = {};
     withoutStatus.forEach(s => {
-      state.attendance[state.currentDate][s.id] = 'C';
+      state.attendance[state.currentDate][s.id] = isReleasedOn(s, state.currentDate) ? 'ZW' : 'C';
     });
 
     save();
     autoBackupDaily();
     renderAttendance();
-    showToast('✓ Zapisano lekcję. ' + withoutStatus.length + ' uczniów ma status C.', 'success');
+    showToast('✓ Zapisano lekcję. ' + (withoutStatus.length - toZW.length) + ' uczniów ma status C' + (toZW.length ? ', ' + toZW.length + ' ZW (zwolnienie OD–DO)' : '') + '.', 'success');
   });
 }
 
@@ -1987,9 +2030,13 @@ function renderAttendance() {
     const todayCell = attRead((state.attendance[state.currentDate] || {})[s.id]);
     const todayStatus = todayCell.s;
 
+    const rel = s.longTermReleased ? null : releaseOn(s, state.currentDate);
+    if (rel) tr.classList.add('released-period');
     let statusHtml = '';
     if (s.longTermReleased) {
       statusHtml = `<span class="status-btn status-blocked">— zwolniony —</span>`;
+    } else if (!todayStatus && rel) {
+      statusHtml = `<button class="status-btn status-empty status-suggest" onclick="openPicker('${s.id}')" title="zwolnienie lekarskie ${relData(rel.od)}–${relData(rel.do)}: Zapisz lekcję nada ZW; klik = wybierz inny status">ZW?</button>`;
     } else if (todayStatus) {
       const info = STATUS_INFO[todayStatus];
       const lateMark = todayCell.sp ? ' <span class="late-mark" title="spóźniony">⏱</span>' : '';
@@ -2044,7 +2091,8 @@ function updateSaveBar() {
     msg = `<strong>✓ Lekcja zapisana.</strong> ${alreadyC.length}× ćwiczył · ${exceptions.length} wyjątków · razem ${activeStudents.length} uczniów`;
   } else {
     bar.classList.remove('complete');
-    msg = `<strong>${withoutStatus.length}</strong> uczeń/uczniów bez statusu · ${exceptions.length} wyjątków zaznaczonych · <strong>Enter</strong> (albo klik "Zapisz") → pozostali dostaną <strong>C</strong>`;
+    const relN = withoutStatus.filter(s => isReleasedOn(s, state.currentDate)).length;
+    msg = `<strong>${withoutStatus.length}</strong> uczeń/uczniów bez statusu · ${exceptions.length} wyjątków zaznaczonych · <strong>Enter</strong> (albo klik "Zapisz") → pozostali dostaną <strong>C</strong>` + (relN ? ` (${relN} ze zwolnieniem OD–DO → <strong>ZW</strong>)` : '');
   }
   status.innerHTML = msg;
 }
@@ -2285,7 +2333,7 @@ function renderKarta() {
   const brk = getSemesterBreak();
   const cls = getCurrentClass();
   const f = state.kartaFilter;
-  let h = '<div class="karta-head"><div><h3>' + (escapeHtml(s.name) || 'uczeń') + '</h3><div class="sub">' + escapeHtml((cls && cls.name) || '') + ' · karta ucznia · stan na ' + kartaData(new Date().toISOString().slice(0, 10)) + (s.longTermReleased ? ' · <b>zwolniony długoterminowo</b>' : '') + '</div></div>'
+  let h = '<div class="karta-head"><div><h3>' + (escapeHtml(s.name) || 'uczeń') + '</h3><div class="sub">' + escapeHtml((cls && cls.name) || '') + ' · karta ucznia · stan na ' + kartaData(new Date().toISOString().slice(0, 10)) + (s.longTermReleased ? ' · <b>zwolniony długoterminowo</b>' : '') + (getReleases(s).length ? ' · zwolnienia OD–DO: ' + getReleases(s).map(r => relData(r.od) + '–' + relData(r.do)).join(', ') : '') + '</div></div>'
     + '<div class="karta-actions"><button onclick="drukujKarte()">🖨 Drukuj / PDF</button><button onclick="closeKarta()">Zamknij</button></div></div>'
     + '<div class="karta-zakres"><label>Zakres: od <input type="date" id="kartaOd" value="' + (state.kartaOd || '') + '" onchange="kartaZakres(this.value, document.getElementById(\'kartaDo\').value)"></label>'
     + '<label>do <input type="date" id="kartaDo" value="' + (state.kartaDo || '') + '" onchange="kartaZakres(document.getElementById(\'kartaOd\').value, this.value)"></label>'
@@ -2338,6 +2386,7 @@ function setStatus(status) {
 function renderStudents() {
   const tbody = document.getElementById('studentsBody');
   tbody.innerHTML = '';
+  const today = new Date().toISOString().slice(0, 10);
   const qaInfo = document.getElementById('quickAddInfo');
   if (qaInfo) {
     const n = state.students.length;
@@ -2350,6 +2399,7 @@ function renderStudents() {
       <td class="left">${i + 1}</td>
       <td class="left"><input type="text" class="student-name" value="${escapeHtml(s.name)}" placeholder="Imię nazwisko" oninput="updateStudentName('${s.id}', this.value)"></td>
       <td><input type="checkbox" class="long-term-checkbox" ${s.longTermReleased ? 'checked' : ''} onchange="toggleLongTerm('${s.id}', this.checked)"></td>
+      <td class="left">${getReleases(s).map((r, k) => `<span class="rel-chip${isReleasedOn(s, today) && r.od <= today && today <= r.do ? ' active' : ''}" title="${r.od} – ${r.do}">${relData(r.od)}–${relData(r.do)}<button type="button" title="usuń okres" onclick="removeRelease('${s.id}', ${k})">×</button></span>`).join('')}<span class="rel-form">od <input type="date" id="relOd_${s.id}"> do <input type="date" id="relDo_${s.id}"> <button type="button" onclick="addRelease('${s.id}')" title="dodaj zwolnienie na termin">+</button></span></td>
       <td><input type="number" value="${s.height}" min="100" max="220" style="width:70px; text-align:right;" oninput="updateStudentField('${s.id}', 'height', this.value)"></td>
       <td><input type="number" value="${s.weight}" min="20" max="120" step="0.1" style="width:70px; text-align:right;" oninput="updateStudentField('${s.id}', 'weight', this.value)"></td>
       <td><button class="delete-btn" onclick="deleteStudent('${s.id}')" title="usuń">×</button></td>
@@ -3120,9 +3170,12 @@ function copyForVulcan() {
     if (s.longTermReleased) token = 'ZW';
     else {
       const c = attRead(day[s.id]);
-      if (!c.s) { noStatus++; return; }
+      if (!c.s && isReleasedOn(s, date)) token = 'ZW';
+      else if (!c.s) { noStatus++; return; }
+      else {
       if (c.s === 'C' && !c.sp) { skippedC++; return; }
       token = c.s + (c.sp ? '+sp' : '');
+      }
     }
     lines.push(s.name.trim() + '\t' + token);
   });
