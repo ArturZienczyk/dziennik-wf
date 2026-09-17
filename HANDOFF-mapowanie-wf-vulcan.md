@@ -85,3 +85,45 @@ v11: dopasowanie (dedup po `data-key`, 46 fantomów DOM → 23 realnych), zapis 
 arm→paint + `PointerEvent`), sprzątanie obwódek (`clearMarks`). Potwierdzone na żywym VULCAN:
 `wpisano 3`, trzy różne symbole przełączone, obwódki znikają. **Mechanizmu NIE ruszać** —
 następna sesja pracuje wyłącznie nad PROJEKCJĄ STATUSÓW i eksportem z appki.
+
+---
+
+## SZCZEBEL 2 (zapisany 2026-09-17, do zrobienia PO teście przycisku na żywym VULCAN)
+
+### A. Usprawiedliwienia wchodzą do VULCANa SAME (problem zgłoszony przez usera)
+Rodzic wysyła usprawiedliwienie przez e-dziennik → VULCAN wstawia `u` w kratce ZANIM nauczyciel
+otworzy lekcję. Apka WF ma wtedy jeszcze `NB` (nieobecny nieuspr.). Skrypt v11 porównuje kratkę
+tylko z tym, co CHCE wpisać (`beforeAll.some(t===want)`) → dla NB chce `—` i **nadpisze `u`
+nieobecnością nieusprawiedliwioną**. Błąd, bo `u` z e-dziennika jest nowszą prawdą.
+
+**Reguła (do wdrożenia w `apply`):** zanim skrypt zamaluje kratkę, czyta jej obecny symbol.
+Jeśli w VULCAN stoi już `u` / `ns` / `z`, a apka chce `—` (NB) → **NIE nadpisuj**, kratka złota,
+osobna lista w logu: „już usprawiedliwieni w VULCAN (popraw w apce na NU): Nowak, Lis". Kierunek
+prawdy: VULCAN wygrywa dla usprawiedliwień, apka wygrywa dla ćwiczenia/stroju/spóźnienia.
+Powrót do apki: apka ma komendę „usprawiedliw Nazwisko" (NB→NU, linia ~2255) — user przepisuje
+z listy w logu. Krok dalszy (opcjonalny, jeśli lista bywa długa): przycisk w panelu „Kopiuj
+usprawiedliwionych" → apka dostaje pole „wklej z VULCAN" i sama zamienia NB→NU.
+Test: kratka z `u` + apka `NB` → po Wypełnij kratka nadal `u`, log wymienia nazwisko.
+
+### B. Dostawa skryptu — jak to wygląda od strony użytkowania
+Dziś (działa): skrypt zapisany jako **DevTools Snippet** (F12 → Sources → Snippets → Ctrl+Enter),
+NIE wkleja się za każdym razem; wklejanie tylko przy aktualizacji (treść z pulpitu
+`D:/Users/Desktop/vulcan-frekwencja.txt`). Rytm dnia: apka „Kopiuj dla VULCAN" → VULCAN okno
+frekwencji → snippet → Ctrl+V w panel → Podgląd → Wypełnij → Zapisz w VULCAN.
+Cel: **bookmarklet** = ten sam kod pod zakładką w pasku, jeden klik zamiast F12; aktualizacja =
+edycja adresu zakładki. Plan B: Tampermonkey (panel sam się pokazuje), ale rozszerzenie może być
+zablokowane na szkolnym laptopie. Budowa bookmarkletu: `javascript:(function(){...})()` z kodu
+zminifikowanego, URL-encoded; sprawdzić limit długości adresu zakładki w Chrome/Edge.
+
+### C. Sprzątnięcie panelu (co to znaczy)
+Po „Podgląd" panel drukuje 3 bloki serwisowe z czasu walki z siatką: `DEBUG` (pary, duplikaty,
+data-key per uczeń, linie 143–150), `DIAG` (lista nazwisk siatki, 156), `ZNAKI SPECJALNE`
+(157–158). Problemy, do których służyły (46 fantomów DOM, znaki niewidzialne w nazwiskach) są
+naprawione w kodzie (dedup po `data-key`, `norm`). Wyciąć te 3 bloki; ZOSTAWIĆ diagnostykę przy
+nieudanym kliknięciu (`nie zareagowało (arm→paint) [...]`, linia ~188) — przyda się, gdy VULCAN
+zmieni interfejs. Po sprzątnięciu panel = liczba uczniów, lista dopasowań, ostrzeżenia.
+
+### Kolejność
+1. User testuje przycisk + snippet v11 na żywym VULCAN z realnym dniem.
+2. A (usprawiedliwienia) — zmiana w mechanizmie, więc osobny commit + test.
+3. C + B razem (sprzątnięcie i bookmarklet) — jeden commit, podbić wersję w nagłówku panelu.
