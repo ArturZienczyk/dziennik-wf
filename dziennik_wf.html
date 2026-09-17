@@ -1046,6 +1046,7 @@
       <button class="primary" onclick="addStudent()">+ Dodaj ucznia</button>
       <button class="primary" onclick="exportEncrypted()" title="Kopia zaszyfrowana hasłem — tę można wysłać mailem">🔒 Zapisz kopię (szyfrowana)</button>
       <button onclick="manageBackupPassword()" title="Pokaż lub zmień hasło, którym szyfrowane są kopie">🔑 Hasło kopii</button>
+      <button id="btnFolderKopii" onclick="wybierzFolderKopii(event)" title="Wskaż folder, do którego mają trafiać kopie (zamiast Pobranych). Shift+klik = wróć do Pobranych.">📁 Kopie: Pobrane</button>
       <button onclick="document.getElementById('fileImport').click()" title="Wczytaj STARĄ, nieszyfrowaną kopię (sprzed września 2026)">📂 Wczytaj stary JSON</button>
       <input type="file" id="fileImport" accept=".json" style="display:none" onchange="importJSON(event)">
       <button onclick="document.getElementById('fileImportEnc').click()" title="Wczytaj kopię zaszyfrowaną hasłem">🔓 Wczytaj szyfrowaną</button>
@@ -2923,6 +2924,63 @@ function manageBackupPassword() {
 }
 
 // Jedyna droga zapisu kopii na dysk. Zwraca true, gdy plik faktycznie powstał.
+// Folder kopii (2026-09-17, prośba usera: „żeby było łatwiejsze w obserwacji"). Raz wskazany
+// (File System Access API, showDirectoryPicker), uchwyt trzymany w IndexedDB obok stanu. Każda kopia
+// próbuje NAJPIERW folderu; gdy przeglądarka nie pozwoli (brak zgody w nowej sesji, folder usunięty,
+// brak API) — wraca do zwykłego pobierania, czyli kopia nigdy nie przepada. Chrome może raz na sesję
+// zapytać o zgodę na zapis; pytanie wychodzi z kliknięcia usera (Zapisz lekcję / Zapisz kopię).
+const IDB_FOLDER_KEY = 'folder_kopii';
+let _folderKopii = null, _folderKopiiNazwa = '';
+function folderKopiiCzytaj() {
+  if (_folderKopii) return Promise.resolve(_folderKopii);
+  return idbOtworz().then(db => new Promise(res => {
+    const q = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(IDB_FOLDER_KEY);
+    q.onsuccess = () => { _folderKopii = q.result || null; _folderKopiiNazwa = _folderKopii ? _folderKopii.name : ''; res(_folderKopii); };
+    q.onerror = () => res(null);
+  })).catch(() => null);
+}
+function folderKopiiZapisz(h) {
+  _folderKopii = h; _folderKopiiNazwa = h ? h.name : '';
+  return idbOtworz().then(db => new Promise(res => {
+    const st = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE);
+    const q = h ? st.put(h, IDB_FOLDER_KEY) : st.delete(IDB_FOLDER_KEY);
+    q.onsuccess = () => res(true); q.onerror = () => res(false);
+  })).catch(() => false);
+}
+function odswiezFolderKopii() {
+  const b = document.getElementById('btnFolderKopii');
+  if (b) b.textContent = '📁 Kopie: ' + (_folderKopiiNazwa || 'Pobrane');
+}
+async function wybierzFolderKopii(ev) {
+  if (ev && ev.shiftKey) { await folderKopiiZapisz(null); odswiezFolderKopii(); showToast('Kopie wracają do Pobranych.', 'info'); return; }
+  if (!window.showDirectoryPicker) { showToast('Ta przeglądarka nie pozwala wskazać folderu — kopie zostają w Pobranych.', 'warn'); return; }
+  try {
+    const h = await window.showDirectoryPicker({ mode: 'readwrite', id: 'dziennik-wf-kopie' });
+    const ok = await folderKopiiZapisz(h);
+    odswiezFolderKopii();
+    showToast('Kopie będą zapisywane w folderze „' + h.name + '”' + (ok ? '' : ' (tylko do zamknięcia karty — przeglądarka nie zapamiętała folderu)') + '.', ok ? 'success' : 'warn');
+  } catch (e) {
+    if (e && e.name !== 'AbortError') showToast('Nie udało się wybrać folderu: ' + e.message, 'error');
+  }
+}
+// zwraca nazwę folderu, gdy zapis się udał; '' gdy trzeba pobrać zwykłą drogą
+async function zapiszDoFolderuKopii(text, filename) {
+  const h = await folderKopiiCzytaj();
+  if (!h) return '';
+  try {
+    let perm = await h.queryPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') perm = await h.requestPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') return '';
+    const f = await h.getFileHandle(filename, { create: true });
+    const w = await f.createWritable();
+    await w.write(text);
+    await w.close();
+    return h.name;
+  } catch (e) {
+    console.warn('folder kopii:', e);
+    return '';
+  }
+}
 async function writeBackupFile(tag) {
   if (!cryptoAvailable()) {
     // Przeglądarka bez Web Crypto: lepiej kopia jawna niż żadna, ale głośno o tym mówimy.
@@ -2934,7 +2992,11 @@ async function writeBackupFile(tag) {
   if (!pwd) return false;
   try {
     const text = await encryptSnapshot(pwd);
-    _triggerDownloadText(text, 'dziennik-wf_' + tag + '_SZYFROWANA_' + fileStamp() + '.enc.json');
+    const fname = 'dziennik-wf_' + tag + '_SZYFROWANA_' + fileStamp() + '.enc.json';
+    const gdzie = await zapiszDoFolderuKopii(text, fname);
+    if (gdzie) { showToast('Kopia zapisana: ' + gdzie + ' \\ ' + fname, 'success'); return true; }
+    _triggerDownloadText(text, fname);
+    if (_folderKopiiNazwa) showToast('Folder kopii niedostępny — kopia poszła do Pobranych (' + fname + ').', 'warn');
     return true;
   } catch (e) {
     showToast('Błąd szyfrowania kopii: ' + e.message, 'error');
@@ -3105,7 +3167,7 @@ function exportEncrypted() {
     return;
   }
   writeBackupFile('RECZNA').then(ok => {
-    if (ok) showToast('Zaszyfrowana kopia pobrana. Tę możesz dołączyć do maila.', 'success');
+    if (ok && !_folderKopiiNazwa) showToast('Zaszyfrowana kopia pobrana. Tę możesz dołączyć do maila.', 'success'); // z folderem dymek już poszedł z writeBackupFile
   });
 }
 
@@ -4090,6 +4152,7 @@ try {
   magazyn.ostatniBlad = (e && e.name) || String(e);
 }
 state.currentDate = new Date().toISOString().slice(0, 10);
+folderKopiiCzytaj().then(odswiezFolderKopii);
 document.getElementById('lessonDate').value = state.currentDate;
 renderClassBar();
 renderAttendance();

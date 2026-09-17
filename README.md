@@ -91,6 +91,14 @@ szyfrowana (AES-GCM 256 + PBKDF2-SHA256, 150 000 iteracji).
   w Chromium szyfrowanie działa **także z pliku otwartego z dysku** (`file://`) —
   zaszyfrowanie i odszyfrowanie przechodzą.
 
+**Folder kopii (2026-09-17).** Przycisk **📁 Kopie: Pobrane** w zakładce Uczniowie — raz wskazujesz
+folder (np. `Dziennik WF kopie` na pulpicie) i od tej pory każda kopia, automatyczna i ręczna, zapisuje
+się prosto tam, bez okienka. Przeglądarka pamięta folder między uruchomieniami (uchwyt w IndexedDB);
+Chrome może raz na sesję zapytać o zgodę na zapis. Gdy folder jest niedostępny (brak zgody, folder
+usunięty, przeglądarka bez tej funkcji) kopia idzie do Pobranych, a dymek o tym mówi — kopia nigdy
+nie przepada. Shift+klik na przycisku = powrót do Pobranych. Bramka: `py -3.14 test_folder_kopii.py`
+(atrapa folderu; prawdziwy wybór folderu sprawdza użytkownik w Chrome).
+
 Bramka: `py -3.14 test_kopie.py` — 13 sprawdzeń, kluczowe: **pobrany plik nie zawiera
 nazwiska dziecka**, zła fraza go nie otwiera, własne hasło odtwarza dane w całości.
 
