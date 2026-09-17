@@ -377,6 +377,12 @@
   .pomiary-table input:focus { outline: none; border-color: var(--ink); background: var(--paper); }
   .test-del { border:0; background:none; color:var(--ink-muted); cursor:pointer; font-size:14px; padding:0 4px; }
   .test-del:hover { color:var(--accent-warm); }
+  /* Przypięta kolumna testu: na czas wpisywania stoi tuż za nazwiskiem i jest podświetlona (Szczebel 4.1) */
+  .test-pin { border:0; background:none; color:var(--ink-muted); cursor:pointer; font-size:14px; padding:0 4px; }
+  .test-pin:hover { color:var(--accent); }
+  .pomiary-table th.pinned, .pomiary-table td.pinned { background: rgba(176,143,78,0.14); }
+  .pomiary-table th.pinned { color: var(--accent); }
+  .pomiary-table th.pinned .test-pin { color: var(--accent); }
 
   /* Modal informacyjny przy starcie */
   .modal-bg {
@@ -1089,6 +1095,7 @@
       <span><kbd>Shift</kbd>+<kbd>Enter</kbd> w górę</span>
       <span><kbd>Tab</kbd> w bok</span>
       <span style="color:var(--ink-muted)">Klikasz raz w pierwszą komórkę testu i lecisz całą klasą.</span>
+      <span><kbd>⇤</kbd> w nagłówku testu przypina kolumnę tuż za nazwiskiem na czas wpisywania</span>
     </div>
 
     <div class="table-wrap">
@@ -2430,18 +2437,46 @@ function removeTestField(id) {
     save(); renderPomiary();
   });
 }
+// Przypięcie kolumny testu (Szczebel 4.1): na czas wpisywania wyników wybrany test stoi tuż za
+// nazwiskiem (przed Wzrost/Waga) i jest podświetlony — nie gubi się wiersza. Jedno pole w klasie
+// (cls.pinnedTest = id), kolejność testów i dane pomiarów bez zmian. Drugi klik odpina.
+function getPinnedTest() {
+  const c = getCurrentClass();
+  const id = c && c.pinnedTest;
+  return id && getTestFields().some(f => f.id === id) ? id : null;
+}
+function togglePinTest(id) {
+  const c = getCurrentClass();
+  if (!c) return;
+  c.pinnedTest = (c.pinnedTest === id) ? null : id;
+  save(); renderPomiary();
+  if (c.pinnedTest) {
+    const first = document.querySelector('#pomiaryBody tr td.pinned input');
+    if (first) first.focus();
+  }
+}
 function renderPomiary() {
   const tbody = document.getElementById('pomiaryBody');
   tbody.innerHTML = '';
   const fields = getTestFields();
+  const pinnedId = getPinnedTest();
+  const pinned = fields.filter(f => f.id === pinnedId);
+  const rest = fields.filter(f => f.id !== pinnedId);
   const headRow = tbody.parentElement.querySelector('thead tr');
   [].forEach.call(headRow.querySelectorAll('th.test-col'), th => th.remove());
-  fields.forEach(f => {
+  const nameTh = headRow.querySelectorAll('th')[1];
+  const makeTh = (f, isPinned) => {
     const th = document.createElement('th');
-    th.className = 'test-col';
-    th.innerHTML = escapeHtml(f.name) + (f.unit ? ' [' + escapeHtml(f.unit) + ']' : '') + ' <button type="button" class="test-del" title="Usuń kolumnę" onclick="removeTestField(\'' + f.id + '\')">×</button>';
-    headRow.appendChild(th);
-  });
+    th.className = 'test-col' + (isPinned ? ' pinned' : '');
+    th.dataset.field = f.id;
+    th.innerHTML = escapeHtml(f.name) + (f.unit ? ' [' + escapeHtml(f.unit) + ']' : '')
+      + ' <button type="button" class="test-pin" title="' + (isPinned ? 'Odepnij — wróć na swoje miejsce' : 'Przypnij tuż za nazwiskiem (na czas wpisywania)') + '" onclick="togglePinTest(\'' + f.id + '\')">' + (isPinned ? '⇥' : '⇤') + '</button>'
+      + '<button type="button" class="test-del" title="Usuń kolumnę" onclick="removeTestField(\'' + f.id + '\')">×</button>';
+    return th;
+  };
+  pinned.forEach(f => nameTh.insertAdjacentElement('afterend', makeTh(f, true)));
+  rest.forEach(f => headRow.appendChild(makeTh(f, false)));
+  const cell = (s, m, f, isPinned) => `<td${isPinned ? ' class="pinned"' : ''} data-field="${f.id}"><input type="number" step="any" value="${escapeHtml(m[f.id] || '')}" oninput="updateMeasurement('${s.id}', '${f.id}', this.value)"></td>`;
   state.students.forEach((s, i) => {
     const tr = document.createElement('tr');
     if (s.longTermReleased) tr.classList.add('long-term-released');
@@ -2449,9 +2484,10 @@ function renderPomiary() {
     tr.innerHTML = `
       <td class="left">${i + 1}</td>
       <td class="left">${escapeHtml(s.name) || '<span style="color:var(--ink-muted);">(brak nazwiska)</span>'}</td>
+      ${pinned.map(f => cell(s, m, f, true)).join('')}
       <td>${s.height || '—'}</td>
       <td>${s.weight || '—'}</td>
-      ${fields.map(f => `<td><input type="number" step="any" value="${escapeHtml(m[f.id] || '')}" oninput="updateMeasurement('${s.id}', '${f.id}', this.value)"></td>`).join('')}
+      ${rest.map(f => cell(s, m, f, false)).join('')}
     `;
     tbody.appendChild(tr);
   });
