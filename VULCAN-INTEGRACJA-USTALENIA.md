@@ -93,7 +93,7 @@ obecność automatycznie**. → skrypt musi wpisywać tylko WYJĄTKI (mało uczn
 | BS (brak stroju) | `nc` | (brak osobnego symbolu — „brak stroju" znika) |
 | NB (nieob. nieuspr.) | `—` | nieobecność |
 | NU (nieob. uspr.) | `u` | nieob. uspraw. |
-| ZW (zwolnienie) | `z` | zwolniony |
+| ZW (zwolnienie jednorazowe) | `nc` | nie ćwiczy na zajęciach WF (decyzja 09-17: `z` „zwolniony" w VULCAN = nieobecny bo zwolniony z lekcji, u nas zapis martwy; ZW appki = na sali z papierem) |
 | +sp (spóźnienie) | `s` | spóźnienie |
 | — | `ns` | nieob. uspr. szkolne |
 | — | `#` | obecność zdalna |
@@ -135,7 +135,7 @@ obecność automatycznie**. → skrypt musi wpisywać tylko WYJĄTKI (mało uczn
 
 ## Mapowanie statusu (nasz→symbol VULCAN, znormalizowany klucz)
 C/•→obecność · NĆ/NC/BS→nie ćwiczy na zajęciach WF · NB/—→nieobecność · NU→nieob. uspraw. ·
-ZW→zwolniony · SP (lub sufiks +sp)→spóźnienie
+ZW→nie ćwiczy na zajęciach WF (nie „zwolniony") · SP (lub sufiks +sp)→spóźnienie
 
 - Eksporty CSV w appce (`exportCSV`, `exportOcenyCSV`) to format RAPORTOWY, nie do importu —
   pod VULCAN osobna ścieżka danych.
@@ -159,9 +159,48 @@ Jedno źródło mapy: `symbolFor` w `vulcan-frekwencja.user.js`. Apka eksportuje
 | BS / BS+sp | nc / s | VULCAN nie ma „brak stroju" |
 | NB / NB+sp | — / s | |
 | NU / NU+sp | u / s | |
-| ZW / ZW+sp | z / s | |
-| zwolniony długoterminowo | z | apka eksportuje jako ZW |
+| ZW / ZW+sp | nc / s | „zwolniony" nieużywany (09-17) |
+| zwolniony długoterminowo | nc | apka eksportuje jako ZW |
 | bez statusu | pomijany | toast podaje liczbę |
 
 Dopasowanie nazwisk: skrypt szuka nazwiska jako 1. LUB ostatniego tokenu (apka trzyma
 „Imię Nazwisko", VULCAN „Nazwisko Imię"). Test e2e: `py -3.14 test_vulcan_kopiuj.py`.
+
+## Poprawki 2026-09-17 (v12-v16, żywy test 3 uczniów: wpisano 3/3, kontrola końcowa zgodna)
+
+1. **Przesunięcie o jednego ucznia** (objaw: „NB daje z, ZW daje —"). Przyczyna: VULCAN obsługuje OBA
+   gesty naraz — klik legendy uzbraja pędzel ORAZ wpisuje symbol do aktualnie zaznaczonej kratki.
+   Skrypt zostawiał kratkę ucznia i zaznaczoną, więc klik legendy dla ucznia i+1 nadpisywał ucznia i;
+   kontrola per uczeń przechodziła (czytała kratkę PRZED nadpisaniem). **Fix:** przed klikiem legendy
+   zaznacz kratkę właściwego ucznia (kratka → legenda → kratka działa w obu modelach) + kontrola
+   końcowa wszystkich kratek po serii.
+2. **Weryfikacja kreski.** VULCAN wpisuje inny znak myślnika niż `—` w `SHORT`; porównanie padało i
+   skrypt malował 3×. **Fix:** wzorcem jest glif z 1. komórki wiersza legendy, `SHORT` awaryjnie.
+3. **Uzbrojenie sprawdzane** (`armedName`): po kliku legendy skrypt czyta zaznaczony wiersz i ponawia do 3×.
+4. **Snippet usera żyje w `D:/Users/Desktop/vulcan-frekwencja.txt`** — każdą zmianę kopiuj tam
+   (`pulpit vulcan-frekwencja.user.js --name vulcan-frekwencja.txt`) i podbij `vNN` w nagłówku panelu,
+   inaczej user uruchamia starą wersję (kosztowało 2 rundy).
+5. **ZW → nc** (decyzja usera): „zwolniony" w VULCAN = nieobecny z powodu zwolnienia; w ZSS zapis martwy.
+
+## Szczebel 2 domknięty (2026-09-17 wieczór, v17→v18)
+
+**A. Usprawiedliwienia z e-dziennika (v17).** Rodzic usprawiedliwia przez VULCAN zanim nauczyciel
+otworzy lekcję → w kratce stoi już `u` (lub `ns`/`z`), a apka ma jeszcze `NB`. Skrypt czyta kratkę
+PRZED malowaniem: jeśli apka chce `—` (nieobecność), a kratka ma `u`/`ns`/`z` → **nie nadpisuje**,
+kratka złota, w logu osobna lista „✋ już usprawiedliwieni w VULCAN (popraw w apce na NU): …".
+Kierunek prawdy: VULCAN wygrywa dla usprawiedliwień, apka dla ćwiczenia/stroju/spóźnienia (`nc`,
+`s` nadpisują `u` — świadomie). Czysta funkcja `keepExcused(symbolName, cellTexts)`, test
+`py -3.14 test_vulcan_usprawiedliwienia.py` (12 przypadków + 3 kontrole strukturalne).
+Kontrola końcowa pomija zachowane kratki. Powrót do apki: komenda „usprawiedliw Nazwisko" (NB→NU).
+
+**C. Panel sprzątnięty (v18).** Wycięte bloki DEBUG (pary/duplikaty/data-key), DIAG (lista siatki)
+i ZNAKI SPECJALNE — problemy, którym służyły, są naprawione w kodzie (dedup po `data-key`, `norm`).
+Zostaje: liczba uczniów, „SPRAWDŹ dopasowania", ostrzeżenia, diagnostyka przy nieudanym kliku.
+
+**B. Bookmarklet.** `py -3.14 build_bookmarklet.py` → `vulcan-frekwencja.bookmarklet.txt`
+(`javascript:` + kod bez nagłówka UserScript, URL-encoded; skrypt sprawdza, że adres dekoduje się do
+identycznego kodu). ~26 tys. znaków. Instalacja: nowa zakładka w pasku Chrome/Edge, w pole adresu
+wkleić CAŁĄ treść pliku. Użycie: otwórz okno edycji frekwencji → klik zakładki → panel. Aktualizacja
+= edycja adresu zakładki. **NIE sprawdzone na żywo** (limit długości adresu zakładki w Chrome/Edge
+— zgaduję, że 26 tys. mieści się; jeśli zakładka się ucina, wracamy do snippetu, który działa).
+Kopie na pulpicie: `vulcan-frekwencja.txt` (snippet) + `vulcan-frekwencja-bookmarklet.txt`.
