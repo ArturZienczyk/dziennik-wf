@@ -211,4 +211,5 @@ ok. 11–12 tys. znaków z 26 tys. — kod obcięty w połowie, klik nic nie rob
 (`<script>` z jsDelivr `@main`, awaryjnie `fetch` z raw.githubusercontent + `Function`).
 Aktualizacja = `git push` (zakładki nie ruszać); jsDelivr cache'uje do ~12 h — pilna zmiana:
 otwórz w przeglądarce `https://purge.jsdelivr.net/gh/ArturZienczyk/dziennik-wf@main/vulcan-frekwencja.user.js`.
-Ryzyko niesprawdzone: CSP VULCANa może blokować obce skrypty — wtedy alert i powrót do snippetu.
+**Potwierdzone na żywo 2026-09-17 (user): zakładka-loader działa na stronie VULCAN** — CSP nie
+blokuje skryptu z jsDelivr. Dostawa domyślna = zakładka; snippet DevTools zostaje jako plan B.
