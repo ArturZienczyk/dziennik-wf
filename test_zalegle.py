@@ -244,11 +244,25 @@ with sync_playwright() as pw:
         == ["2026-09-11", 3, "2026-09-11#3"],
     )
     check("selektor numeru lekcji = 3", page.input_value("#lessonNr") == "3")
+    # pasek tygodnia z planu: kafelki Pi 11.09 dla „2 inf” = L2 i L3; klik = klasa+data+lekcja
+    kaf = "#planTydzien .plan-lekcja[data-cls='%s'][data-iso='2026-09-11']" % cid2
+    check("pasek tygodnia: 2 kafelki 2 inf w piątek", page.locator(kaf).count() == 2, page.locator(kaf).count())
+    check("kafelek L3 aktywny", "aktywna" in page.get_attribute(kaf + "[data-nr='3']", "class"))
+    check("kafelek L2 = nie było (szary)", "niebylo" in page.get_attribute(kaf + "[data-nr='2']", "class"))
+    page.evaluate("() => { state.currentDate = '2026-09-04'; renderAttendance(); }")  # tydzień 31.08–4.09
+    page.click("#planTydzien .plan-lekcja[data-cls='%s'][data-iso='2026-09-04'][data-nr='2']" % cid2)
+    page.wait_for_timeout(150)
     check(
-        "podpowiedź przy dacie: L2 i L3 z planu",
-        "L2" in page.inner_text("#lessonNrHint") and "L3" in page.inner_text("#lessonNrHint"),
-        page.inner_text("#lessonNrHint"),
+        "klik pierwszej lekcji dnia → wpis pod samą datą (bez numeru)",
+        page.evaluate("() => [state.currentDate, state.currentNr]") == ["2026-09-04", None],
     )
+    check("kafelek 4.09 L2 zielony (wpis jest)", "jest" in page.get_attribute("#planTydzien .plan-lekcja[data-cls='%s'][data-iso='2026-09-04'][data-nr='2']" % cid2, "class"))
+    page.evaluate("() => { state.currentDate = '2026-09-11'; renderAttendance(); }")
+    page.click(kaf + "[data-nr='3']")
+    page.wait_for_timeout(150)
+    check("klik drugiej godziny → numer 3", page.evaluate("() => attKey()") == "2026-09-11#3")
+    check("selektor numeru schowany, gdy plan jest", not page.is_visible("#lessonNrZapas"))
+    page.screenshot(path=str(SHOTS / "zalegle_6_pasek_tygodnia.png"))
     page.keyboard.press("c")  # klawiatura: status pod attKey()
     page.wait_for_timeout(150)
     check(

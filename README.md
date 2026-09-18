@@ -340,20 +340,23 @@ Dlaczego „nie było" jest obowiązkowe: plan nie wie o wycieczkach, zawodach i
 zastępstwach, więc bez tej siatki chip mówiłby „zaległe" częściej niż jest
 naprawdę i stałby się szumem. Dziś nie liczy się jako zaległe (trwająca praca).
 
-### Dwie lekcje jednego dnia — numer lekcji w kluczu wpisu
+### Pasek tygodnia — klikasz lekcję, nie wybierasz numeru
 
-Wpis frekwencji ma klucz `RRRR-MM-DD` (jedyna albo pierwsza lekcja dnia — wszystkie
-stare wpisy, zero migracji) **albo** `RRRR-MM-DD#nr` (lekcja o numerze z planu: druga
-godzina z rzędu, zastępstwo). W Obecności obok daty stoi selektor **lekcja:** (— / 0–11)
-i podpowiedź z planu na ten dzień (`bez nr`, `L2`, `L3 ✓` = ma już wpis) — klik ustawia
-numer, potem klawiatura/mysz/dyktowanie zapisują pod tym kluczem jak zawsze. Wpis pod
-samą datą pokrywa pierwszą lekcję dnia bez wpisu z numerem, wpis `#nr` dokładnie tę
-lekcję — dlatego dwie godziny z rzędu = dwa wpisy i dwie pozycje w Zaległych. Statystyki,
-karta ucznia, CSV (kolumna `2026-09-18 L4`) i „Kopiuj dla VULCAN" (wypełniasz okno
-kolumny właściwej lekcji, dwa wklejenia) liczą każdy klucz osobno; półrocze, zwolnienia
-OD–DO i zakres karty patrzą na samą datę z klucza.
+Pod datą w Obecności stoi tydzień z planu (Pn–Pt, wszystkie klasy): kafelek = lekcja
+(`L3 · 2 inf`). Kolor: zielony ✓ wpis jest, czerwony ! dzień miniony bez wpisu, szary
+przekreślony „nie było", ramka = lekcja otwarta teraz. **Klik kafelka przełącza klasę,
+datę i lekcję** — dalej wpisujesz klawiaturą/myszą/głosem jak zawsze. Pasek widać tylko
+z planem (siatka albo plik); bez planu obok daty jest zapasowy selektor „lekcja nr".
 
-Bramka: `py -3.14 test_zalegle.py` (42 sprawdzenia: liczenie v1 i v2, dwie lekcje jednego
+Pod spodem: wpis ma klucz `RRRR-MM-DD` (jedyna albo pierwsza lekcja dnia — wszystkie
+stare wpisy, zero migracji) **albo** `RRRR-MM-DD#nr` (druga godzina tego dnia z tą samą
+klasą). Numer nadaje kafelek, nie użytkownik. Wpis pod samą datą pokrywa pierwszą lekcję
+dnia, wpis `#nr` dokładnie tę lekcję — dlatego dwie godziny z rzędu = dwa wpisy i dwie
+pozycje w Zaległych. Statystyki, karta ucznia, CSV (kolumna `2026-09-18 L4`) i „Kopiuj
+dla VULCAN" (dwa wklejenia, w VULCAN kolumny mają numer lekcji) liczą każdy klucz
+osobno; półrocze, zwolnienia OD–DO i zakres karty patrzą na samą datę z klucza.
+
+Bramka: `py -3.14 test_zalegle.py` (48 sprawdzeń: liczenie v1 i v2, pasek tygodnia, dwie lekcje jednego
 dnia, klawiatura pod `#nr`, siatka, dni wolne, „nie było", „wpisz", magazyn, prawdziwy
 `plan-wf.json`).
 
