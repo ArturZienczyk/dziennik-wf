@@ -163,7 +163,8 @@ with sync_playwright() as pw:
     )
     check(
         "ocena i kolumna doszły",
-        any(c["id"] == "gc_1" for c in A["gradeColumns"]) and A["grades"]["gc_1"]["u1"] == 5,
+        any(c["id"] == "gc_1" for c in A["gradeColumns"])
+        and A["grades"]["gc_1"]["u1"] == 5,
     )
     check("pomiar doszedł", A["measurements"]["u2"]["height"] == "150")
     check("nie było doszło", A.get("odwolane", {}).get("2026-09-16#1") == "wycieczka")
@@ -299,6 +300,17 @@ with sync_playwright() as pw:
         "po zastąp+scal: klasy 1a, 7b, 8c",
         sorted(page.evaluate("() => state.classes.map(c => c.name)"))
         == ["1a", "7b", "8c"],
+    )
+
+    # 7b. Kopia szyfrowana niesie plan (empiria 18.09: telefon nie dostał planu, bo snapshot go nie miał)
+    kopia = page.evaluate(
+        """async () => { const txt = await encryptSnapshot('haslo-kopii'); const d = await decryptBackup(txt, 'haslo-kopii');
+             return { maPlan: !!(d.planWf && d.planWf.plany && d.planWf.plany.length), od: d.planWf && d.planWf.plany[0] && d.planWf.plany[0].od }; }"""
+    )
+    check(
+        "szyfrowana kopia zawiera plan",
+        kopia["maPlan"] and kopia["od"] == "2026-09-01",
+        kopia,
     )
 
     # 8. Drugi folder kopii: przycisk i atrapa zapisu do obu
