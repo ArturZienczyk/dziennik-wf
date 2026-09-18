@@ -293,6 +293,12 @@ with sync_playwright() as pw:
     check("drugi klik zdejmuje", plan2t() == {"4": [2, 3]}, plan2t())
     page.screenshot(path=str(SHOTS / "zalegle_5_siatka.png"))
 
+    # 11b. dwie klasy na tę samą klasę planu → ostrzeżenie w tabeli (empiria: 5TS przypięte do 2 technikum)
+    page.evaluate("(id) => zaleglePlanKlasaZmien(id, '2t')", page.evaluate("() => state.classes[1].id"))
+    check("dubel klasy planu: ostrzeżenie przy obu", page.locator("#zalegleUstawienia .plan-dubel").count() == 2)
+    page.evaluate("(id) => zaleglePlanKlasaZmien(id, '4dLO')", page.evaluate("() => state.classes[1].id"))
+    check("po rozdzieleniu brak ostrzeżenia", page.locator("#zalegleUstawienia .plan-dubel").count() == 0)
+
     # 12. dni wolne: od–do + wklejenie tekstu
     page.evaluate("() => wolneDodaj('2026-09-10', '2026-09-11')")
     check(
