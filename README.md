@@ -317,23 +317,29 @@ nie ma wpisu frekwencji ani „nie było" pod tą lekcją. Klik chipu otwiera li
 z powodem (wycieczka / zawody / zastępstwo / odwołana) — pozycja znika na stałe, do
 cofnięcia w Ustawieniach okna.
 
-**Skąd plan — dwie drogi, siatka jest pierwsza.** Chip → Ustawienia → tabela klasa ×
-Pn–Pt: klik komórki otwiera numery lekcji 0–11, klik numeru wpisuje lekcję do planu (drugi
-klik zdejmuje). Pierwszy klik zakłada plan „od 1 września" — daty ważności od/do są do
-zmiany obok. Dni wolne: zakres od–do + „dodaj" albo wklejony tekst kalendarium (łapie
-`RRRR-MM-DD` i `DD.MM.RRRR`, „od – do" w jednej linii). Każdy nauczyciel wpisuje plan sam —
-to jest produkt, plik z EduPage to dodatek.
+**Skąd plan — zakładka 🗓 Plan, siatka jest pierwsza.** Tabela klasa × Pn–Pt: klik
+komórki otwiera numery lekcji 0–11, klik numeru wpisuje lekcję do planu (drugi klik
+zdejmuje). Pierwszy klik zakłada plan „od 1 września" — daty ważności od/do są do zmiany
+obok. **Inne zajęcia** (edukacja zdrowotna, wychowawcza, dyżur) dopisujesz w tej samej
+zakładce: nazwa + „dodaj zajęcia" + numery w dniach; w pasku tygodnia są szare,
+przerywane, bez kliku, bez frekwencji i bez Zaległych. Dni wolne: zakres od–do + „dodaj"
+albo wklejony tekst kalendarium (łapie `RRRR-MM-DD` i `DD.MM.RRRR`, „od – do" w jednej
+linii). Każdy nauczyciel wpisuje plan sam — to jest produkt, plik z EduPage to dodatek.
+Okno „Zaległe" jest tylko listą braków; planu się w nim nie edytuje (feedback usera:
+ustawienia schowane w alarmie były nieczytelne).
 
 Dodatek: `plan-roczny/plan-lekcji-RRRR-MM/zbuduj_plan_wf.py` → `plan-wf.json` (EduPage +
 `technikum-recznie.json` + kalendarium ICS + święta ustawowe; format v2: klasa → dzień →
-numery lekcji). „Wczytaj plan" o tym samym `od` **dokłada do siatki**: klasy z pliku
+numery lekcji; `inne` = pozostałe moje lekcje jako EZ/GW). „Wczytaj plan" (zakładka Plan) o tym
+samym `od` **dokłada do siatki**: klasy i inne zajęcia z pliku
 nadpisują swoje wiersze, ręcznie wpisane inne klasy zostają, dni wolne się sumują. Inny
 `od` (np. od 1.10) = nowy plan obok, stare miesiące liczą się po starym. Stary format pliku
 (lista dni bez numerów) czyta się dalej: siatka pokazuje „?", zaległość liczy się per dzień.
 
 Dopasowanie klasy dziennika do klasy w planie idzie po nazwie (`7 b` → `7b`,
 `4d LO dz.` → `4dLO`); gdy nazwa nie pasuje (technikum), wybierz ręcznie w tabeli
-Ustawień albo „— nie licz —". Klasa bez klucza dostaje przy pierwszym kliku w siatce
+zakładki Plan albo „— nie licz —"; dwie klasy na tej samej klasie planu dostają
+czerwone ostrzeżenie (empiria: 5TS przypięte do 2 technikum). Klasa bez klucza dostaje przy pierwszym kliku w siatce
 klucz = własna nazwa.
 
 Dlaczego „nie było" jest obowiązkowe: plan nie wie o wycieczkach, zawodach i
@@ -356,7 +362,7 @@ pozycje w Zaległych. Statystyki, karta ucznia, CSV (kolumna `2026-09-18 L4`) i 
 dla VULCAN" (dwa wklejenia, w VULCAN kolumny mają numer lekcji) liczą każdy klucz
 osobno; półrocze, zwolnienia OD–DO i zakres karty patrzą na samą datę z klucza.
 
-Bramka: `py -3.14 test_zalegle.py` (48 sprawdzeń: liczenie v1 i v2, pasek tygodnia, dwie lekcje jednego
+Bramka: `py -3.14 test_zalegle.py` (54 sprawdzeń: liczenie v1 i v2, pasek tygodnia, zakładka Plan, inne zajęcia, dwie lekcje jednego
 dnia, klawiatura pod `#nr`, siatka, dni wolne, „nie było", „wpisz", magazyn, prawdziwy
 `plan-wf.json`).
 

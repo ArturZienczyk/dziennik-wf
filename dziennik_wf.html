@@ -164,6 +164,7 @@
   .plan-lekcja.brak { background: #FFF0F0; border-color: #E0A0A0; }
   .plan-lekcja.niebylo { opacity: .5; text-decoration: line-through; }
   .plan-lekcja.aktywna { border: 2px solid var(--ink); font-weight: 600; }
+  .plan-lekcja.inne { background: transparent; border-style: dashed; color: var(--ink-muted); cursor: default; }
   @media (max-width: 900px) { .plan-tydzien { grid-template-columns: repeat(2, 1fr); } }
   .date-row {
     display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
@@ -998,6 +999,7 @@
       <button class="tab" onclick="switchTab('pomiary')">📏 Pomiary</button>
       <button class="tab" onclick="switchTab('oceny')">📝 Oceny</button>
       <button class="tab" onclick="switchTab('statystyki')">📊 Statystyki</button>
+      <button class="tab" onclick="switchTab('plan')">🗓 Plan</button>
       <button class="tab tab-zamek" onclick="zamekZablokuj('ręcznie')" title="Zasłoń dziennik (odsłania PIN albo hasło)">🔒 Zablokuj</button>
     </div>
   </div>
@@ -1308,6 +1310,22 @@
   <!-- =================================================== -->
   <!-- ZAKŁADKA: STATYSTYKI -->
   <!-- =================================================== -->
+  <!-- =================================================== -->
+  <!-- ZAKŁADKA: PLAN (siatka lekcji, dni wolne, dopasowanie klas) -->
+  <!-- =================================================== -->
+  <div id="tab-plan" class="tab-content">
+    <p style="font-size:13px;color:var(--ink-muted);margin:0 0 12px 0;">
+      Plan zasila pasek tygodnia w Obecności i chip „Zaległe”. <b>Klik komórki</b> (klasa × dzień) otwiera numery lekcji,
+      klik numeru wpisuje lekcję; drugi klik zdejmuje. „Inne zajęcia” pokazują się w pasku na szaro, bez frekwencji.
+      Plik z EduPage jest dodatkiem: wypełnia siatkę, ręczne wpisy zostają.
+    </p>
+    <div id="planUstawienia"></div>
+    <div style="margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;">
+      <label style="padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--paper);cursor:pointer;">📂 Wczytaj plan (plan-wf.json)<input type="file" id="zaleglePlik" accept=".json,application/json" style="display:none" onchange="zalegleWczytajPlik(event)"></label>
+      <span style="color:var(--ink-muted)">Plik o tej samej dacie „od” dokłada do siatki (klasy z pliku nadpisują swoje wiersze, ręczne zostają, dni wolne się sumują). Robi go <code>py -3.14 zbuduj_plan_wf.py</code> w folderze planu (plan-roczny/plan-lekcji-RRRR-MM).</span>
+    </div>
+  </div>
+
   <div id="tab-statystyki" class="tab-content">
     <div class="summary-grid" id="summaryGrid"></div>
 
@@ -1526,21 +1544,14 @@
 
 <!-- Modal: zaległe lekcje (plan + kalendarium vs wpisy frekwencji) -->
 <div class="modal-bg" id="zalegleModal" onclick="if(event.target===this) zamknijZalegle()">
-  <div class="modal" style="max-width: 900px;">
+  <div class="modal" style="max-width: 720px;">
     <h3 style="margin-bottom: 6px;">Zaległe lekcje — brak wpisu frekwencji</h3>
     <p style="font-size: 13px; color: var(--ink-muted); margin: 0 0 12px 0;">
       Lekcja z planu (dzień i numer), dzień nie jest wolny, a w dzienniku nie ma wpisu pod tą lekcją.
       Dwie godziny z rzędu = dwie pozycje. Plan nie wie o wycieczkach, zawodach i zastępstwach — jeśli lekcji nie było, kliknij <b>nie było</b> i pozycja znika na stałe.
     </p>
     <div id="zalegleLista" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px;"></div>
-    <details style="margin-top: 12px; font-size: 13px;">
-      <summary style="cursor:pointer;">Ustawienia: siatka planu (klik), dni wolne, dopasowanie klas</summary>
-      <div id="zalegleUstawienia" style="margin-top: 8px;"></div>
-      <div style="margin-top: 10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-        <label style="padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--paper);cursor:pointer;">📂 Wczytaj plan (plan-wf.json)<input type="file" id="zaleglePlik" accept=".json,application/json" style="display:none" onchange="zalegleWczytajPlik(event)"></label>
-        <span style="color:var(--ink-muted)">Dodatek, nie wymóg: plik z EduPage wypełnia siatkę (klasy z pliku nadpisują swoje wiersze, ręczne zostają, dni wolne się sumują). Robi go <code>py -3.14 zbuduj_plan_wf.py</code> w folderze planu (plan-roczny/plan-lekcji-RRRR-MM).</span>
-      </div>
-    </details>
+    <p style="font-size:13px;color:var(--ink-muted);margin:10px 0 0 0;">Plan, dni wolne i dopasowanie klas: zakładka <b>🗓 Plan</b>. „Nie było” cofniesz tam, w kolumnie po prawej.</p>
     <div class="modal-actions" style="margin-top: 14px;">
       <button onclick="zamknijZalegle()">Zamknij</button>
     </div>
@@ -1592,7 +1603,8 @@ const STATUS_INFO = {
 let state = {
   classes: [],          // [{ id, school, name, students, attendance, measurements, gradeColumns, grades }]
   currentClassId: null,
-  // planWf: { plany: [{od, do, klasy: {nazwa: {dzien0=Pn: [nrLekcji]}}, wolne: [daty], zrodlo}] }
+  // planWf: { plany: [{od, do, klasy: {nazwa: {dzien0=Pn: [nrLekcji]}}, inne: {nazwa: {dzien: [nr]}}, wolne: [daty], zrodlo}] }
+  // inne = zajęcia widoczne w pasku tygodnia bez frekwencji (EZ, GW, dyżur)
   // — siatka z Ustawień (klik) i/lub plik z zbuduj_plan_wf.py; v1 (nazwa: [dni]) czyta się dalej
   planWf: null,
   students: [],
@@ -1888,8 +1900,9 @@ function zaleglePlanKlasa(cls) {
 }
 function zalegleDzienTyg(iso) { return (new Date(iso + 'T12:00:00').getDay() + 6) % 7; } // 0 = Pn
 // Siatka jednej klasy w jednym planie: { dzien: [nr | null, ...] } — v1 i v2 do jednej postaci.
-function planSiatka(p, klucz) {
-  const v = (p && p.klasy || {})[klucz];
+function planSiatka(p, klucz) { return planSiatkaZ(p && p.klasy, klucz); }
+function planSiatkaZ(obj, klucz) {
+  const v = (obj || {})[klucz];
   const out = {};
   if (Array.isArray(v)) v.forEach(d => { out[d] = [null]; });
   else if (v && typeof v === 'object') Object.keys(v).forEach(d => {
@@ -1994,19 +2007,43 @@ function siatkaOtworz(clsId, dzien) {
   siatkaOtwarta = (siatkaOtwarta && siatkaOtwarta.clsId === clsId && siatkaOtwarta.dzien === dzien) ? null : { clsId, dzien };
   renderZalegle();
 }
-function siatkaPrzelacz(clsId, dzien, nr) {
-  const cls = state.classes.find(c => c.id === clsId);
-  if (!cls) return;
+function inneDodaj() {
+  const inp = document.getElementById('inneNazwa');
+  const nazwa = (inp ? inp.value : '').trim();
+  if (!nazwa) return;
   const p = planAktywny(true);
-  const klucz = siatkaKluczKlasy(cls);
-  const s = planSiatka(p, klucz);
+  p.inne = p.inne || {};
+  if (!p.inne[nazwa]) p.inne[nazwa] = {};
+  siatkaOtwarta = { clsId: 'inne:' + nazwa, dzien: 0 };
+  save(); renderZalegle(); renderZalegleChip(); renderAttendance();
+}
+function inneUsun(nazwa) {
+  const p = planAktywny(false);
+  if (!p || !p.inne) return;
+  delete p.inne[nazwa];
+  save(); renderZalegle(); renderZalegleChip(); renderAttendance();
+}
+function siatkaPrzelacz(clsId, dzien, nr) {
+  const p = planAktywny(true);
+  let klucz, cel;
+  if (String(clsId).startsWith('inne:')) {
+    klucz = clsId.slice(5);
+    p.inne = p.inne || {};
+    cel = p.inne;
+  } else {
+    const cls = state.classes.find(c => c.id === clsId);
+    if (!cls) return;
+    klucz = siatkaKluczKlasy(cls);
+    p.klasy = p.klasy || {};
+    cel = p.klasy;
+  }
+  const s = planSiatkaZ(cel, klucz);
   const a = (s[dzien] || []).filter(n => n !== null);   // klik numeru zastępuje „?” z planu v1
   const i = a.indexOf(nr);
   if (i < 0) a.push(nr); else a.splice(i, 1);
   a.sort((x, y) => x - y);
   if (a.length) s[dzien] = a; else delete s[dzien];
-  p.klasy = p.klasy || {};
-  p.klasy[klucz] = s;
+  cel[klucz] = s;
   save(); renderZalegle(); renderZalegleChip(); renderAttendance();
 }
 // ---------- dni wolne ----------
@@ -2067,10 +2104,10 @@ function wolneWklej() {
 
 function renderZalegle() {
   const lista = document.getElementById('zalegleLista');
-  const ust = document.getElementById('zalegleUstawienia');
   const plany = zaleglePlany();
+  if (!lista) return;
   if (!plany.length) {
-    lista.innerHTML = '<div style="padding:14px;color:var(--ink-muted);font-size:13px;">Nie ma jeszcze planu. Kliknij dni i numery lekcji w siatce niżej (Ustawienia) albo wczytaj <code>plan-wf.json</code>.</div>';
+    lista.innerHTML = '<div style="padding:14px;color:var(--ink-muted);font-size:13px;">Nie ma jeszcze planu. Wpisz go w zakładce <b>🗓 Plan</b> (klik w siatce) albo wczytaj tam <code>plan-wf.json</code>.</div>';
   } else {
     const z = zaleglePolicz();
     lista.innerHTML = z.length ? z.map(x =>
@@ -2081,6 +2118,12 @@ function renderZalegle() {
       `<button onclick="zalegleNieBylo('${x.clsId}','${x.wpis}')" style="padding:4px 10px;font-size:12.5px;">nie było</button></div>`).join('')
       : '<div style="padding:14px;color:#2E7D32;font-size:13px;">Wszystkie lekcje z planu mają wpis. ✓</div>';
   }
+  renderPlanUstawienia();
+}
+function renderPlanUstawienia() {
+  const ust = document.getElementById('planUstawienia');
+  if (!ust) return;
+  const plany = zaleglePlany();
   const p = planAktywny(false);
   const klucze = zalegleKluczePlanu();
   const td = 'padding:3px 6px;vertical-align:top;';
@@ -2118,6 +2161,29 @@ function renderZalegle() {
         `</td></tr>`;
     }
   });
+  // --- inne zajęcia: w pasku tygodnia na szaro, bez frekwencji i bez Zaległych
+  const inne = (p && p.inne) || {};
+  const nazwyInne = Object.keys(inne).sort();
+  h += `<tr><td colspan="8" style="${td}padding-top:12px;"><b>Inne zajęcia</b> <span style="color:var(--ink-muted)">(w pasku tygodnia na szaro, bez frekwencji: edukacja zdrowotna, wychowawcza, dyżur…)</span></td></tr>`;
+  nazwyInne.forEach(nazwa => {
+    const id = 'inne:' + nazwa;
+    const s = planSiatkaZ(inne, nazwa);
+    h += `<tr class="plan-inne"><td style="${td}">${escapeHtml(nazwa)} <button onclick="inneUsun('${escapeHtml(nazwa).replace(/'/g, "\\'")}')" title="usuń z planu" style="padding:0 5px;font-size:11px;">×</button></td>`;
+    for (let d = 0; d < 5; d++) {
+      const nrs = s[d] || [];
+      const otw = siatkaOtwarta && siatkaOtwarta.clsId === id && siatkaOtwarta.dzien === d;
+      h += `<td style="${td}text-align:center;"><button type="button" class="siatka-kom" data-cls="${escapeHtml(id)}" data-dzien="${d}" onclick="siatkaOtworz(${JSON.stringify(id).replace(/"/g, '&quot;')},${d})" title="kliknij: numery lekcji w ${ZALEGLE_DNI[d]}" style="min-width:44px;padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid ${otw ? 'var(--ink)' : 'var(--line)'};border-radius:5px;background:${nrs.length ? '#F0F0F0' : 'var(--paper)'};cursor:pointer;color:var(--ink-muted);">${nrs.length ? nrs.map(n => n === null ? '?' : n).join(' ') : '·'}</button></td>`;
+    }
+    h += `<td colspan="2" style="${td}color:var(--ink-muted);">bez frekwencji</td></tr>`;
+    if (siatkaOtwarta && siatkaOtwarta.clsId === id) {
+      const d = siatkaOtwarta.dzien;
+      const nrs = (s[d] || []).filter(n => n !== null);
+      h += `<tr><td colspan="8" style="${td}background:#F6F8FB;"><span style="color:var(--ink-muted);margin-right:6px;">${escapeHtml(nazwa)} · ${ZALEGLE_DNI[d]} · numery lekcji:</span>` +
+        SIATKA_NR.map(n => `<button type="button" class="siatka-nr" data-nr="${n}" onclick="siatkaPrzelacz(${JSON.stringify(id).replace(/"/g, '&quot;')},${d},${n})" style="width:30px;padding:3px 0;margin:1px;font-family:inherit;font-size:12.5px;border-radius:5px;cursor:pointer;border:1px solid ${nrs.includes(n) ? 'var(--ink)' : 'var(--line)'};background:${nrs.includes(n) ? 'var(--ink)' : 'var(--paper)'};color:${nrs.includes(n) ? 'var(--paper)' : 'var(--ink)'};">${n}</button>`).join('') +
+        `</td></tr>`;
+    }
+  });
+  h += `<tr><td colspan="8" style="${td}"><input type="text" id="inneNazwa" placeholder="np. EZ 4a, GW 7b, dyżur" style="padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:5px;width:180px;" onkeydown="if(event.key==='Enter'){event.preventDefault();inneDodaj();}"> <button onclick="inneDodaj()" style="padding:3px 10px;font-size:12.5px;">dodaj zajęcia</button></td></tr>`;
   h += '</table>';
   // --- dni wolne
   const zakresy = wolneZakresy(p ? p.wolne : []);
@@ -2166,12 +2232,13 @@ function zaleglePlanZastosuj(plan) {
   const stary = state.planWf.plany.find(p => p.od === plan.od);
   if (stary) {
     stary.klasy = Object.assign({}, stary.klasy || {}, plan.klasy);
+    if (plan.inne) stary.inne = Object.assign({}, stary.inne || {}, plan.inne);
     stary.wolne = Array.from(new Set((stary.wolne || []).concat(plan.wolne || []))).sort();
     if (plan.do) stary.do = plan.do;
     stary.wygenerowano = plan.wygenerowano || stary.wygenerowano || '';
     stary.zrodlo = plan.zrodlo || stary.zrodlo || '';
   } else {
-    state.planWf.plany.push({ od: plan.od, do: plan.do || '', klasy: plan.klasy, wolne: plan.wolne || [], wygenerowano: plan.wygenerowano || '', zrodlo: plan.zrodlo || '' });
+    state.planWf.plany.push({ od: plan.od, do: plan.do || '', klasy: plan.klasy, inne: plan.inne || {}, wolne: plan.wolne || [], wygenerowano: plan.wygenerowano || '', zrodlo: plan.zrodlo || '' });
   }
   state.planWf.plany.sort((a, b) => a.od < b.od ? -1 : 1);
   save();
@@ -2366,6 +2433,7 @@ function switchTab(name) {
   if (name === 'pomiary') renderPomiary();
   if (name === 'oceny') renderOceny();
   if (name === 'obecnosc') renderAttendance();
+  if (name === 'plan') renderPlanUstawienia();
 }
 
 // =====================================================
@@ -2453,12 +2521,20 @@ function renderPlanTydzien() {
     const wolny = plany.some(p => planObejmuje(p, iso) && (p.wolne || []).includes(iso));
     const lekcje = [];
     state.classes.forEach(cls => {
-      zalegleLekcjeDnia(cls, iso).forEach(nr => lekcje.push({ cls, nr }));
+      zalegleLekcjeDnia(cls, iso).forEach(nr => lekcje.push({ cls, nr, nazwa: cls.name }));
     });
-    lekcje.sort((a, b) => (a.nr === null) - (b.nr === null) || (a.nr || 0) - (b.nr || 0) || a.cls.name.localeCompare(b.cls.name));
+    plany.forEach(p => {
+      if (!planObejmuje(p, iso) || wolny) return;
+      Object.keys(p.inne || {}).forEach(nazwa => (planSiatkaZ(p.inne, nazwa)[i] || []).forEach(nr => lekcje.push({ cls: null, nr, nazwa })));
+    });
+    lekcje.sort((a, b) => (a.nr === null) - (b.nr === null) || (a.nr || 0) - (b.nr || 0) || (b.cls ? 1 : 0) - (a.cls ? 1 : 0) || a.nazwa.localeCompare(b.nazwa));
     h += `<div class="plan-dzien${iso === dzis ? ' dzis' : ''}${wolny ? ' wolny' : ''}"><div class="dz-naglowek"><span>${ZALEGLE_DNI[i]} ${iso.slice(8, 10)}.${iso.slice(5, 7)}</span>${wolny ? '<span>wolne</span>' : ''}</div>`;
     if (!lekcje.length && !wolny) h += '<div style="font-size:12px;color:var(--ink-muted);">—</div>';
-    lekcje.forEach(({ cls, nr }) => {
+    lekcje.forEach(({ cls, nr, nazwa }) => {
+      if (!cls) {
+        h += `<div class="plan-lekcja inne" data-inne="${escapeHtml(nazwa)}" data-iso="${iso}" data-nr="${nr === null ? '' : nr}" title="inne zajęcia — bez frekwencji"><span class="nr">${nr === null ? '' : 'L' + nr}</span><span>${escapeHtml(nazwa)}</span></div>`;
+        return;
+      }
       const k = kluczZ(iso, nrDlaLekcji(cls, iso, nr));
       const jest = !!(cls.attendance || {})[k];
       const niebylo = !!(cls.odwolane || {})[k];
