@@ -92,3 +92,13 @@ cytuje PZO, nie własną formułę.
 DECYZJA (23:30): Systematyczność = 2 oceny na półrocze (4 okna w roku: I.1 I.2 II.1 II.2), okno = połowa
 półrocza; szczegóły w wf/pzo/README.md. Zakładka Reguły pokazuje 4 daty granic zamiast jednej. Wdrożenie razem
 z żywą apką (osobny punkt listy, po widoku dziennym).
+
+## ZATWIERDZONE (user „dobra pasuje", 18.09 23:35) — mockup C v2 = baza robocza. Start żywej apki:
+1. Belka zakładek C (karty zrośnięte z treścią) + zakładka Reguły (cytat PZO z wf/pzo/README.md, manipulatory,
+   szkoły→e-dziennik). 2. Obecność: widok dnia (kolumny z planu v2, otwarta = tabela, podgląd = klik nagłówka),
+   przełącznik Dzień/Tydzień, bez belki klasy; ◀ dziś ▶ nowrap. 3. Wybór/dodawanie klasy i szkoły → Uczniowie;
+   pytanie o e-dziennik przy szkole. 4. Stopka kolumny: Zapisz (reszta = ćwiczył) + Kopiuj do VULCANa/Librusa;
+   po zapisie „zapisano HH:MM". 5. Ustawienie klasy dz./chł. → etykiety ćwiczył/ćwiczyła. 6. % dotychczasowy przy
+   uczniu + % klasy w nagłówku (getStudentStats). 7. Kolumna „inne" (EZ/GW) w dniu. 8. Systematyczność: 4 okna
+   (I.1 I.2 II.1 II.2). 9. test_widok_dzienny.py + regresja (zalegle 54, klawiatura 22, uklad, scalanie 31),
+   README, sw v12, push + purge jsDelivr. Mockup po wdrożeniu → _zrzuty/ (ślad decyzji).
