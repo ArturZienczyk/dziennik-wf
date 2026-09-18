@@ -89,3 +89,6 @@ ROZSTRZYGNIĘTE (23:20): reguła liczenia w kodzie (getStudentStats: NU i ZW poz
 „Systematyczność". Dokumenty leżały w Downloads, teraz D:/Projects/nauczyciel/wf/pzo/ (SSP + SLO + README z
 wyciągiem i 3 rozjazdami: okno 2 mies. vs półrocze, SLO punkty vs %, nć/bs jako interpretacja). Zakładka Reguły
 cytuje PZO, nie własną formułę.
+DECYZJA (23:30): Systematyczność = 2 oceny na półrocze (4 okna w roku: I.1 I.2 II.1 II.2), okno = połowa
+półrocza; szczegóły w wf/pzo/README.md. Zakładka Reguły pokazuje 4 daty granic zamiast jednej. Wdrożenie razem
+z żywą apką (osobny punkt listy, po widoku dziennym).
