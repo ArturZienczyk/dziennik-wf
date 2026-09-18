@@ -1981,7 +1981,7 @@ function planDatyZmien(pole, val) {
   if (pole === 'od' && !/^\d{4}-\d{2}-\d{2}$/.test(val)) return;
   p[pole] = val || '';
   state.planWf.plany.sort((a, b) => a.od < b.od ? -1 : 1);
-  save(); renderZalegle(); renderZalegleChip(); renderLessonNr();
+  save(); renderZalegle(); renderZalegleChip(); renderAttendance();
 }
 // Klasa dziennika bez klucza w planie dostaje klucz = własna nazwa (siatka ręczna).
 function siatkaKluczKlasy(cls) {
@@ -2007,7 +2007,7 @@ function siatkaPrzelacz(clsId, dzien, nr) {
   if (a.length) s[dzien] = a; else delete s[dzien];
   p.klasy = p.klasy || {};
   p.klasy[klucz] = s;
-  save(); renderZalegle(); renderZalegleChip(); renderLessonNr();
+  save(); renderZalegle(); renderZalegleChip(); renderAttendance();
 }
 // ---------- dni wolne ----------
 function wolneZakresy(list) {
@@ -2032,14 +2032,14 @@ function wolneDodaj(od, do_) {
   if (!daty.length) { showToast('Podaj datę „od” (RRRR-MM-DD).', 'warn'); return; }
   const p = planAktywny(true);
   p.wolne = Array.from(new Set((p.wolne || []).concat(daty))).sort();
-  save(); renderZalegle(); renderZalegleChip(); renderLessonNr();
+  save(); renderZalegle(); renderZalegleChip(); renderAttendance();
 }
 function wolneUsun(od, do_) {
   const p = planAktywny(false);
   if (!p) return;
   const zbior = new Set(wolneDaty(od, do_));
   p.wolne = (p.wolne || []).filter(x => !zbior.has(x));
-  save(); renderZalegle(); renderZalegleChip(); renderLessonNr();
+  save(); renderZalegle(); renderZalegleChip(); renderAttendance();
 }
 // Wklejone kalendarium / lista dat: łapie RRRR-MM-DD i DD.MM.RRRR, zakresy „od – do” w jednej linii.
 function wolneZTekstu(text) {
@@ -2061,7 +2061,7 @@ function wolneWklej() {
   const p = planAktywny(true);
   p.wolne = Array.from(new Set((p.wolne || []).concat(daty))).sort();
   if (ta) ta.value = '';
-  save(); renderZalegle(); renderZalegleChip(); renderLessonNr();
+  save(); renderZalegle(); renderZalegleChip(); renderAttendance();
   showToast('Dodano ' + daty.length + ' dni wolnych.', 'success');
 }
 
@@ -2142,18 +2142,19 @@ function zalegleNieBylo(clsId, klucz) {
   save();
   renderZalegle();
   renderZalegleChip();
+  renderAttendance();
 }
 function zalegleCofnijNieBylo(clsId, klucz) {
   const cls = state.classes.find(c => c.id === clsId);
   if (!cls || !cls.odwolane) return;
   delete cls.odwolane[klucz];
-  save(); renderZalegle(); renderZalegleChip();
+  save(); renderZalegle(); renderZalegleChip(); renderAttendance();
 }
 function zaleglePlanKlasaZmien(clsId, val) {
   const cls = state.classes.find(c => c.id === clsId);
   if (!cls) return;
   cls.planKlasa = val;
-  save(); renderZalegle(); renderZalegleChip(); renderLessonNr();
+  save(); renderZalegle(); renderZalegleChip(); renderAttendance();
 }
 // Wczytanie pliku: plan o tym samym `od` = dokładka do siatki (klasy z pliku nadpisują swoje
 // klucze, ręcznie wpisane inne klasy zostają, dni wolne = suma). Inny `od` = nowy plan obok.
@@ -2181,7 +2182,7 @@ function zalegleWczytajPlik(event) {
     try { zaleglePlanZastosuj(JSON.parse(e.target.result)); }
     catch (err) { showToast('Nie wczytano planu: ' + err.message, 'error'); return; }
     showToast('Plan wczytany.', 'success');
-    renderZalegle(); renderZalegleChip(); renderLessonNr();
+    renderZalegle(); renderZalegleChip(); renderAttendance();
   };
   reader.readAsText(file);
   event.target.value = '';
