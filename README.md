@@ -404,6 +404,54 @@ lokalne, nagrobek, plan upsert, klasa nieznana, kopia bez znaczników, magazyn, 
 wszystko", okno importu, dwa foldery). Regresja: `test_kopie`, `test_zamek`, `test_klawiatura`,
 `test_zalegle`, `test_folder_kopii`.
 
+## Widok dnia + belki C v2 + Reguły (2026-09-18/19)
+
+Słowa usera: „plan chciałbym jako widok dzienny — godzina obok godziny, żeby lepiej było widać
+uczniów i lekcje z obecnościami; belki tak pokazać, żeby było jasne, że tam się klika". Najpierw
+mockup (`_zrzuty/mockup-widok-dzienny.html`, oko usera wybrało C, uwagi → C v2), potem żywa apka.
+
+**Obecność = widok dnia (domyślny).** Lekcje dnia z planu stoją **obok siebie**: otwarta lekcja
+to dotychczasowa tabela (jedyne miejsce wpisu — klawiatura, picker, dyktowanie bez zmian; `attRead/attWrite`
+nietknięte), pozostałe to **podglądy** (nazwisko + status; klik nagłówka = `wybierzLekcje`, czyli otwiera
+lekcję w tabeli — podgląd nie edytuje). Zajęcia bez frekwencji (`inne` z planu: EZ, GW) = wąska kreskowana
+kolumna na swoim miejscu w dniu. Bez planu otwarta kolumna stoi sama (zero zmian dla klasy bez planu).
+Przełącznik **Dzień / Tydzień** (`ustawWidok`, preferencja w `localStorage`, nie w danych); Tydzień =
+dotychczasowy pasek Pn–Pt. W widoku dnia kolumny liczników (C/NĆ/BS/…) są schowane (są w Statystykach),
+zostaje status + „% dotąd". Telefon: kolumny przewijane poziomo, otwarta przewinięta na ekran od razu;
+`◀ dziś ▶` to jedna grupa `nowrap`.
+
+**Belki.** Zakładki = karty zrośnięte z białym panelem treści (aktywna zlewa się z panelem). **W Obecności
+nie ma paska klasy** — klasa wynika z otwartej lekcji; wybór szkoły/klasy, „+ klasa", zmiana nazwy, usuń,
+forma (chł./dz.) mieszkają w **Uczniowie** (`#classBar`). Pomiary/Oceny/Statystyki mają tytuł klasy z ▾
+(`.klasa-tytul`, ten sam `onClassChange`).
+
+**Stopka otwartej kolumny** (`#saveBar`): „✓ Zapisz lekcję" (reszta bez statusu → ćwiczył/ćwiczyła; Enter
+jak dotąd) + „📋 do VULCANa / do Librusa" (`copyForVulcan(clsId?, klucz?)` — bez argumentów bieżąca lekcja,
+z argumentami lekcja z podglądu; tekst schowka ten sam dla obu e-dzienników). Po zapisie: „Zapisano HH:MM"
+(pamięć sesji `_zapisanoO`, nie dane). Etykieta z ustawienia szkoły: `edziennikSzkoly(szkoła)` —
+ręczne (`state.ustawienia.szkoly[szkoła].edziennik`, pytanie w modalu „+ klasa" i w Reguły) albo domyślne
+po nazwie (zawiera „tech" → Librus, reszta VULCAN). Skrypt wklejania istnieje tylko dla VULCANa.
+
+**Forma ćwiczył/ćwiczyła** — `cls.plec` (`''|'chl'|'dz'`), klasy ZSS jednorodne płciowo → ustawienie per
+klasa, tylko etykiety (`cwLabel`), nie liczenie. Nagłówek kolumny pokazuje „dz."/„chł.".
+
+**Zakładka Reguły** cytuje PZO (`D:/Projects/nauczyciel/wf/pzo/README.md` — źródło reguły, która siedziała
+w kodzie od maja) i daje manipulatory `state.ustawienia.reguly` (`bsBaza`, `ncBaza`, `spPol`, `nuBaza`,
+`progZielony`, `progCzerwony`); **domyślne = dotychczasowe liczenie** (`REGULY_DOMYSLNE`). Jedno miejsce
+liczenia: `getStudentStatsZ` (progi: `pctKlasa`). Ustawienia jedzą do magazynu, migawki i kopii obok `planWf`;
+scalanie kopii: szkoły dopisują się, gdy lokalnie brak, reguły z kopii tylko gdy lokalnie nic nie ustawiono.
+
+**Systematyczność = 4 okna** (decyzja 18.09, dwie oceny na półrocze): `oknaSystematycznosci(cls)` →
+`Syst. I.1 / I.2 / II.1 / II.2` (`auto_sys11…22`). Granica półrocza jak dotąd (`semesterBreak`), środki
+półroczy liczone same (`oknaGranice`: połowa 1.09→granica i granica→30.06) albo ręcznie `cls.polI` / `cls.polII`
+(Reguły). Bez granicy: jedno okno (`auto_sys0`), jak dotąd. Meta klasy w listkach scalania (`k`) niesie
+`polI`, `polII`, `plec`.
+
+Test: `test_widok_dzienny.py` (kolumny, klik nagłówka, przełącznik, inne, stopka, forma, reguły, okna,
+390 px; zrzuty `_zrzuty/cv2_*.png`). Regresja dopasowana: `test_zalegle` (pasek tygodnia = widok Tydzień),
+`test_pamiec` (pasek klasy w Uczniowie), `test_vulcan_kopiuj` / `test_zwolnienie_od_do` (`#saveBarKopiuj`).
+Otwarte: SLO punkty (max 20/okno) vs procent — decyzja usera; bookmarklet Librus — osobny szczebel.
+
 ## Uwaga operacyjna: jedno miejsce uruchamiania
 
 Dane siedzą w `localStorage`, który jest **osobny dla pliku na dysku i dla adresu

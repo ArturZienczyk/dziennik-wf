@@ -119,7 +119,7 @@ with sync_playwright() as pw:
     page.evaluate(
         "() => { state.currentDate = '2026-09-12'; state.attendance['2026-09-12'] = { u1: 'C' }; save(); renderAttendance(); }"
     )
-    page.click('button:has-text("Kopiuj dla VULCAN")')
+    page.click('#saveBarKopiuj')  # C v2: „📋 do VULCANa” w stopce kolumny
     page.wait_for_timeout(300)
     clip = (
         page.evaluate("() => navigator.clipboard.readText()")
