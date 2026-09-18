@@ -122,12 +122,25 @@ with sync_playwright() as pw:
     )
     n_przed = page.locator("#kolPrzed .kol").count()
     n_po = page.locator("#kolPo .kol").count()
-    check("kolumny przed otwartą: 2 (L1 2 inf, L2 4dLO)", n_przed == 2, n_przed)
-    check("kolumny po otwartej: 2 (L4 EZ inne, L5 8c)", n_po == 2, n_po)
+    check("pasek dnia: 5 guzików (2 inf, 4dLO, 7b otwarta, EZ, 8c), kolPo pusty", n_przed == 5 and n_po == 0, (n_przed, n_po))
     check(
-        "kolumna inne (EZ 4a) kreskowana, bez tabeli",
-        page.locator("#kolPo .kol.inne[data-inne='EZ 4a']").count() == 1
-        and page.locator("#kolPo .kol.inne table").count() == 0,
+        "guzik otwartej (7b) stoi trzeci, w miejscu z planu",
+        "guzik-otw" in (page.get_attribute("#kolPrzed .kol:nth-child(3)", "class") or ""),
+    )
+    check(
+        "guzik inne (EZ 4a) kreskowany, bez tabeli",
+        page.locator("#kolPrzed .kol.inne[data-inne='EZ 4a']").count() == 1
+        and page.locator("#kolPrzed .kol.inne table").count() == 0,
+    )
+    check(
+        "guziki bez tabel (podgląd = suma, nie wiersze)",
+        page.locator("#kolPrzed .kol table").count() == 0,
+    )
+    hs = page.evaluate("() => [...document.querySelectorAll('#kolPrzed .kol')].map(e => Math.round(e.getBoundingClientRect().height))")
+    check("guziki równej wysokości (±2 px)", max(hs) - min(hs) <= 2, hs)
+    check(
+        "tabela otwartej na całą szerokość paska",
+        page.evaluate("() => Math.abs(document.querySelector('#kolOtwarta').getBoundingClientRect().width - document.querySelector('#dzienKolumny').getBoundingClientRect().width) < 2"),
     )
     head = page.text_content("#kolOtwartaHead")
     check(
@@ -144,9 +157,10 @@ with sync_playwright() as pw:
         ),
     )
     check(
-        "kolumny liczników schowane w widoku dnia",
-        not page.evaluate(VIS, "#attendanceTable th.stat"),
+        "liczniki widoczne w widoku dnia (tabela ma szerokość)",
+        page.evaluate(VIS, "#attendanceTable th.stat"),
     )
+    check("% jedną liczbą (ułamek schowany)", not page.evaluate(VIS, "#attendanceTable .stat-detail"))
     check("% dotąd widoczny", page.evaluate(VIS, "#attendanceTable .percent-cell"))
     # podgląd 2 inf: wpis jest → stopka „do Librusa" (szkoła Technikum)
     cid2 = page.evaluate("() => state.classes[3].id")
@@ -155,11 +169,9 @@ with sync_playwright() as pw:
         "jest"
         in (page.get_attribute("#kolPrzed .kol[data-cls='%s']" % cid2, "class") or ""),
     )
-    lib = page.text_content("#kolPrzed .kol[data-cls='%s'] .zapisz-mini button" % cid2)
-    check("technikum → „do Librusa”", "do Librusa" in lib, lib)
     check(
-        "podgląd 2 inf: 3 ćwiczyło · 1 nć",
-        "3 ćwiczyło" in page.text_content("#kolPrzed .kol[data-cls='%s'] .sum" % cid2),
+        "guzik 2 inf: 3 ćw. · 1 nć",
+        "3 ćw. · 1 nć" in page.text_content("#kolPrzed .kol[data-cls='%s'] .sum" % cid2),
     )
     check(
         "stopka otwartej: „do VULCANa” (ZSS)",
@@ -174,7 +186,7 @@ with sync_playwright() as pw:
 
     # klik nagłówka podglądu 8c → otwiera lekcję (podgląd, nie edycja w kolumnie)
     cid8 = page.evaluate("() => state.classes[1].id")
-    page.click("#kolPo .kol[data-cls='%s'] .kol-head" % cid8)
+    page.click("#kolPrzed .kol.podglad[data-cls='%s'] .kol-head" % cid8)
     page.wait_for_timeout(300)
     check(
         "klik nagłówka 8c: klasa bieżąca = 8c",
@@ -186,19 +198,19 @@ with sync_playwright() as pw:
         and page.evaluate("() => attKey()") == DZIS,
     )
     check(
-        "teraz przed otwartą 4 kolumny (2 inf, 4dLO, 7b, EZ), po 0",
-        page.locator("#kolPrzed .kol").count() == 4
-        and page.locator("#kolPo .kol").count() == 0,
+        "po kliku 8c: nadal 5 guzików, otwarta = piąty",
+        page.locator("#kolPrzed .kol").count() == 5
+        and "guzik-otw" in (page.get_attribute("#kolPrzed .kol:nth-child(5)", "class") or ""),
     )
     check(
         "tabela nadal jedna (klawiatura ma jedno miejsce wpisu)",
         page.locator("#attendanceBody").count() == 1,
     )
     check(
-        "7b w podglądzie ma ✓ i bs",
-        "bs"
+        "7b w guziku: suma 2 ćw. · 1 bs",
+        "2 ćw. · 1 bs"
         in page.text_content(
-            "#kolPrzed .kol[data-cls='%s'] table"
+            "#kolPrzed .kol[data-cls='%s'] .sum"
             % page.evaluate("() => state.classes[0].id")
         ),
     )
@@ -263,8 +275,9 @@ with sync_playwright() as pw:
         "() => { const p = state.planWf; state.planWf = null; renderAttendance(); state._p = p; }"
     )
     check(
-        "bez planu: zero podglądów, tabela jest",
-        page.locator("#kolPrzed .kol").count() == 0
+        "bez planu: tylko guzik otwartej, tabela jest",
+        page.locator("#kolPrzed .kol").count() == 1
+        and page.locator("#kolPrzed .kol.guzik-otw").count() == 1
         and page.locator("#kolPo .kol").count() == 0
         and page.evaluate(VIS, "#attendanceTable"),
     )
@@ -404,7 +417,13 @@ with sync_playwright() as pw:
     sw, cw = page.evaluate(
         "() => { const e = document.getElementById('dzienKolumny'); return [e.scrollWidth, e.clientWidth]; }"
     )
-    check("390 px: kolumny przewijane poziomo", sw > cw, (sw, cw))
+    check("390 px: guziki zawijają się, bez przewijania poziomego", sw <= cw + 1, (sw, cw))
+    tops = page.evaluate("() => [...document.querySelectorAll('#kolPrzed .kol')].map(e => Math.round(e.getBoundingClientRect().top))")
+    check("390 px: guziki w ≥2 wierszach", len(set(tops)) >= 2, tops)
+    check(
+        "390 px: tabela otwartej na całą szerokość",
+        page.evaluate("() => Math.abs(document.querySelector('#kolOtwarta').getBoundingClientRect().width - document.querySelector('#dzienKolumny').getBoundingClientRect().width) < 2"),
+    )
     nav_top = page.evaluate(
         "() => [...document.querySelectorAll('.dzien-row .nav button')].map(b => Math.round(b.getBoundingClientRect().top))"
     )
