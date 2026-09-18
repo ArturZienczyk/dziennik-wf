@@ -85,3 +85,7 @@ jak getStudentStats. (8) Zakładka „Reguły": opis liczenia + manipulatory (bs
 progi 90/75, granica półrocza) — domyślne = dzisiejsze zachowanie. USER: „one [reguły] są opisane w e-dzienniku" —
 treść Reguł ma odzwierciedlać zasady VULCAN/Librus, nie własną formułę; manipulatory służą do ZRÓWNANIA liczenia
 z e-dziennikiem. Potrzebny od usera: tekst/zrzut reguł z VULCANa i Librusa (albo link do pomocy).
+ROZSTRZYGNIĘTE (23:20): reguła liczenia w kodzie (getStudentStats: NU i ZW poza bazą) = PZO ZSS obszar
+„Systematyczność". Dokumenty leżały w Downloads, teraz D:/Projects/nauczyciel/wf/pzo/ (SSP + SLO + README z
+wyciągiem i 3 rozjazdami: okno 2 mies. vs półrocze, SLO punkty vs %, nć/bs jako interpretacja). Zakładka Reguły
+cytuje PZO, nie własną formułę.
