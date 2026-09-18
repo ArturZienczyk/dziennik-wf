@@ -3649,6 +3649,7 @@ function snapshotData() {
   return {
     classes: state.classes,
     currentClassId: state.currentClassId,
+    planWf: state.planWf,        // plan (siatka, dni wolne, inne zajęcia) — bez tego telefon nie ma planu (empiria 18.09)
     exported: new Date().toISOString()
   };
 }
