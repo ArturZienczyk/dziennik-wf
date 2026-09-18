@@ -147,6 +147,24 @@
   .toolbar button.danger:hover { background: #FBEEEC; }
 
   /* Date picker */
+  .plan-tydzien { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: -6px 0 16px 0; }
+  .plan-tydzien:empty { display: none; }
+  .plan-dzien { background: var(--bg); border-radius: 8px; padding: 8px 10px; min-height: 52px; }
+  .plan-dzien.dzis { outline: 2px solid var(--ink); }
+  .plan-dzien.wolny { opacity: .55; }
+  .plan-dzien .dz-naglowek { font-size: 12px; color: var(--ink-muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .plan-lekcja {
+    display: flex; gap: 6px; align-items: center; width: 100%; text-align: left; margin: 3px 0;
+    padding: 5px 8px; font-family: inherit; font-size: 13px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--paper); color: var(--ink);
+  }
+  .plan-lekcja .nr { font-size: 11px; color: var(--ink-muted); min-width: 22px; }
+  .plan-lekcja .st { margin-left: auto; font-size: 12px; }
+  .plan-lekcja.jest { background: #EEF7EE; border-color: #A9D3A9; }
+  .plan-lekcja.brak { background: #FFF0F0; border-color: #E0A0A0; }
+  .plan-lekcja.niebylo { opacity: .5; text-decoration: line-through; }
+  .plan-lekcja.aktywna { border: 2px solid var(--ink); font-weight: 600; }
+  @media (max-width: 900px) { .plan-tydzien { grid-template-columns: repeat(2, 1fr); } }
   .date-row {
     display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
     background: var(--bg); padding: 10px 16px; border-radius: 8px; margin-bottom: 16px;
@@ -1002,8 +1020,10 @@
     <div class="date-row">
       <label>Data lekcji:</label>
       <input type="date" id="lessonDate" onchange="changeDate()">
-      <label for="lessonNr" title="Numer lekcji z planu. Puste = jedyna lekcja tego dnia (wpis pod samą datą). Dwie godziny z rzędu albo zastępstwo = osobny numer, osobny wpis.">lekcja:</label>
+      <span id="lessonNrZapas" style="display:none;gap:6px;align-items:center;">
+      <label for="lessonNr" title="Bez planu w Ustawieniach: numer lekcji rozróżnia dwie godziny z tą samą klasą jednego dnia. Puste = jedyna lekcja dnia.">lekcja nr:</label>
       <select id="lessonNr" onchange="ustawNrLekcji(this.value)" style="padding:6px 8px;font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:6px;"><option value="">—</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option></select>
+      </span>
       <span id="lessonNrHint" style="display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap;"></span>
       <button onclick="dateOffset(-1)">◀ poprz.</button>
       <button onclick="dateOffset(1)">nast. ▶</button>
@@ -1012,6 +1032,9 @@
       <button onclick="copyForVulcan()" title="Kopiuje do schowka wyjątki z tego dnia (bez „ćwiczył”) w formacie Nazwisko Imię + status, do wklejenia w panel skryptu VULCAN">📋 Kopiuj dla VULCAN</button>
       <span class="lesson-count" id="lessonCount"></span>
     </div>
+
+    <!-- Tydzień z planu: kafelek = lekcja (klasa + numer), klik = ta lekcja w dzienniku -->
+    <div id="planTydzien" class="plan-tydzien"></div>
 
     <!-- Przycisk szybkiego zapisu -->
     <div class="save-bar" id="saveBar">
@@ -2105,15 +2128,9 @@ function renderZalegle() {
   ust.innerHTML = h;
 }
 function zalegleWpisz(clsId, klucz) {
-  activateClass(clsId);
-  uiSelectedSchool = getCurrentClass().school;
-  state.currentDate = kluczData(klucz);
-  state.currentNr = kluczNr(klucz);
-  document.getElementById('lessonDate').value = state.currentDate;
   zamknijZalegle();
   switchTab('obecnosc');
-  save();
-  refreshAll();
+  wybierzLekcje(clsId, kluczData(klucz), kluczNr(klucz));
   showToast('Lekcja ' + zalegleData(state.currentDate) + (state.currentNr === null ? '' : ' L' + state.currentNr) + ' · ' + getCurrentClass().name + ' — wpisz frekwencję i zapisz.', 'info');
 }
 function zalegleNieBylo(clsId, klucz) {
@@ -2370,6 +2387,7 @@ function renderLessonNr() {
   sel.value = state.currentNr === null ? '' : String(state.currentNr);
   const hint = document.getElementById('lessonNrHint');
   if (!hint) return;
+  if (zaleglePlany().length) { hint.innerHTML = state.currentNr === null ? '' : '<span style="font-size:12px;color:var(--ink-muted);">lekcja ' + state.currentNr + '</span>'; return; }
   const cls = getCurrentClass();
   const d = state.currentDate;
   const plan = cls ? zalegleLekcjeDnia(cls, d).filter(n => n !== null) : [];
@@ -2386,6 +2404,71 @@ function renderLessonNr() {
   if (maPlain || nrs.length) h += chip(null, 'bez nr', 'wpis pod samą datą');
   nrs.forEach(nr => { h += chip(nr, 'L' + nr, plan.includes(nr) ? 'lekcja ' + nr + ' z planu' : 'wpis pod lekcją ' + nr); });
   hint.innerHTML = '<span style="color:var(--ink-muted);font-size:12px;">plan: </span>' + h;
+}
+// Klucz, pod którym ląduje lekcja (klasa, dzień, nr z planu). Jedna lekcja dziennie = sama data
+// (jak zawsze; stare wpisy). Druga godzina tego dnia dostaje '#nr'. Użytkownik numerów nie
+// wybiera — klika kafelek w pasku tygodnia.
+function nrDlaLekcji(cls, iso, nr) {
+  if (nr === null || nr === undefined) return null;
+  const att = cls.attendance || {}, odw = cls.odwolane || {};
+  if (att[kluczZ(iso, nr)] || odw[kluczZ(iso, nr)]) return nr;
+  const plan = zalegleLekcjeDnia(cls, iso).filter(n => n !== null);
+  const pierwsza = plan.length ? Math.min.apply(null, plan) : nr;
+  if (nr !== pierwsza) return nr;
+  return null;   // pierwsza lekcja dnia — sama data (zero migracji, VULCAN jak dotąd)
+}
+function wybierzLekcje(clsId, iso, nr) {
+  activateClass(clsId);
+  uiSelectedSchool = getCurrentClass().school;
+  state.currentDate = iso;
+  state.currentNr = nrDlaLekcji(getCurrentClass(), iso, nr);
+  document.getElementById('lessonDate').value = iso;
+  save();
+  refreshAll();
+}
+function tydzienPoniedzialek(iso) {
+  const d = new Date(iso + 'T12:00:00');
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+}
+// Pasek tygodnia: Pn–Pt bieżącego tygodnia (wg daty lekcji), wszystkie klasy z planu.
+// Kolor kafelka: zielony = wpis jest, czerwony = dzień miniony bez wpisu, szary = „nie było”.
+function renderPlanTydzien() {
+  const el = document.getElementById('planTydzien');
+  if (!el) return;
+  const plany = zaleglePlany();
+  const zapas = document.getElementById('lessonNrZapas');
+  if (zapas) zapas.style.display = plany.length ? 'none' : 'inline-flex';
+  if (!plany.length) { el.innerHTML = ''; return; }
+  const dzis = new Date().toISOString().slice(0, 10);
+  const pn = tydzienPoniedzialek(state.currentDate);
+  const cur = getCurrentClass();
+  let h = '';
+  for (let i = 0; i < 5; i++) {
+    const d = new Date(pn + 'T12:00:00'); d.setDate(d.getDate() + i);
+    const iso = d.toISOString().slice(0, 10);
+    const wolny = plany.some(p => planObejmuje(p, iso) && (p.wolne || []).includes(iso));
+    const lekcje = [];
+    state.classes.forEach(cls => {
+      zalegleLekcjeDnia(cls, iso).forEach(nr => lekcje.push({ cls, nr }));
+    });
+    lekcje.sort((a, b) => (a.nr === null) - (b.nr === null) || (a.nr || 0) - (b.nr || 0) || a.cls.name.localeCompare(b.cls.name));
+    h += `<div class="plan-dzien${iso === dzis ? ' dzis' : ''}${wolny ? ' wolny' : ''}"><div class="dz-naglowek"><span>${ZALEGLE_DNI[i]} ${iso.slice(8, 10)}.${iso.slice(5, 7)}</span>${wolny ? '<span>wolne</span>' : ''}</div>`;
+    if (!lekcje.length && !wolny) h += '<div style="font-size:12px;color:var(--ink-muted);">—</div>';
+    lekcje.forEach(({ cls, nr }) => {
+      const k = kluczZ(iso, nrDlaLekcji(cls, iso, nr));
+      const jest = !!(cls.attendance || {})[k];
+      const niebylo = !!(cls.odwolane || {})[k];
+      const brak = !jest && !niebylo && iso < dzis;
+      const aktywna = cur && cls.id === cur.id && iso === state.currentDate && kluczZ(iso, state.currentNr) === k;
+      const klasa = 'plan-lekcja' + (jest ? ' jest' : '') + (brak ? ' brak' : '') + (niebylo ? ' niebylo' : '') + (aktywna ? ' aktywna' : '');
+      const tytul = jest ? 'wpis jest — kliknij, żeby poprawić' : niebylo ? 'nie było: ' + cls.odwolane[k] : brak ? 'brak wpisu — kliknij i wpisz' : 'kliknij, żeby wpisać';
+      h += `<button type="button" class="${klasa}" data-cls="${cls.id}" data-iso="${iso}" data-nr="${nr === null ? '' : nr}" title="${escapeHtml(tytul)}" onclick="wybierzLekcje('${cls.id}','${iso}',${nr === null ? 'null' : nr})">` +
+        `<span class="nr">${nr === null ? '' : 'L' + nr}</span><span>${escapeHtml(cls.name)}</span><span class="st">${jest ? '✓' : niebylo ? '–' : brak ? '!' : ''}</span></button>`;
+    });
+    h += '</div>';
+  }
+  el.innerHTML = h;
 }
 function changeDate() {
   state.currentDate = document.getElementById('lessonDate').value;
@@ -2531,6 +2614,7 @@ function getStudentStats(studentId, fromDate, toDate) {
 function renderAttendance() {
   document.getElementById('lessonDate').value = state.currentDate;
   renderLessonNr();
+  renderPlanTydzien();
   const tbody = document.getElementById('attendanceBody');
   tbody.innerHTML = '';
 
