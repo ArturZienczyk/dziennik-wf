@@ -366,6 +366,44 @@ Bramka: `py -3.14 test_zalegle.py` (54 sprawdzeń: liczenie v1 i v2, pasek tygod
 dnia, klawiatura pod `#nr`, siatka, dni wolne, „nie było", „wpisz", magazyn, prawdziwy
 `plan-wf.json`).
 
+## Synchronizacja laptop ↔ telefon — scalanie kopii (2026-09-18)
+
+Dane żyją osobno w każdej przeglądarce. Do teraz „Wczytaj szyfrowaną" **podmieniało** wszystko
+plikiem — wpisy zrobione na drugim urządzeniu ginęły. Od dziś wczytanie kopii **scala**:
+
+- brakujące wpisy dochodzą; ten sam wpis w obu miejscach różny → **wygrywa nowszy**; skasowany
+  na jednym urządzeniu nie wraca ze starej kopii (nagrobek). Nic nie pyta — po scaleniu okno
+  informacyjne „dołożono N, nadpisano K" z listą nadpisanych (klasa, lekcja, uczeń, było → jest).
+- klasy parowane po `id` (nieznana z pliku dochodzi cała), uczniowie po `id`, plan przez upsert
+  (jak wczytanie `plan-wf.json`). Stary tryb = checkbox **„Zastąp wszystko"** w tym samym oknie
+  (przenosiny na czysto). Kopia obecnych danych zapisuje się przed operacją, jak dawniej.
+- kopie sprzed dziś nie mają znaczników czasu → nic nie nadpisują, tylko dokładają brakujące
+  („laptop jest prawdą" przy pierwszym scaleniu).
+
+Pod spodem: `cls._t[ścieżka] = ms` obok danych (format komórek nietknięty). Znaczniki liczy
+`save()` przez diff z poprzednim zapisem — jedno miejsce, nie 40 miejsc zapisu. Ścieżki:
+`a|klucz|uczeń` frekwencja · `o|klucz` nie było · `g|kol|uczeń` ocena · `gc|kol` kolumna ·
+`m|uczeń` pomiary · `s|uczeń` uczeń · `k` meta klasy.
+
+**Rytm dnia (jedno kliknięcie na urządzenie):** laptop zapisuje kopię sam (auto raz dziennie
++ „Zapisz kopię"); na telefonie: Dysk Google → plik `.enc.json` → otwórz w dzienniku →
+„Wczytaj szyfrowaną" → hasło → OK. Kierunek telefon → laptop: „Zapisz kopię" (plik w
+Pobranych) → Udostępnij → Dysk (Android nie synchronizuje Pobranych sam — **nie testowane
+u użytkownika**), na laptopie „Wczytaj szyfrowaną" z folderu Dysku.
+
+**Dwa foldery kopii:** „📁 Kopie" (główny, dotychczasowy) i **„📁 Kopia 2"** — każda kopia
+idzie do obu; drugi to np. folder Dysku Google na komputerze (wymaga aplikacji *Dysk Google na
+komputer*; na tym laptopie 18.09 jej **nie było** — bez niej „Kopia 2" może wskazać dowolny
+folder, ale do chmury nic samo nie pójdzie). Błąd drugiego folderu nie blokuje kopii (dymek).
+
+**Czego nie ma:** automatu (Drive API w apce) — decyzja: dopiero gdy ręczny transfer po
+tygodniu okaże się uciążliwy; Wi-Fi/serwer lokalny (szkolna sieć izoluje urządzenia).
+
+Bramka: `py -3.14 test_scalanie.py` (30 sprawdzeń: znaczniki z diffu, nowszy wygrywa, remis =
+lokalne, nagrobek, plan upsert, klasa nieznana, kopia bez znaczników, magazyn, „zastąp
+wszystko", okno importu, dwa foldery). Regresja: `test_kopie`, `test_zamek`, `test_klawiatura`,
+`test_zalegle`, `test_folder_kopii`.
+
 ## Uwaga operacyjna: jedno miejsce uruchamiania
 
 Dane siedzą w `localStorage`, który jest **osobny dla pliku na dysku i dla adresu

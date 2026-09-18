@@ -1141,6 +1141,7 @@
       <button onclick="zmienHaslo()" title="Zmień hasło dziennika i kopii (wymaga obecnego). Apka nie pokazuje hasła — zapomniane = dane nie do odzyskania poza kopiami.">🔑 Zmień hasło</button>
       <button onclick="zamekUI_pinZmien()" title="PIN 4 cyfry do szybkiego odblokowania po bezczynności na lekcji">🔢 PIN</button>
       <button id="btnFolderKopii" onclick="wybierzFolderKopii(event)" title="Wskaż folder, do którego mają trafiać kopie (zamiast Pobranych). Shift+klik = wróć do Pobranych.">📁 Kopie: Pobrane</button>
+      <button id="btnFolderKopii2" onclick="wybierzFolderKopii(event, 2)" title="Drugi folder — każda kopia idzie też tam (np. Dysk Google na komputerze). Shift+klik = wyłącz.">📁 Kopia 2: brak</button>
       <button onclick="document.getElementById('fileImport').click()" title="Wczytaj STARĄ, nieszyfrowaną kopię (sprzed września 2026)">📂 Wczytaj stary JSON</button>
       <input type="file" id="fileImport" accept=".json" style="display:none" onchange="importJSON(event)">
       <button onclick="document.getElementById('fileImportEnc').click()" title="Wczytaj kopię zaszyfrowaną hasłem">🔓 Wczytaj szyfrowaną</button>
@@ -1421,7 +1422,8 @@
 <div class="modal-bg" id="confirmModal" onclick="if(event.target===this) confirmCancel()">
   <div class="modal" style="max-width: 420px;">
     <h3 id="confirmTitle" style="margin-bottom: 12px;">Potwierdź</h3>
-    <div id="confirmMessage" style="font-size: 14px; line-height: 1.6; margin-bottom: 20px; white-space: pre-line; color: var(--ink);"></div>
+    <div id="confirmMessage" style="font-size: 14px; line-height: 1.6; margin-bottom: 20px; white-space: pre-line; color: var(--ink); max-height: 50vh; overflow: auto;"></div>
+    <label id="confirmOpcja" style="display:none; font-size: 13px; margin: -8px 0 16px; color: var(--ink-muted); cursor: pointer;"><input type="checkbox" id="confirmOpcjaChk"> <span id="confirmOpcjaTekst"></span></label>
     <div style="display: flex; gap: 8px; justify-content: flex-end;">
       <button onclick="confirmCancel()" style="padding: 10px 20px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; font-family: inherit; font-size: 14px; cursor: pointer;">Anuluj</button>
       <button onclick="confirmOk()" style="padding: 10px 20px; background: #1D9E75; color: white; border: 1px solid #1D9E75; border-radius: 6px; font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer;">OK</button>
@@ -1658,6 +1660,127 @@ function activateClass(id) {
 }
 
 // =====================================================
+// ZNACZNIKI CZASU + SCALANIE KOPII (laptop ↔ telefon, 2026-09-18)
+// =====================================================
+// Każdy liść danych klasy (wpis frekwencji, ocena, pomiar, „nie było", uczeń, kolumna, meta)
+// ma znacznik `cls._t[ścieżka] = ms`. Znaczniki liczy save() przez diff z poprzednim zapisem —
+// jedno miejsce zamiast 40 miejsc zapisu; format komórek nietknięty (znaczniki leżą OBOK danych).
+// Skasowany liść też dostaje znacznik (nagrobek) — stara kopia go nie wskrzesi.
+// Ścieżki: a|klucz|sid frekwencja · o|klucz nie było · g|kol|sid ocena · gc|kol kolumna ·
+// m|sid pomiary · s|sid uczeń · k meta klasy (szkoła, nazwa, półrocze, klasa w planie).
+function listkiKlasy(cls) {
+  const L = {};
+  const J = JSON.stringify;
+  Object.keys(cls.attendance || {}).forEach(k => Object.keys(cls.attendance[k] || {}).forEach(sid => {
+    if (cls.attendance[k][sid] != null) L['a|' + k + '|' + sid] = J(cls.attendance[k][sid]);
+  }));
+  Object.keys(cls.odwolane || {}).forEach(k => { L['o|' + k] = J(cls.odwolane[k]); });
+  Object.keys(cls.grades || {}).forEach(col => Object.keys(cls.grades[col] || {}).forEach(sid => {
+    if (cls.grades[col][sid] != null && cls.grades[col][sid] !== '') L['g|' + col + '|' + sid] = J(cls.grades[col][sid]);
+  }));
+  (cls.gradeColumns || []).forEach(c => { L['gc|' + c.id] = J(c); });
+  Object.keys(cls.measurements || {}).forEach(sid => {
+    if (cls.measurements[sid] && Object.keys(cls.measurements[sid]).length) L['m|' + sid] = J(cls.measurements[sid]);
+  });
+  (cls.students || []).forEach(s => { L['s|' + s.id] = J(s); });
+  L['k'] = J({ school: cls.school || '', name: cls.name || '', semesterBreak: cls.semesterBreak || '', planKlasa: cls.planKlasa });
+  return L;
+}
+const _liscieBaza = {};   // cls.id → liście z ostatniego zapisu (baza do diffu)
+function stemplujBaza() { state.classes.forEach(c => { _liscieBaza[c.id] = listkiKlasy(c); }); }
+function stempluj(teraz) {
+  teraz = teraz || Date.now();
+  state.classes.forEach(cls => {
+    const L = listkiKlasy(cls), B = _liscieBaza[cls.id];
+    cls._t = cls._t || {};
+    if (!B) { Object.keys(L).forEach(p => { cls._t[p] = teraz; }); }   // nowa klasa = wszystko świeże
+    else {
+      Object.keys(L).forEach(p => { if (B[p] !== L[p]) cls._t[p] = teraz; });
+      Object.keys(B).forEach(p => { if (!(p in L)) cls._t[p] = teraz; });   // nagrobek
+    }
+    _liscieBaza[cls.id] = L;
+  });
+}
+function _sciezkaZastosuj(lk, Z, p) {
+  const [typ, a, b] = p.split('|');
+  const jest = p in Z;
+  const val = jest ? JSON.parse(Z[p]) : undefined;
+  if (typ === 'a') { lk.attendance = lk.attendance || {}; lk.attendance[a] = lk.attendance[a] || {}; if (jest) lk.attendance[a][b] = val; else delete lk.attendance[a][b]; }
+  else if (typ === 'o') { lk.odwolane = lk.odwolane || {}; if (jest) lk.odwolane[a] = val; else delete lk.odwolane[a]; }
+  else if (typ === 'g') { lk.grades = lk.grades || {}; lk.grades[a] = lk.grades[a] || {}; if (jest) lk.grades[a][b] = val; else delete lk.grades[a][b]; }
+  else if (typ === 'gc') { lk.gradeColumns = lk.gradeColumns || []; const i = lk.gradeColumns.findIndex(c => c.id === a); if (jest) { if (i >= 0) lk.gradeColumns[i] = val; else { lk.gradeColumns.push(val); lk.grades = lk.grades || {}; lk.grades[a] = lk.grades[a] || {}; } } else if (i >= 0) lk.gradeColumns.splice(i, 1); }
+  else if (typ === 'm') { lk.measurements = lk.measurements || {}; if (jest) lk.measurements[a] = val; else delete lk.measurements[a]; }
+  else if (typ === 's') { lk.students = lk.students || []; const i = lk.students.findIndex(s => s.id === a); if (jest) { if (i >= 0) lk.students[i] = val; else lk.students.push(val); } else if (i >= 0) lk.students.splice(i, 1); }
+  else if (typ === 'k') { if (jest) { lk.school = val.school; lk.name = val.name; lk.semesterBreak = val.semesterBreak; if (val.planKlasa === undefined) delete lk.planKlasa; else lk.planKlasa = val.planKlasa; } }
+}
+function _sciezkaOpis(lk, p, bylo, jest) {
+  const [typ, a, b] = p.split('|');
+  const ucz = sid => { const s = (lk.students || []).find(x => x.id === sid); return s && s.name ? s.name : sid; };
+  const v = x => x === undefined ? '—' : (typeof x === 'string' ? x : JSON.stringify(x));
+  const co = typ === 'a' ? 'frekwencja ' + a.replace('#', ' L') + ' · ' + ucz(b) : typ === 'o' ? 'nie było ' + a.replace('#', ' L') :
+    typ === 'g' ? 'ocena ' + a + ' · ' + ucz(b) : typ === 'gc' ? 'kolumna ocen ' + a : typ === 'm' ? 'pomiary · ' + ucz(a) :
+    typ === 's' ? 'uczeń ' + ucz(a) : 'dane klasy';
+  return { klasa: lk.name, co, bylo: v(bylo), jest: v(jest) };
+}
+// Scala dane z kopii z danymi lokalnymi. Nowszy znacznik wygrywa; brak znacznika = 0 (stare dane);
+// remis (0 vs 0) = lokalne zostają („laptop jest prawdą" przy pierwszym scaleniu). Nic nie pyta.
+function scalKopie(data) {
+  const w = { dodane: 0, nadpisane: [], pominiete: 0, pominieteSciezki: [], klasyDodane: 0 };
+  stempluj();
+  (data.classes || []).forEach(zk => {
+    const lk = state.classes.find(c => c.id === zk.id);
+    if (!lk) { state.classes.push(zk); w.klasyDodane++; return; }
+    const L = listkiKlasy(lk), Z = listkiKlasy(zk), lt = lk._t || {}, zt = zk._t || {};
+    lk._t = lt;
+    const sciezki = new Set(Object.keys(L).concat(Object.keys(Z)));
+    sciezki.forEach(p => {
+      const tl = lt[p] || 0, tz = zt[p] || 0;
+      if (L[p] === Z[p]) { if (tz > tl) lt[p] = tz; return; }
+      // plik wygrywa, gdy jest nowszy; wpis nieznany lokalnie (nigdy nie widziany, brak nagrobka) dochodzi zawsze
+      if (!(tz > tl) && !(!(p in L) && !lt[p])) { w.pominiete++; w.pominieteSciezki.push(p); return; }
+      const bylo = p in L ? JSON.parse(L[p]) : undefined, jest = p in Z ? JSON.parse(Z[p]) : undefined;
+      _sciezkaZastosuj(lk, Z, p);
+      lt[p] = tz;
+      if (p in L) w.nadpisane.push(_sciezkaOpis(lk, p, bylo, jest)); else w.dodane++;
+    });
+  });
+  if (data.planWf && Array.isArray(data.planWf.plany)) data.planWf.plany.forEach(pl => { try { zaleglePlanZastosuj(pl); } catch (e) { /* stary plan bez od/klasy */ } });
+  if (!state.currentClassId || !state.classes.find(c => c.id === state.currentClassId)) state.currentClassId = data.currentClassId || state.classes[0].id;
+  stemplujBaza();
+  return w;
+}
+// Wspólne dla obu importów (szyfrowany / stary jawny). zastapWszystko = dawny tryb podmiany.
+function importZastosuj(data, zastapWszystko) {
+  if (Array.isArray(data.classes) && data.classes.length) {
+    if (zastapWszystko) {
+      state.classes = data.classes;
+      state.currentClassId = data.currentClassId || data.classes[0].id;
+      if (data.planWf) state.planWf = data.planWf;
+      stemplujBaza();
+      activateClass(state.currentClassId); uiSelectedSchool = null; save(); refreshAll();
+      showToast('Wczytano — dane zastąpione w całości.', 'success');
+      return;
+    }
+    const w = scalKopie(data);
+    activateClass(state.currentClassId); uiSelectedSchool = null; save(); refreshAll();
+    const lista = w.nadpisane.slice(0, 40).map(n => '• ' + n.klasa + ': ' + n.co + ' — było ' + n.bylo + ', jest ' + n.jest).join('\n');
+    showConfirm('Scalono kopię',
+      'Dołożono ' + w.dodane + ' wpisów' + (w.klasyDodane ? ', nowych klas: ' + w.klasyDodane : '') +
+      ', nadpisano nowszymi: ' + w.nadpisane.length + ', starszych z pliku pominięto: ' + w.pominiete + '.' +
+      (lista ? '\n\nNadpisane (nowszy wpis z kopii wygrał):\n' + lista + (w.nadpisane.length > 40 ? '\n…' : '') : ''), null);
+    showToast('Scalono: +' + w.dodane + ', nadpisane ' + w.nadpisane.length + '.', 'success');
+  } else if (data.students) {
+    migrateFlat(data); stemplujBaza();
+    activateClass(state.currentClassId); uiSelectedSchool = null; save(); refreshAll();
+    showToast('Wczytano stary płaski format.', 'success');
+  } else {
+    showToast('Plik nie zawiera danych dziennika.', 'error');
+  }
+}
+const IMPORT_TEKST = 'Kopia zostanie SCALONA z tym, co tu jest: brakujące wpisy dojdą, a gdy ten sam wpis się różni — wygrywa nowszy. Nic nie ginie; kopia obecnych danych zapisze się przed operacją.';
+const IMPORT_OPCJA = 'Zastąp wszystko (przenosiny na czysto — dane tutaj znikają, zostaje tylko plik)';
+
+// =====================================================
 // PERSISTENCJA
 // =====================================================
 function migrateFlat(data) {
@@ -1823,6 +1946,7 @@ function initDefault() {
 let _saveNr = 0, _saveZapisany = 0;
 function save(natychmiast) {
   // state.students itd. są referencjami do state.classes[i], więc to wystarcza.
+  stempluj();
   const dane = {
     classes: state.classes,
     currentClassId: state.currentClassId,
@@ -3575,43 +3699,55 @@ function manageBackupPassword() { zmienHaslo(); }
 // próbuje NAJPIERW folderu; gdy przeglądarka nie pozwoli (brak zgody w nowej sesji, folder usunięty,
 // brak API) — wraca do zwykłego pobierania, czyli kopia nigdy nie przepada. Chrome może raz na sesję
 // zapytać o zgodę na zapis; pytanie wychodzi z kliknięcia usera (Zapisz lekcję / Zapisz kopię).
-const IDB_FOLDER_KEY = 'folder_kopii';
-let _folderKopii = null, _folderKopiiNazwa = '';
-function folderKopiiCzytaj() {
-  if (_folderKopii) return Promise.resolve(_folderKopii);
+// Dwa gniazda: 1 = folder główny (Pobrane, gdy pusty), 2 = drugi folder (np. Dysk Google na
+// komputerze) — kopia idzie do obu; drugi jest dodatkiem, jego błąd nie blokuje kopii.
+const IDB_FOLDER_KEY = 'folder_kopii', IDB_FOLDER2_KEY = 'folder_kopii_2';
+let _folderKopii = null, _folderKopiiNazwa = '', _folderKopii2 = null, _folderKopii2Nazwa = '';
+function folderKopiiCzytaj(slot) {
+  const k2 = slot === 2;
+  if (k2 ? _folderKopii2 : _folderKopii) return Promise.resolve(k2 ? _folderKopii2 : _folderKopii);
   return idbOtworz().then(db => new Promise(res => {
-    const q = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(IDB_FOLDER_KEY);
-    q.onsuccess = () => { _folderKopii = q.result || null; _folderKopiiNazwa = _folderKopii ? _folderKopii.name : ''; res(_folderKopii); };
+    const q = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(k2 ? IDB_FOLDER2_KEY : IDB_FOLDER_KEY);
+    q.onsuccess = () => {
+      const h = q.result || null;
+      if (k2) { _folderKopii2 = h; _folderKopii2Nazwa = h ? h.name : ''; } else { _folderKopii = h; _folderKopiiNazwa = h ? h.name : ''; }
+      res(h);
+    };
     q.onerror = () => res(null);
   })).catch(() => null);
 }
-function folderKopiiZapisz(h) {
-  _folderKopii = h; _folderKopiiNazwa = h ? h.name : '';
+function folderKopiiZapisz(h, slot) {
+  const k2 = slot === 2;
+  if (k2) { _folderKopii2 = h; _folderKopii2Nazwa = h ? h.name : ''; } else { _folderKopii = h; _folderKopiiNazwa = h ? h.name : ''; }
   return idbOtworz().then(db => new Promise(res => {
     const st = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE);
-    const q = h ? st.put(h, IDB_FOLDER_KEY) : st.delete(IDB_FOLDER_KEY);
+    const key = k2 ? IDB_FOLDER2_KEY : IDB_FOLDER_KEY;
+    const q = h ? st.put(h, key) : st.delete(key);
     q.onsuccess = () => res(true); q.onerror = () => res(false);
   })).catch(() => false);
 }
 function odswiezFolderKopii() {
   const b = document.getElementById('btnFolderKopii');
   if (b) b.textContent = '📁 Kopie: ' + (_folderKopiiNazwa || 'Pobrane');
+  const b2 = document.getElementById('btnFolderKopii2');
+  if (b2) b2.textContent = '📁 Kopia 2: ' + (_folderKopii2Nazwa || 'brak');
 }
-async function wybierzFolderKopii(ev) {
-  if (ev && ev.shiftKey) { await folderKopiiZapisz(null); odswiezFolderKopii(); showToast('Kopie wracają do Pobranych.', 'info'); return; }
+async function wybierzFolderKopii(ev, slot) {
+  const k2 = slot === 2;
+  if (ev && ev.shiftKey) { await folderKopiiZapisz(null, slot); odswiezFolderKopii(); showToast(k2 ? 'Drugi folder wyłączony.' : 'Kopie wracają do Pobranych.', 'info'); return; }
   if (!window.showDirectoryPicker) { showToast('Ta przeglądarka nie pozwala wskazać folderu — kopie zostają w Pobranych.', 'warn'); return; }
   try {
-    const h = await window.showDirectoryPicker({ mode: 'readwrite', id: 'dziennik-wf-kopie' });
-    const ok = await folderKopiiZapisz(h);
+    const h = await window.showDirectoryPicker({ mode: 'readwrite', id: k2 ? 'dziennik-wf-kopie-2' : 'dziennik-wf-kopie' });
+    const ok = await folderKopiiZapisz(h, slot);
     odswiezFolderKopii();
-    showToast('Kopie będą zapisywane w folderze „' + h.name + '”' + (ok ? '' : ' (tylko do zamknięcia karty — przeglądarka nie zapamiętała folderu)') + '.', ok ? 'success' : 'warn');
+    showToast((k2 ? 'Każda kopia pójdzie też do folderu „' : 'Kopie będą zapisywane w folderze „') + h.name + '”' + (ok ? '' : ' (tylko do zamknięcia karty — przeglądarka nie zapamiętała folderu)') + '.', ok ? 'success' : 'warn');
   } catch (e) {
     if (e && e.name !== 'AbortError') showToast('Nie udało się wybrać folderu: ' + e.message, 'error');
   }
 }
 // zwraca nazwę folderu, gdy zapis się udał; '' gdy trzeba pobrać zwykłą drogą
-async function zapiszDoFolderuKopii(text, filename) {
-  const h = await folderKopiiCzytaj();
+async function zapiszDoFolderuKopii(text, filename, slot) {
+  const h = await folderKopiiCzytaj(slot);
   if (!h) return '';
   try {
     let perm = await h.queryPermission({ mode: 'readwrite' });
@@ -3640,7 +3776,9 @@ async function writeBackupFile(tag) {
     const text = await encryptSnapshot(pwd);
     const fname = 'dziennik-wf_' + tag + '_SZYFROWANA_' + fileStamp() + '.enc.json';
     const gdzie = await zapiszDoFolderuKopii(text, fname);
-    if (gdzie) { showToast('Kopia zapisana: ' + gdzie + ' \\ ' + fname, 'success'); return true; }
+    const gdzie2 = await zapiszDoFolderuKopii(text, fname, 2);
+    if (_folderKopii2Nazwa && !gdzie2) showToast('Drugi folder kopii niedostępny — kopia poszła tylko do pierwszego.', 'warn');
+    if (gdzie) { showToast('Kopia zapisana: ' + gdzie + (gdzie2 ? ' + ' + gdzie2 : '') + ' \\ ' + fname, 'success'); return true; }
     _triggerDownloadText(text, fname);
     if (_folderKopiiNazwa) showToast('Folder kopii niedostępny — kopia poszła do Pobranych (' + fname + ').', 'warn');
     return true;
@@ -3673,24 +3811,10 @@ function importJSON(event) {
   reader.onload = (e) => {
     try {
       const data = JSON.parse(e.target.result);
-      showConfirm('Wczytaj dane', 'Wczytać dane z pliku? WSZYSTKIE klasy zostaną zastąpione (kopia obecnych pobierze się automatycznie).', async () => {
+      showConfirm('Wczytaj dane', IMPORT_TEKST, async (zastap) => {
         if (!await backupBeforeDestruction('IMPORT')) { showToast('Przerwano — kopia bezpieczeństwa nie powstała, dane nietknięte.', 'warn'); return; }
-        if (Array.isArray(data.classes) && data.classes.length) {
-          state.classes = data.classes;
-          state.currentClassId = data.currentClassId || data.classes[0].id;
-          if (data.planWf) state.planWf = data.planWf;
-        } else if (data.students) {
-          migrateFlat(data);
-        } else {
-          showToast('Plik nie zawiera danych dziennika.', 'error');
-          return;
-        }
-        activateClass(state.currentClassId);
-        uiSelectedSchool = null;
-        save();
-        refreshAll();
-        showToast('Wczytano dane.', 'success');
-      });
+        importZastosuj(data, zastap);
+      }, IMPORT_OPCJA);
     } catch (err) {
       showToast('Błąd wczytywania: ' + err.message, 'error');
     }
@@ -3840,26 +3964,11 @@ function importEncrypted(event) {
           showToast('Nie udało się odszyfrować — złe hasło lub uszkodzony / nie ten plik.', 'error');
           return;
         }
-        showConfirm('Wczytaj dane',
-          'Hasło OK. Wczytać dane? WSZYSTKIE klasy zostaną zastąpione (kopia obecnych pobierze się automatycznie).',
-          () => {
-            backupBeforeDestruction('IMPORT-ENC');
-            if (Array.isArray(data.classes) && data.classes.length) {
-              state.classes = data.classes;
-              state.currentClassId = data.currentClassId || data.classes[0].id;
-              if (data.planWf) state.planWf = data.planWf;
-            } else if (data.students) {
-              migrateFlat(data);
-            } else {
-              showToast('Plik nie zawiera danych dziennika.', 'error');
-              return;
-            }
-            activateClass(state.currentClassId);
-            uiSelectedSchool = null;
-            save();
-            refreshAll();
-            showToast('Wczytano z szyfrowanej kopii.', 'success');
-          });
+        showConfirm('Wczytaj dane', 'Hasło OK. ' + IMPORT_TEKST,
+          async (zastap) => {
+            if (!await backupBeforeDestruction('IMPORT-ENC')) { showToast('Przerwano — kopia bezpieczeństwa nie powstała, dane nietknięte.', 'warn'); return; }
+            importZastosuj(data, zastap);
+          }, IMPORT_OPCJA);
       });
   };
   reader.readAsText(file);
@@ -4782,17 +4891,22 @@ function escapeHtml(s) {
 
 // Własny confirm dialog (działa w artefakcie Claude'a i wszędzie)
 let confirmCallback = null;
-function showConfirm(title, message, onOk) {
+// opcja (opcjonalnie): tekst checkboxa pod komunikatem; onOk dostaje wtedy true/false.
+function showConfirm(title, message, onOk, opcja) {
   document.getElementById('confirmTitle').textContent = title;
   document.getElementById('confirmMessage').textContent = message;
+  document.getElementById('confirmOpcja').style.display = opcja ? 'block' : 'none';
+  document.getElementById('confirmOpcjaChk').checked = false;
+  document.getElementById('confirmOpcjaTekst').textContent = opcja || '';
   confirmCallback = onOk;
   document.getElementById('confirmModal').classList.add('active');
 }
 function confirmOk() {
   const cb = confirmCallback;
+  const opcja = document.getElementById('confirmOpcjaChk').checked;
   confirmCallback = null;
   document.getElementById('confirmModal').classList.remove('active');
-  if (cb) cb();
+  if (cb) cb(opcja);
 }
 function confirmCancel() {
   confirmCallback = null;
@@ -4903,6 +5017,7 @@ function zamekZastosujDane(data) {
   } else {
     initDefault();
   }
+  stemplujBaza();                 // wczytane = baza diffu; znaczniki dostają dopiero zmiany
   zamek.pin = (data && data.pin) || null;
   activateClass(state.currentClassId);
   state.classes.forEach(sprzatnijPusteWiersze);   // widma z Entera nie wracaja po otwarciu
@@ -5192,7 +5307,7 @@ try {
   magazyn.ostatniBlad = (e && e.name) || String(e);
 }
 state.currentDate = new Date().toISOString().slice(0, 10);
-folderKopiiCzytaj().then(odswiezFolderKopii);
+Promise.all([folderKopiiCzytaj(), folderKopiiCzytaj(2)]).then(odswiezFolderKopii);
 zamekStart();
 
 // =====================================================
