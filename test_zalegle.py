@@ -300,25 +300,25 @@ with sync_playwright() as pw:
     check("po rozdzieleniu brak ostrzeżenia", page.locator("#planUstawienia .plan-dubel").count() == 0)
 
     # 11c. inne zajęcia: dopisane w zakładce Plan → szary kafelek w pasku, bez frekwencji i bez Zaległych
-    page.fill("#inneNazwa", "EZ 4a")
+    page.fill("#inneNazwa", "EZ test")
     page.click("#planUstawienia button:has-text('dodaj zajęcia')")
     page.wait_for_timeout(150)
-    page.click("#planUstawienia .plan-inne .siatka-kom[data-dzien='4']")
+    page.click("#planUstawienia tr.plan-inne:has-text('EZ test') .siatka-kom[data-dzien='4']")
     page.wait_for_timeout(150)
     page.click("#planUstawienia .siatka-nr[data-nr='5']")
     page.wait_for_timeout(150)
-    check("inne w planie", page.evaluate("() => planAktywny(false).inne['EZ 4a']") == {"4": [5]})
+    check("inne w planie", page.evaluate("() => planAktywny(false).inne['EZ test']") == {"4": [5]})
     page.click(".tab:has-text('Obecność')")
     page.wait_for_timeout(200)
-    kaf_inne = "#planTydzien .plan-lekcja.inne[data-inne='EZ 4a'][data-iso='2026-09-11']"
+    kaf_inne = "#planTydzien .plan-lekcja.inne[data-inne='EZ test'][data-iso='2026-09-11']"
     check("szary kafelek EZ 4a w piątek, L5", page.locator(kaf_inne).count() == 1 and page.get_attribute(kaf_inne, "data-nr") == "5")
     check("kafelek inne nie ma kliku", page.get_attribute(kaf_inne, "onclick") is None)
     check("inne nie liczy się w Zaległych", not any("EZ" in x for x in page.evaluate("(d) => zaleglePolicz(d).map(x => x.clsName)", DZIS)))
     page.screenshot(path=str(SHOTS / "zalegle_7_inne.png"))
     page.click(".tab:has-text('Plan')")
     page.wait_for_timeout(200)
-    page.evaluate("() => inneUsun('EZ 4a')")
-    check("inne usunięte", page.evaluate("() => Object.keys(planAktywny(false).inne).length") == 0)
+    page.evaluate("() => inneUsun('EZ test')")
+    check("inne usunięte", page.evaluate("() => !('EZ test' in planAktywny(false).inne)"))
     page.screenshot(path=str(SHOTS / "zalegle_8_zakladka_plan.png"))
 
     # 12. dni wolne: od–do + wklejenie tekstu
