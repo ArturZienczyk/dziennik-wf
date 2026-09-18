@@ -126,7 +126,7 @@ function keepExcused(symbolName,cellTexts){
 var P=document.createElement('div');
 P.style.cssText='position:fixed;top:10px;right:10px;z-index:2147483647;width:340px;background:#fff;border:2px solid #1E2D4F;border-radius:8px;font:13px/1.4 Arial,sans-serif;color:#1A1A1A;box-shadow:0 6px 24px rgba(0,0,0,.3)';
 P.innerHTML=''
-+'<div style="background:#1E2D4F;color:#fff;padding:8px 10px;font-weight:bold;border-radius:5px 5px 0 0;display:flex;justify-content:space-between">Dziennik WF -> VULCAN <span style="opacity:.6;font-weight:normal">v18</span><span id="wfX" style="cursor:pointer">✕</span></div>'
++'<div style="background:#1E2D4F;color:#fff;padding:8px 10px;font-weight:bold;border-radius:5px 5px 0 0;display:flex;justify-content:space-between">Dziennik WF -> VULCAN <span style="opacity:.6;font-weight:normal">v19</span><span id="wfX" style="cursor:pointer">✕</span></div>'
 +'<div style="padding:10px">'
 +'<div style="font-size:12px;color:#4A4543;margin-bottom:6px">Wklej statusy dnia: <b>Nazwisko Imię</b> [tab / ; / 2 spacje] <b>status</b> (C, NĆ, BS, NB, NU, ZW, SP)</div>'
 +'<textarea id="wfIn" style="width:100%;height:120px;box-sizing:border-box;font:12px monospace" placeholder="Nowak Jan\tC\nKowalska Zofia\tNU"></textarea>'
@@ -165,7 +165,8 @@ document.getElementById('wfPrev').onclick=preview;
 document.getElementById('wfGo').onclick=function(){
   var m=preview(); if(!m)return;
   var todo=m.rows.filter(function(r){return r.symbol;});
-  if(!todo.length){log('Nie ma nic do wpisania.','#8C2520');return;}
+  // v19: nie kasuj diagnostyki Podglądu (18.09: 7b l.7 padło bez śladu, ręczny wpis, przyczyna nieznana)
+  if(!todo.length){var L=document.getElementById('wfLog'); L.innerHTML='<span style="color:#8C2520">Nie ma nic do wpisania. Niżej co widziałem — zrób zrzut:</span>\n'+L.innerHTML; return;}
   var i=0,done=0,skip=0,fail=[],excused=[];
   // rozne myslniki Unicode (— – ‒ − -) = ta sama kreska 'nieobecnosc' (bug 09-17: VULCAN wpisuje inny znak niz w SHORT)
   var txt=function(c){return (c.textContent||'').trim().replace(/[‐-―−\-]/g,'—');};

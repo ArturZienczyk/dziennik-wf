@@ -972,6 +972,7 @@
       <h1>Dziennik WF</h1>
       <p class="subtitle">dane zapisują się lokalnie</p>
       <div id="classBar"></div>
+      <div id="zalegleChip"></div>
     </div>
     <div class="tabs">
       <button class="tab active" onclick="switchTab('obecnosc')">📋 Obecność</button>
@@ -1497,6 +1498,29 @@
   </div>
 </div>
 
+<!-- Modal: zaległe lekcje (plan + kalendarium vs wpisy frekwencji) -->
+<div class="modal-bg" id="zalegleModal" onclick="if(event.target===this) zamknijZalegle()">
+  <div class="modal" style="max-width: 720px;">
+    <h3 style="margin-bottom: 6px;">Zaległe lekcje — brak wpisu frekwencji</h3>
+    <p style="font-size: 13px; color: var(--ink-muted); margin: 0 0 12px 0;">
+      Dzień szkolny, w którym plan mówi „WF z tą klasą”, kalendarium nie mówi „wolne”, a w dzienniku nie ma wpisu pod tą datą.
+      Plan nie wie o wycieczkach, zawodach i zastępstwach — jeśli lekcji nie było, kliknij <b>nie było</b> i pozycja znika na stałe.
+    </p>
+    <div id="zalegleLista" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px;"></div>
+    <details style="margin-top: 12px; font-size: 13px;">
+      <summary style="cursor:pointer;">Ustawienia: plan i dopasowanie klas</summary>
+      <div id="zalegleUstawienia" style="margin-top: 8px;"></div>
+      <div style="margin-top: 10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <label style="padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--paper);cursor:pointer;">📂 Wczytaj plan (plan-wf.json)<input type="file" id="zaleglePlik" accept=".json,application/json" style="display:none" onchange="zalegleWczytajPlik(event)"></label>
+        <span style="color:var(--ink-muted)">Plik robi <code>py -3.14 zbuduj_plan_wf.py</code> w folderze planu (plan-roczny/plan-lekcji-RRRR-MM). Nowy plan = nowy plik, stare zostają.</span>
+      </div>
+    </details>
+    <div class="modal-actions" style="margin-top: 14px;">
+      <button onclick="zamknijZalegle()">Zamknij</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: zajetosc localStorage -->
 <div class="modal-bg" id="pamiecModal" onclick="if(event.target===this) zamknijPamiecModal()">
   <div class="modal" style="max-width: 640px;">
@@ -1542,6 +1566,8 @@ const STATUS_INFO = {
 let state = {
   classes: [],          // [{ id, school, name, students, attendance, measurements, gradeColumns, grades }]
   currentClassId: null,
+  // planWf: { plany: [{od, do, klasy: {nazwa: [dniTyg 0=Pn]}, wolne: [daty]}] } — wsad z zbuduj_plan_wf.py
+  planWf: null,
   students: [],
   // attendance: { 'YYYY-MM-DD': { studentId: 'C' | 'NC' | 'BS' | 'ZW' | 'NB' } }
   attendance: {},
@@ -1758,6 +1784,7 @@ function save(natychmiast) {
   const dane = {
     classes: state.classes,
     currentClassId: state.currentClassId,
+    planWf: state.planWf,
     pin: zamek.pin,
     savedAt: Date.now()          // rozstrzyga, który magazyn ma nowszą wersję
   };
@@ -1800,8 +1827,156 @@ function distinctSchools() {
   return out;
 }
 
+// =====================================================
+// ZALEGŁE LEKCJE — plan (EduPage) + kalendarium (ICS) vs wpisy frekwencji
+// =====================================================
+// Zaległość = dzień < dziś, plan ma WF z klasą w tym dniu tygodnia, dzień nie
+// jest wolny, klasa nie ma cls.attendance[data] ani cls.odwolane[data].
+// Plan nie zna wycieczek/zawodów/zastępstw → „nie było” (cls.odwolane) to
+// jedyna siatka na fałszywe alarmy; bez niej chip stałby się szumem.
+const ZALEGLE_DNI = ['Pn', 'Wt', 'Śr', 'Czw', 'Pi', 'So', 'Nd'];
+const ZALEGLE_POWODY = ['wycieczka', 'zawody', 'zastępstwo / zmiana planu', 'odwołana', 'inne'];
+
+function zalegleNorm(s) { return String(s || '').toLowerCase().replace(/[\s.\-_()]/g, ''); }
+function zaleglePlany() { return (state.planWf && Array.isArray(state.planWf.plany)) ? state.planWf.plany : []; }
+function zalegleKluczePlanu() {
+  const out = [];
+  zaleglePlany().forEach(p => Object.keys(p.klasy || {}).forEach(k => { if (!out.includes(k)) out.push(k); }));
+  return out.sort();
+}
+// Klasa dziennika → klucz w planie. cls.planKlasa: undefined = auto po nazwie, '' = nie licz.
+function zaleglePlanKlasa(cls) {
+  if (cls.planKlasa !== undefined) return cls.planKlasa;
+  const n = zalegleNorm(cls.name);
+  if (!n) return '';
+  const klucze = zalegleKluczePlanu();
+  return klucze.find(k => zalegleNorm(k) === n) || klucze.find(k => n.startsWith(zalegleNorm(k))) || '';
+}
+function zalegleDzienTyg(iso) { return (new Date(iso + 'T12:00:00').getDay() + 6) % 7; } // 0 = Pn
+function zaleglePolicz(dzis) {
+  dzis = dzis || new Date().toISOString().slice(0, 10);
+  const out = [];
+  state.classes.forEach(cls => {
+    const klucz = zaleglePlanKlasa(cls);
+    if (!klucz) return;
+    zaleglePlany().forEach(p => {
+      const dni = (p.klasy || {})[klucz];
+      if (!dni || !dni.length) return;
+      const wolne = new Set(p.wolne || []);
+      const ostatni = (p.do && p.do < dzis) ? p.do : null;   // plan wygasły liczy do końca ważności
+      for (let d = new Date(p.od + 'T12:00:00'); ; d.setDate(d.getDate() + 1)) {
+        const iso = d.toISOString().slice(0, 10);
+        if (ostatni ? iso > ostatni : iso >= dzis) break;   // dziś nie liczymy — trwająca praca
+        if (!dni.includes(zalegleDzienTyg(iso)) || wolne.has(iso)) continue;
+        if (cls.attendance[iso] || (cls.odwolane && cls.odwolane[iso])) continue;
+        out.push({ clsId: cls.id, clsName: cls.name, klucz, date: iso });
+      }
+    });
+  });
+  out.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.clsName.localeCompare(b.clsName));
+  return out;
+}
+function zalegleData(iso) { return ZALEGLE_DNI[zalegleDzienTyg(iso)] + ' ' + iso.slice(8, 10) + '.' + iso.slice(5, 7); }
+function renderZalegleChip() {
+  const el = document.getElementById('zalegleChip');
+  if (!el) return;
+  if (!zaleglePlany().length) {
+    el.innerHTML = '<button id="zalegleChipBtn" onclick="otworzZalegle()" title="Wczytaj plan lekcji, a dziennik pokaże lekcje bez wpisu" style="padding:6px 12px;border:1px dashed var(--line);border-radius:999px;background:var(--paper);cursor:pointer;font-family:inherit;font-size:13px;color:var(--ink-muted)">Zaległe: brak planu</button>';
+    return;
+  }
+  const n = zaleglePolicz().length;
+  const kolor = n ? 'background:#FFF0F0;border-color:#E0A0A0;color:#C0392B;font-weight:600' : 'background:#EEF7EE;border-color:#A9D3A9;color:#2E7D32';
+  el.innerHTML = `<button onclick="otworzZalegle()" id="zalegleChipBtn" style="padding:6px 12px;border:1px solid var(--line);border-radius:999px;cursor:pointer;font-family:inherit;font-size:13px;${kolor}">${n ? '⚠ Zaległe: ' + n : '✓ Frekwencja na bieżąco'}</button>`;
+}
+function otworzZalegle() { renderZalegle(); document.getElementById('zalegleModal').classList.add('active'); }
+function zamknijZalegle() { document.getElementById('zalegleModal').classList.remove('active'); }
+function renderZalegle() {
+  const lista = document.getElementById('zalegleLista');
+  const ust = document.getElementById('zalegleUstawienia');
+  const plany = zaleglePlany();
+  if (!plany.length) {
+    lista.innerHTML = '<div style="padding:14px;color:var(--ink-muted);font-size:13px;">Nie ma jeszcze planu. Wczytaj <code>plan-wf.json</code> niżej (Ustawienia).</div>';
+  } else {
+    const z = zaleglePolicz();
+    lista.innerHTML = z.length ? z.map(x =>
+      `<div class="zalegle-poz" style="display:flex;gap:10px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line-soft);font-size:13.5px;">` +
+      `<span style="min-width:90px;font-weight:600;">${zalegleData(x.date)}</span><span style="min-width:90px;">${escapeHtml(x.clsName)}</span>` +
+      `<button onclick="zalegleWpisz('${x.clsId}','${x.date}')" class="primary" style="padding:4px 10px;font-size:12.5px;">wpisz</button>` +
+      `<select id="zaleglePowod_${x.clsId}_${x.date}" style="padding:4px 6px;font-size:12.5px;font-family:inherit;border:1px solid var(--line);border-radius:5px;">${ZALEGLE_POWODY.map(p => `<option>${p}</option>`).join('')}</select>` +
+      `<button onclick="zalegleNieBylo('${x.clsId}','${x.date}')" style="padding:4px 10px;font-size:12.5px;">nie było</button></div>`).join('')
+      : '<div style="padding:14px;color:#2E7D32;font-size:13px;">Wszystkie lekcje z planu mają wpis. ✓</div>';
+  }
+  const klucze = zalegleKluczePlanu();
+  let h = plany.length ? '<div style="color:var(--ink-muted);margin-bottom:6px;">Plany: ' + plany.map(p => `${p.od} – ${p.do || '…'} (${Object.keys(p.klasy || {}).length} klas, ${(p.wolne || []).length} dni wolnych)`).join(' · ') + '</div>' : '';
+  h += '<table style="font-size:13px;border-collapse:collapse;"><tr><th style="text-align:left;padding:3px 8px;">klasa w dzienniku</th><th style="text-align:left;padding:3px 8px;">klasa w planie</th><th style="text-align:left;padding:3px 8px;">„nie było”</th></tr>';
+  state.classes.forEach(cls => {
+    const cur = zaleglePlanKlasa(cls);
+    const auto = cls.planKlasa === undefined;
+    h += `<tr><td style="padding:3px 8px;">${escapeHtml((cls.school ? cls.school + ' / ' : '') + cls.name)}</td><td style="padding:3px 8px;"><select onchange="zaleglePlanKlasaZmien('${cls.id}', this.value)" style="padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:5px;">` +
+      `<option value="">— nie licz —</option>` + klucze.map(k => `<option value="${escapeHtml(k)}" ${k === cur ? 'selected' : ''}>${escapeHtml(k)}</option>`).join('') + `</select>${auto && cur ? ' <span style="color:var(--ink-muted)">(auto)</span>' : ''}</td>` +
+      `<td style="padding:3px 8px;color:var(--ink-muted);">${Object.keys(cls.odwolane || {}).length ? Object.keys(cls.odwolane).sort().map(d => `${d.slice(5)} <button onclick="zalegleCofnijNieBylo('${cls.id}','${d}')" title="${escapeHtml(cls.odwolane[d])} — cofnij" style="padding:0 5px;font-size:11px;">×</button>`).join(' ') : '—'}</td></tr>`;
+  });
+  ust.innerHTML = h + '</table>';
+}
+function zalegleWpisz(clsId, date) {
+  activateClass(clsId);
+  uiSelectedSchool = getCurrentClass().school;
+  state.currentDate = date;
+  document.getElementById('lessonDate').value = date;
+  zamknijZalegle();
+  switchTab('obecnosc');
+  save();
+  refreshAll();
+  showToast('Lekcja ' + zalegleData(date) + ' · ' + getCurrentClass().name + ' — wpisz frekwencję i zapisz.', 'info');
+}
+function zalegleNieBylo(clsId, date) {
+  const cls = state.classes.find(c => c.id === clsId);
+  if (!cls) return;
+  const sel = document.getElementById('zaleglePowod_' + clsId + '_' + date);
+  cls.odwolane = cls.odwolane || {};
+  cls.odwolane[date] = sel ? sel.value : 'inne';
+  save();
+  renderZalegle();
+  renderZalegleChip();
+}
+function zalegleCofnijNieBylo(clsId, date) {
+  const cls = state.classes.find(c => c.id === clsId);
+  if (!cls || !cls.odwolane) return;
+  delete cls.odwolane[date];
+  save(); renderZalegle(); renderZalegleChip();
+}
+function zaleglePlanKlasaZmien(clsId, val) {
+  const cls = state.classes.find(c => c.id === clsId);
+  if (!cls) return;
+  cls.planKlasa = val;
+  save(); renderZalegle(); renderZalegleChip();
+}
+// Wczytanie planu: upsert po `od` (ten sam `od` = nowsza wersja tego samego planu).
+function zaleglePlanZastosuj(plan) {
+  if (!plan || typeof plan !== 'object' || !plan.od || !plan.klasy) throw new Error('To nie jest plan-wf.json (brak pól od/klasy).');
+  state.planWf = state.planWf || { plany: [] };
+  state.planWf.plany = state.planWf.plany.filter(p => p.od !== plan.od);
+  state.planWf.plany.push({ od: plan.od, do: plan.do || '', klasy: plan.klasy, wolne: plan.wolne || [], wygenerowano: plan.wygenerowano || '' });
+  state.planWf.plany.sort((a, b) => a.od < b.od ? -1 : 1);
+  save();
+}
+function zalegleWczytajPlik(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try { zaleglePlanZastosuj(JSON.parse(e.target.result)); }
+    catch (err) { showToast('Nie wczytano planu: ' + err.message, 'error'); return; }
+    showToast('Plan wczytany.', 'success');
+    renderZalegle(); renderZalegleChip();
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
 function refreshAll() {
   renderClassBar();
+  renderZalegleChip();
   renderAttendance();
   renderStudents();
   renderPomiary();
@@ -3103,6 +3278,7 @@ function importJSON(event) {
         if (Array.isArray(data.classes) && data.classes.length) {
           state.classes = data.classes;
           state.currentClassId = data.currentClassId || data.classes[0].id;
+          if (data.planWf) state.planWf = data.planWf;
         } else if (data.students) {
           migrateFlat(data);
         } else {
@@ -3271,6 +3447,7 @@ function importEncrypted(event) {
             if (Array.isArray(data.classes) && data.classes.length) {
               state.classes = data.classes;
               state.currentClassId = data.currentClassId || data.classes[0].id;
+              if (data.planWf) state.planWf = data.planWf;
             } else if (data.students) {
               migrateFlat(data);
             } else {
@@ -4320,6 +4497,7 @@ function zamekZastosujDane(data) {
   if (data && Array.isArray(data.classes) && data.classes.length) {
     state.classes = data.classes;
     state.currentClassId = data.currentClassId || data.classes[0].id;
+    if (data.planWf) state.planWf = data.planWf;
   } else if (data && data.students) {
     migrateFlat(data);            // nic nie ginie — stare dane → klasa "Bez przypisania"
   } else {
@@ -4600,6 +4778,7 @@ function zmienHaslo() {
 function startPoOdblokowaniu() {
   document.getElementById('lessonDate').value = state.currentDate;
   renderClassBar();
+  renderZalegleChip();
   renderAttendance();
   odswiezBanerMagazynu();
 }
