@@ -1,5 +1,5 @@
 # Test end-to-end „Zaległe lekcje”: plan-wf.json + kalendarium vs wpisy frekwencji.
-# Sprawdza: chip bez planu, wczytanie planu, dopasowanie klasy po nazwie, liczenie
+# Sprawdza (v2 od 2026-09-18: numery lekcji, siatka, dni wolne): chip bez planu, wczytanie planu, dopasowanie klasy po nazwie, liczenie
 # zaległości (dni tygodnia, dni wolne, dziś pominięte), „nie było” znika na stałe,
 # „wpisz” przełącza klasę i datę, plan przeżywa zapis/odczyt z magazynu.
 import sys
@@ -186,6 +186,121 @@ with sync_playwright() as pw:
             "prawdziwy plan: 8 klas",
             page.evaluate("() => zalegleKluczePlanu().length") == 8,
         )
+    # 10. plan v2 (numery lekcji): klasa „2 inf” → klucz „2t”, piątek L2+L3 (dwie godziny z rzędu)
+    page.evaluate("""() => {
+      const c = makeClass('', '2 inf', [{id: 'u1', name: 'Uczeń Testowy'}]); state.classes.push(c);
+      zaleglePlanKlasaZmien(c.id, '2t');
+      zaleglePlanZastosuj({od: '2026-09-01', klasy: {'2t': {'4': [2, 3]}}});
+      refreshAll();
+    }""")
+    cid2 = page.evaluate("() => state.classes[state.classes.length - 1].id")
+    z2 = lambda: page.evaluate(
+        "(d) => zaleglePolicz(d).filter(x => x.clsName === '2 inf').map(x => x.wpis)", DZIS
+    )
+    check(
+        "v2: 2 piątki × 2 lekcje = 4 zaległe z numerami",
+        z2() == ["2026-09-04#2", "2026-09-04#3", "2026-09-11#2", "2026-09-11#3"],
+        z2(),
+    )
+    page.evaluate(
+        "(id) => { const c = state.classes.find(x => x.id === id); c.attendance['2026-09-04'] = {u1: 'C'}; save(); refreshAll(); }",
+        cid2,
+    )
+    check(
+        "wpis pod samą datą pokrywa pierwszą lekcję dnia (zostaje L3)",
+        z2() == ["2026-09-04#3", "2026-09-11#2", "2026-09-11#3"],
+        z2(),
+    )
+    page.evaluate(
+        "(id) => { const c = state.classes.find(x => x.id === id); c.attendance['2026-09-04#3'] = {u1: 'NB'}; save(); refreshAll(); }",
+        cid2,
+    )
+    check("wpis 'data#3' pokrywa dokładnie L3", z2() == ["2026-09-11#2", "2026-09-11#3"], z2())
+    check(
+        "statystyki liczą obie lekcje 4.09 osobno",
+        page.evaluate(
+            "(id) => { activateClass(id); const s = getStudentStats('u1'); return [s.total, s.C, s.NB]; }",
+            cid2,
+        )
+        == [2, 1, 1],
+    )
+    page.click("#zalegleChipBtn")
+    page.wait_for_timeout(200)
+    page.select_option("#zaleglePowod_%s_2026-09-11_L2" % cid2, "zastępstwo / zmiana planu")
+    page.click("#zaleglePowod_%s_2026-09-11_L2 + button" % cid2)
+    page.wait_for_timeout(150)
+    check(
+        "'nie było' pod kluczem z numerem",
+        page.evaluate("(id) => state.classes.find(x => x.id === id).odwolane['2026-09-11#2']", cid2)
+        == "zastępstwo / zmiana planu",
+    )
+    check("zostaje 1 zaległa (11.09 L3)", z2() == ["2026-09-11#3"], z2())
+    page.screenshot(path=str(SHOTS / "zalegle_3_dwie_lekcje.png"))
+    page.click("#zalegleLista .zalegle-poz:has-text('2 inf') >> button.primary")
+    page.wait_for_timeout(200)
+    check(
+        "wpisz: data + numer lekcji",
+        page.evaluate("() => [state.currentDate, state.currentNr, attKey()]")
+        == ["2026-09-11", 3, "2026-09-11#3"],
+    )
+    check("selektor numeru lekcji = 3", page.input_value("#lessonNr") == "3")
+    check(
+        "podpowiedź przy dacie: L2 i L3 z planu",
+        "L2" in page.inner_text("#lessonNrHint") and "L3" in page.inner_text("#lessonNrHint"),
+        page.inner_text("#lessonNrHint"),
+    )
+    page.keyboard.press("c")  # klawiatura: status pod attKey()
+    page.wait_for_timeout(150)
+    check(
+        "klawiatura zapisuje pod 'data#3'",
+        page.evaluate("() => (state.attendance['2026-09-11#3'] || {}).u1") == "C",
+        page.evaluate("() => Object.keys(state.attendance)"),
+    )
+    check("po wpisie 0 zaległych dla '2 inf'", z2() == [], z2())
+    page.screenshot(path=str(SHOTS / "zalegle_4_obecnosc_L3.png"))
+
+    # 11. siatka w Ustawieniach: klik dnia → numery, klik numeru → plan
+    page.click("#zalegleChipBtn")
+    page.wait_for_timeout(200)
+    page.evaluate("() => { document.querySelector('#zalegleModal details').open = true; }")
+    page.wait_for_timeout(100)
+    n_kom = page.locator("#zalegleUstawienia .siatka-kom").count()
+    check("siatka: 5 komórek na klasę", n_kom == 5 * page.evaluate("() => state.classes.length"), n_kom)
+    page.click("#zalegleUstawienia .siatka-kom[data-cls='%s'][data-dzien='0']" % cid2)
+    page.wait_for_timeout(150)
+    check("klik komórki otwiera 12 numerów", page.locator("#zalegleUstawienia .siatka-nr").count() == 12)
+    page.click("#zalegleUstawienia .siatka-nr[data-nr='5']")
+    page.wait_for_timeout(150)
+    plan2t = lambda: page.evaluate("() => planAktywny(false).klasy['2t']")
+    check("klik numeru dopisuje Pn L5 do planu", plan2t() == {"0": [5], "4": [2, 3]}, plan2t())
+    check("nowa lekcja w siatce od razu liczy się w Zaległych (Pn 7.09)", "2026-09-07#5" in z2(), z2())
+    page.click("#zalegleUstawienia .siatka-nr[data-nr='5']")
+    page.wait_for_timeout(150)
+    check("drugi klik zdejmuje", plan2t() == {"4": [2, 3]}, plan2t())
+    page.screenshot(path=str(SHOTS / "zalegle_5_siatka.png"))
+
+    # 12. dni wolne: od–do + wklejenie tekstu
+    page.evaluate("() => wolneDodaj('2026-09-10', '2026-09-11')")
+    check(
+        "dni wolne od–do dodane",
+        page.evaluate("() => planAktywny(false).wolne.filter(x => x >= '2026-09-10' && x <= '2026-09-11')")
+        == ["2026-09-10", "2026-09-11"],
+    )
+    check("wolny piątek 11.09 nie liczy się", z2() == [], z2())
+    check(
+        "wklejone kalendarium: ISO, DD.MM.RRRR, zakres w linii",
+        page.evaluate("(t) => wolneZTekstu(t)", "23.12.2026 – 24.12.2026\nwolne 2027-01-06\nnic tu nie ma")
+        == ["2026-12-23", "2026-12-24", "2027-01-06"],
+    )
+    page.evaluate("() => wolneUsun('2026-09-10', '2026-09-11')")
+    check("cofnięcie wolnych: L3 ma wpis, L2 'nie było' → nadal 0", z2() == [], z2())
+
+    # 13. plan v1 obok v2 w tej samej strukturze: 7b (lista dni) dalej liczy per dzień
+    check(
+        "v1 nadal działa obok v2",
+        page.evaluate("(d) => zaleglePolicz(d).filter(x => x.clsName === '7 b').length", DZIS) > 0,
+    )
+
     check(
         "odrzuca zły plik",
         page.evaluate(

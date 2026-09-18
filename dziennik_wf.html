@@ -1002,6 +1002,9 @@
     <div class="date-row">
       <label>Data lekcji:</label>
       <input type="date" id="lessonDate" onchange="changeDate()">
+      <label for="lessonNr" title="Numer lekcji z planu. Puste = jedyna lekcja tego dnia (wpis pod samą datą). Dwie godziny z rzędu albo zastępstwo = osobny numer, osobny wpis.">lekcja:</label>
+      <select id="lessonNr" onchange="ustawNrLekcji(this.value)" style="padding:6px 8px;font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:6px;"><option value="">—</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option></select>
+      <span id="lessonNrHint" style="display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap;"></span>
       <button onclick="dateOffset(-1)">◀ poprz.</button>
       <button onclick="dateOffset(1)">nast. ▶</button>
       <button onclick="setToday()">dziś</button>
@@ -1500,19 +1503,19 @@
 
 <!-- Modal: zaległe lekcje (plan + kalendarium vs wpisy frekwencji) -->
 <div class="modal-bg" id="zalegleModal" onclick="if(event.target===this) zamknijZalegle()">
-  <div class="modal" style="max-width: 720px;">
+  <div class="modal" style="max-width: 900px;">
     <h3 style="margin-bottom: 6px;">Zaległe lekcje — brak wpisu frekwencji</h3>
     <p style="font-size: 13px; color: var(--ink-muted); margin: 0 0 12px 0;">
-      Dzień szkolny, w którym plan mówi „WF z tą klasą”, kalendarium nie mówi „wolne”, a w dzienniku nie ma wpisu pod tą datą.
-      Plan nie wie o wycieczkach, zawodach i zastępstwach — jeśli lekcji nie było, kliknij <b>nie było</b> i pozycja znika na stałe.
+      Lekcja z planu (dzień i numer), dzień nie jest wolny, a w dzienniku nie ma wpisu pod tą lekcją.
+      Dwie godziny z rzędu = dwie pozycje. Plan nie wie o wycieczkach, zawodach i zastępstwach — jeśli lekcji nie było, kliknij <b>nie było</b> i pozycja znika na stałe.
     </p>
     <div id="zalegleLista" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px;"></div>
     <details style="margin-top: 12px; font-size: 13px;">
-      <summary style="cursor:pointer;">Ustawienia: plan i dopasowanie klas</summary>
+      <summary style="cursor:pointer;">Ustawienia: siatka planu (klik), dni wolne, dopasowanie klas</summary>
       <div id="zalegleUstawienia" style="margin-top: 8px;"></div>
       <div style="margin-top: 10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
         <label style="padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--paper);cursor:pointer;">📂 Wczytaj plan (plan-wf.json)<input type="file" id="zaleglePlik" accept=".json,application/json" style="display:none" onchange="zalegleWczytajPlik(event)"></label>
-        <span style="color:var(--ink-muted)">Plik robi <code>py -3.14 zbuduj_plan_wf.py</code> w folderze planu (plan-roczny/plan-lekcji-RRRR-MM). Nowy plan = nowy plik, stare zostają.</span>
+        <span style="color:var(--ink-muted)">Dodatek, nie wymóg: plik z EduPage wypełnia siatkę (klasy z pliku nadpisują swoje wiersze, ręczne zostają, dni wolne się sumują). Robi go <code>py -3.14 zbuduj_plan_wf.py</code> w folderze planu (plan-roczny/plan-lekcji-RRRR-MM).</span>
       </div>
     </details>
     <div class="modal-actions" style="margin-top: 14px;">
@@ -1566,10 +1569,13 @@ const STATUS_INFO = {
 let state = {
   classes: [],          // [{ id, school, name, students, attendance, measurements, gradeColumns, grades }]
   currentClassId: null,
-  // planWf: { plany: [{od, do, klasy: {nazwa: [dniTyg 0=Pn]}, wolne: [daty]}] } — wsad z zbuduj_plan_wf.py
+  // planWf: { plany: [{od, do, klasy: {nazwa: {dzien0=Pn: [nrLekcji]}}, wolne: [daty], zrodlo}] }
+  // — siatka z Ustawień (klik) i/lub plik z zbuduj_plan_wf.py; v1 (nazwa: [dni]) czyta się dalej
   planWf: null,
   students: [],
-  // attendance: { 'YYYY-MM-DD': { studentId: 'C' | 'NC' | 'BS' | 'ZW' | 'NB' } }
+  // attendance: { klucz: { studentId: 'C' | 'NC' | 'BS' | 'ZW' | 'NB' } }
+  // klucz = 'YYYY-MM-DD' (jedyna/pierwsza lekcja dnia) albo 'YYYY-MM-DD#nr' (lekcja nr z planu:
+  // druga godzina z rzędu, zastępstwo). Stare wpisy bez sufiksu czytają się bez migracji.
   attendance: {},
   // measurements: { studentId: { jump, shuttle, beep, plank } }
   measurements: {},
@@ -1578,6 +1584,7 @@ let state = {
   // grades: { columnId: { studentId: value (0-100) } }
   grades: {},
   currentDate: new Date().toISOString().slice(0, 10),
+  currentNr: null,      // numer lekcji z planu (0-11) albo null = wpis pod samą datą
   pickerStudentId: null,
   pickerLate: false,
   // edycja oceny - tymczasowe
@@ -1828,14 +1835,18 @@ function distinctSchools() {
 }
 
 // =====================================================
-// ZALEGŁE LEKCJE — plan (EduPage) + kalendarium (ICS) vs wpisy frekwencji
+// ZALEGŁE LEKCJE — plan (siatka w Ustawieniach / EduPage) + dni wolne vs wpisy frekwencji
 // =====================================================
-// Zaległość = dzień < dziś, plan ma WF z klasą w tym dniu tygodnia, dzień nie
-// jest wolny, klasa nie ma cls.attendance[data] ani cls.odwolane[data].
-// Plan nie zna wycieczek/zawodów/zastępstw → „nie było” (cls.odwolane) to
-// jedyna siatka na fałszywe alarmy; bez niej chip stałby się szumem.
+// Plan v2: klasy[nazwa] = { '0': [nr, ...], '1': [...] } — dzień tygodnia (0 = Pn) → numery
+// lekcji. Plan v1 (lista dni) czyta się jako numery nieznane (null): siatka pokazuje „?”,
+// zaległość liczy się per dzień. Zaległość = dzień < dziś, plan ma lekcję (data, nr), dzień nie
+// jest wolny, klasa nie ma wpisu ani „nie było” pod tą lekcją. Wpis pod samą datą pokrywa
+// pierwszą lekcję dnia bez wpisu z numerem; wpis 'data#nr' pokrywa dokładnie tę lekcję.
+// Plan nie zna wycieczek/zawodów/zastępstw → „nie było” (cls.odwolane) to jedyna siatka na
+// fałszywe alarmy; bez niej chip stałby się szumem.
 const ZALEGLE_DNI = ['Pn', 'Wt', 'Śr', 'Czw', 'Pi', 'So', 'Nd'];
 const ZALEGLE_POWODY = ['wycieczka', 'zawody', 'zastępstwo / zmiana planu', 'odwołana', 'inne'];
+const SIATKA_NR = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 
 function zalegleNorm(s) { return String(s || '').toLowerCase().replace(/[\s.\-_()]/g, ''); }
 function zaleglePlany() { return (state.planWf && Array.isArray(state.planWf.plany)) ? state.planWf.plany : []; }
@@ -1853,6 +1864,43 @@ function zaleglePlanKlasa(cls) {
   return klucze.find(k => zalegleNorm(k) === n) || klucze.find(k => n.startsWith(zalegleNorm(k))) || '';
 }
 function zalegleDzienTyg(iso) { return (new Date(iso + 'T12:00:00').getDay() + 6) % 7; } // 0 = Pn
+// Siatka jednej klasy w jednym planie: { dzien: [nr | null, ...] } — v1 i v2 do jednej postaci.
+function planSiatka(p, klucz) {
+  const v = (p && p.klasy || {})[klucz];
+  const out = {};
+  if (Array.isArray(v)) v.forEach(d => { out[d] = [null]; });
+  else if (v && typeof v === 'object') Object.keys(v).forEach(d => {
+    const a = Array.isArray(v[d]) ? v[d].filter(x => x === null || Number.isInteger(x)) : [];
+    if (a.length) out[d] = a.sort((x, y) => (x === null) - (y === null) || x - y);
+  });
+  return out;
+}
+function planObejmuje(p, iso) { return p.od <= iso && (!p.do || iso <= p.do); }
+// Lekcje z planu dla klasy w danym dniu: [nr | null, ...] (puste = brak WF / dzień wolny).
+function zalegleLekcjeDnia(cls, iso) {
+  const klucz = zaleglePlanKlasa(cls);
+  if (!klucz) return [];
+  const out = [];
+  zaleglePlany().forEach(p => {
+    if (!planObejmuje(p, iso) || (p.wolne || []).includes(iso)) return;
+    (planSiatka(p, klucz)[zalegleDzienTyg(iso)] || []).forEach(n => out.push(n));
+  });
+  return out;
+}
+// Które z planowanych lekcji dnia (nrs) nie mają wpisu ani „nie było”.
+function zalegleBrakujace(cls, iso, nrs) {
+  const klucze = Object.keys(cls.attendance || {}).concat(Object.keys(cls.odwolane || {})).filter(k => kluczData(k) === iso);
+  const zNr = new Set(klucze.map(kluczNr).filter(n => n !== null));
+  let plain = klucze.some(k => kluczNr(k) === null);
+  const brak = [];
+  nrs.forEach(n => {
+    if (n === null) { if (!klucze.length) brak.push(null); return; }
+    if (zNr.has(n)) return;
+    if (plain) { plain = false; return; }
+    brak.push(n);
+  });
+  return brak;
+}
 function zaleglePolicz(dzis) {
   dzis = dzis || new Date().toISOString().slice(0, 10);
   const out = [];
@@ -1860,28 +1908,29 @@ function zaleglePolicz(dzis) {
     const klucz = zaleglePlanKlasa(cls);
     if (!klucz) return;
     zaleglePlany().forEach(p => {
-      const dni = (p.klasy || {})[klucz];
-      if (!dni || !dni.length) return;
+      const siatka = planSiatka(p, klucz);
+      if (!Object.keys(siatka).length) return;
       const wolne = new Set(p.wolne || []);
       const ostatni = (p.do && p.do < dzis) ? p.do : null;   // plan wygasły liczy do końca ważności
       for (let d = new Date(p.od + 'T12:00:00'); ; d.setDate(d.getDate() + 1)) {
         const iso = d.toISOString().slice(0, 10);
         if (ostatni ? iso > ostatni : iso >= dzis) break;   // dziś nie liczymy — trwająca praca
-        if (!dni.includes(zalegleDzienTyg(iso)) || wolne.has(iso)) continue;
-        if (cls.attendance[iso] || (cls.odwolane && cls.odwolane[iso])) continue;
-        out.push({ clsId: cls.id, clsName: cls.name, klucz, date: iso });
+        const nrs = siatka[zalegleDzienTyg(iso)];
+        if (!nrs || wolne.has(iso)) continue;
+        zalegleBrakujace(cls, iso, nrs).forEach(nr => out.push({ clsId: cls.id, clsName: cls.name, klucz, date: iso, nr, wpis: kluczZ(iso, nr) }));
       }
     });
   });
-  out.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.clsName.localeCompare(b.clsName));
+  out.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.clsName.localeCompare(b.clsName) || (a.nr || 0) - (b.nr || 0));
   return out;
 }
 function zalegleData(iso) { return ZALEGLE_DNI[zalegleDzienTyg(iso)] + ' ' + iso.slice(8, 10) + '.' + iso.slice(5, 7); }
+function zalegleIdKlucza(k) { return String(k).replace('#', '_L'); }   // '#' psuje selektory CSS w id
 function renderZalegleChip() {
   const el = document.getElementById('zalegleChip');
   if (!el) return;
   if (!zaleglePlany().length) {
-    el.innerHTML = '<button id="zalegleChipBtn" onclick="otworzZalegle()" title="Wczytaj plan lekcji, a dziennik pokaże lekcje bez wpisu" style="padding:6px 12px;border:1px dashed var(--line);border-radius:999px;background:var(--paper);cursor:pointer;font-family:inherit;font-size:13px;color:var(--ink-muted)">Zaległe: brak planu</button>';
+    el.innerHTML = '<button id="zalegleChipBtn" onclick="otworzZalegle()" title="Wpisz plan w Ustawieniach (siatka) albo wczytaj plan-wf.json, a dziennik pokaże lekcje bez wpisu" style="padding:6px 12px;border:1px dashed var(--line);border-radius:999px;background:var(--paper);cursor:pointer;font-family:inherit;font-size:13px;color:var(--ink-muted)">Zaległe: brak planu</button>';
     return;
   }
   const n = zaleglePolicz().length;
@@ -1890,73 +1939,220 @@ function renderZalegleChip() {
 }
 function otworzZalegle() { renderZalegle(); document.getElementById('zalegleModal').classList.add('active'); }
 function zamknijZalegle() { document.getElementById('zalegleModal').classList.remove('active'); }
+
+// ---------- plan aktywny (ten, który edytuje siatka) ----------
+function rokSzkolnyStart(iso) { const y = +iso.slice(0, 4); return (iso.slice(5, 7) >= '09' ? y : y - 1) + '-09-01'; }
+function planAktywny(utworz) {
+  const dzis = new Date().toISOString().slice(0, 10);
+  const plany = zaleglePlany();
+  let p = plany.filter(x => x.od <= dzis).pop() || plany[0] || null;
+  if (!p && utworz) {
+    state.planWf = state.planWf || { plany: [] };
+    p = { od: rokSzkolnyStart(dzis), do: '', klasy: {}, wolne: [], wygenerowano: '', zrodlo: 'ręcznie' };
+    state.planWf.plany.push(p);
+  }
+  return p;
+}
+function planDatyZmien(pole, val) {
+  const p = planAktywny(true);
+  if (pole === 'od' && !/^\d{4}-\d{2}-\d{2}$/.test(val)) return;
+  p[pole] = val || '';
+  state.planWf.plany.sort((a, b) => a.od < b.od ? -1 : 1);
+  save(); renderZalegle(); renderZalegleChip(); renderLessonNr();
+}
+// Klasa dziennika bez klucza w planie dostaje klucz = własna nazwa (siatka ręczna).
+function siatkaKluczKlasy(cls) {
+  let k = zaleglePlanKlasa(cls);
+  if (!k) { k = cls.name || cls.id; cls.planKlasa = k; }
+  return k;
+}
+let siatkaOtwarta = null;   // { clsId, dzien } — otwarty wybór numerów lekcji
+function siatkaOtworz(clsId, dzien) {
+  siatkaOtwarta = (siatkaOtwarta && siatkaOtwarta.clsId === clsId && siatkaOtwarta.dzien === dzien) ? null : { clsId, dzien };
+  renderZalegle();
+}
+function siatkaPrzelacz(clsId, dzien, nr) {
+  const cls = state.classes.find(c => c.id === clsId);
+  if (!cls) return;
+  const p = planAktywny(true);
+  const klucz = siatkaKluczKlasy(cls);
+  const s = planSiatka(p, klucz);
+  const a = (s[dzien] || []).filter(n => n !== null);   // klik numeru zastępuje „?” z planu v1
+  const i = a.indexOf(nr);
+  if (i < 0) a.push(nr); else a.splice(i, 1);
+  a.sort((x, y) => x - y);
+  if (a.length) s[dzien] = a; else delete s[dzien];
+  p.klasy = p.klasy || {};
+  p.klasy[klucz] = s;
+  save(); renderZalegle(); renderZalegleChip(); renderLessonNr();
+}
+// ---------- dni wolne ----------
+function wolneZakresy(list) {
+  const d = Array.from(new Set(list || [])).sort();
+  const out = [];
+  d.forEach(x => {
+    const last = out[out.length - 1];
+    if (last && nastepnyDzien(last.do) === x) last.do = x; else out.push({ od: x, do: x });
+  });
+  return out;
+}
+function nastepnyDzien(iso) { const t = new Date(iso + 'T12:00:00'); t.setDate(t.getDate() + 1); return t.toISOString().slice(0, 10); }
+function wolneDaty(od, do_) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(od)) return [];
+  if (!do_ || do_ < od) do_ = od;
+  const out = [];
+  for (let x = od; x <= do_ && out.length < 400; x = nastepnyDzien(x)) out.push(x);
+  return out;
+}
+function wolneDodaj(od, do_) {
+  const daty = wolneDaty(od, do_);
+  if (!daty.length) { showToast('Podaj datę „od” (RRRR-MM-DD).', 'warn'); return; }
+  const p = planAktywny(true);
+  p.wolne = Array.from(new Set((p.wolne || []).concat(daty))).sort();
+  save(); renderZalegle(); renderZalegleChip(); renderLessonNr();
+}
+function wolneUsun(od, do_) {
+  const p = planAktywny(false);
+  if (!p) return;
+  const zbior = new Set(wolneDaty(od, do_));
+  p.wolne = (p.wolne || []).filter(x => !zbior.has(x));
+  save(); renderZalegle(); renderZalegleChip(); renderLessonNr();
+}
+// Wklejone kalendarium / lista dat: łapie RRRR-MM-DD i DD.MM.RRRR, zakresy „od – do” w jednej linii.
+function wolneZTekstu(text) {
+  const out = [];
+  String(text || '').split(/\r?\n/).forEach(line => {
+    const daty = [];
+    const re = /(\d{4})-(\d{2})-(\d{2})|(\d{1,2})\.(\d{1,2})\.(\d{4})/g;
+    let m;
+    while ((m = re.exec(line))) daty.push(m[1] ? `${m[1]}-${m[2]}-${m[3]}` : `${m[6]}-${m[5].padStart(2, '0')}-${m[4].padStart(2, '0')}`);
+    if (daty.length >= 2 && /[-–—]|do\b/.test(line.replace(re, ''))) wolneDaty(daty[0], daty[1]).forEach(x => out.push(x));
+    else daty.forEach(x => out.push(x));
+  });
+  return Array.from(new Set(out)).sort();
+}
+function wolneWklej() {
+  const ta = document.getElementById('wolneTekst');
+  const daty = wolneZTekstu(ta ? ta.value : '');
+  if (!daty.length) { showToast('Nie znalazłem żadnej daty w tekście.', 'warn'); return; }
+  const p = planAktywny(true);
+  p.wolne = Array.from(new Set((p.wolne || []).concat(daty))).sort();
+  if (ta) ta.value = '';
+  save(); renderZalegle(); renderZalegleChip(); renderLessonNr();
+  showToast('Dodano ' + daty.length + ' dni wolnych.', 'success');
+}
+
 function renderZalegle() {
   const lista = document.getElementById('zalegleLista');
   const ust = document.getElementById('zalegleUstawienia');
   const plany = zaleglePlany();
   if (!plany.length) {
-    lista.innerHTML = '<div style="padding:14px;color:var(--ink-muted);font-size:13px;">Nie ma jeszcze planu. Wczytaj <code>plan-wf.json</code> niżej (Ustawienia).</div>';
+    lista.innerHTML = '<div style="padding:14px;color:var(--ink-muted);font-size:13px;">Nie ma jeszcze planu. Kliknij dni i numery lekcji w siatce niżej (Ustawienia) albo wczytaj <code>plan-wf.json</code>.</div>';
   } else {
     const z = zaleglePolicz();
     lista.innerHTML = z.length ? z.map(x =>
       `<div class="zalegle-poz" style="display:flex;gap:10px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line-soft);font-size:13.5px;">` +
-      `<span style="min-width:90px;font-weight:600;">${zalegleData(x.date)}</span><span style="min-width:90px;">${escapeHtml(x.clsName)}</span>` +
-      `<button onclick="zalegleWpisz('${x.clsId}','${x.date}')" class="primary" style="padding:4px 10px;font-size:12.5px;">wpisz</button>` +
-      `<select id="zaleglePowod_${x.clsId}_${x.date}" style="padding:4px 6px;font-size:12.5px;font-family:inherit;border:1px solid var(--line);border-radius:5px;">${ZALEGLE_POWODY.map(p => `<option>${p}</option>`).join('')}</select>` +
-      `<button onclick="zalegleNieBylo('${x.clsId}','${x.date}')" style="padding:4px 10px;font-size:12.5px;">nie było</button></div>`).join('')
+      `<span style="min-width:110px;font-weight:600;">${zalegleData(x.date)}${x.nr === null ? '' : ' <span style="font-weight:400;color:var(--ink-muted)">L' + x.nr + '</span>'}</span><span style="min-width:90px;">${escapeHtml(x.clsName)}</span>` +
+      `<button onclick="zalegleWpisz('${x.clsId}','${x.wpis}')" class="primary" style="padding:4px 10px;font-size:12.5px;">wpisz</button>` +
+      `<select id="zaleglePowod_${x.clsId}_${zalegleIdKlucza(x.wpis)}" style="padding:4px 6px;font-size:12.5px;font-family:inherit;border:1px solid var(--line);border-radius:5px;">${ZALEGLE_POWODY.map(p => `<option>${p}</option>`).join('')}</select>` +
+      `<button onclick="zalegleNieBylo('${x.clsId}','${x.wpis}')" style="padding:4px 10px;font-size:12.5px;">nie było</button></div>`).join('')
       : '<div style="padding:14px;color:#2E7D32;font-size:13px;">Wszystkie lekcje z planu mają wpis. ✓</div>';
   }
+  const p = planAktywny(false);
   const klucze = zalegleKluczePlanu();
-  let h = plany.length ? '<div style="color:var(--ink-muted);margin-bottom:6px;">Plany: ' + plany.map(p => `${p.od} – ${p.do || '…'} (${Object.keys(p.klasy || {}).length} klas, ${(p.wolne || []).length} dni wolnych)`).join(' · ') + '</div>' : '';
-  h += '<table style="font-size:13px;border-collapse:collapse;"><tr><th style="text-align:left;padding:3px 8px;">klasa w dzienniku</th><th style="text-align:left;padding:3px 8px;">klasa w planie</th><th style="text-align:left;padding:3px 8px;">„nie było”</th></tr>';
+  const td = 'padding:3px 6px;vertical-align:top;';
+  let h = '';
+  // --- plan aktywny: daty ważności + źródło
+  h += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">' +
+    `<b>Plan</b> od <input type="date" value="${p ? p.od : ''}" onchange="planDatyZmien('od', this.value)" style="padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:5px;">` +
+    ` do <input type="date" value="${p ? p.do || '' : ''}" onchange="planDatyZmien('do', this.value)" style="padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:5px;">` +
+    `<span style="color:var(--ink-muted)">${p ? (p.zrodlo || (p.wygenerowano ? 'plik z ' + p.wygenerowano : 'ręcznie')) : 'jeszcze nie ma — klik w siatce go założy (od 1 września)'}</span>` +
+    (plany.length > 1 ? `<span style="color:var(--ink-muted)">· wszystkie plany: ${plany.map(x => `${x.od} – ${x.do || '…'}`).join(', ')}</span>` : '') + '</div>';
+  // --- siatka: klasa × dzień → numery lekcji (klik komórki = wybór numerów)
+  h += '<table style="font-size:13px;border-collapse:collapse;"><tr><th style="text-align:left;' + td + '">klasa</th>' +
+    ZALEGLE_DNI.slice(0, 5).map(d => `<th style="${td}">${d}</th>`).join('') +
+    '<th style="text-align:left;' + td + '">klasa w planie</th><th style="text-align:left;' + td + '">„nie było”</th></tr>';
   state.classes.forEach(cls => {
     const cur = zaleglePlanKlasa(cls);
     const auto = cls.planKlasa === undefined;
-    h += `<tr><td style="padding:3px 8px;">${escapeHtml((cls.school ? cls.school + ' / ' : '') + cls.name)}</td><td style="padding:3px 8px;"><select onchange="zaleglePlanKlasaZmien('${cls.id}', this.value)" style="padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:5px;">` +
+    const s = p ? planSiatka(p, cur) : {};
+    h += `<tr><td style="${td}">${escapeHtml((cls.school ? cls.school + ' / ' : '') + cls.name)}</td>`;
+    for (let d = 0; d < 5; d++) {
+      const nrs = s[d] || [];
+      const otw = siatkaOtwarta && siatkaOtwarta.clsId === cls.id && siatkaOtwarta.dzien === d;
+      h += `<td style="${td}text-align:center;"><button type="button" class="siatka-kom" data-cls="${cls.id}" data-dzien="${d}" onclick="siatkaOtworz('${cls.id}',${d})" title="kliknij: numery lekcji w ${ZALEGLE_DNI[d]}" style="min-width:44px;padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid ${otw ? 'var(--ink)' : 'var(--line)'};border-radius:5px;background:${nrs.length ? '#EEF3FA' : 'var(--paper)'};cursor:pointer;">${nrs.length ? nrs.map(n => n === null ? '?' : n).join(' ') : '·'}</button></td>`;
+    }
+    h += `<td style="${td}"><select onchange="zaleglePlanKlasaZmien('${cls.id}', this.value)" style="padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:5px;">` +
       `<option value="">— nie licz —</option>` + klucze.map(k => `<option value="${escapeHtml(k)}" ${k === cur ? 'selected' : ''}>${escapeHtml(k)}</option>`).join('') + `</select>${auto && cur ? ' <span style="color:var(--ink-muted)">(auto)</span>' : ''}</td>` +
-      `<td style="padding:3px 8px;color:var(--ink-muted);">${Object.keys(cls.odwolane || {}).length ? Object.keys(cls.odwolane).sort().map(d => `${d.slice(5)} <button onclick="zalegleCofnijNieBylo('${cls.id}','${d}')" title="${escapeHtml(cls.odwolane[d])} — cofnij" style="padding:0 5px;font-size:11px;">×</button>`).join(' ') : '—'}</td></tr>`;
+      `<td style="${td}color:var(--ink-muted);">${Object.keys(cls.odwolane || {}).length ? Object.keys(cls.odwolane).sort().map(k => `${k.slice(5).replace('#', ' L')} <button onclick="zalegleCofnijNieBylo('${cls.id}','${k}')" title="${escapeHtml(cls.odwolane[k])} — cofnij" style="padding:0 5px;font-size:11px;">×</button>`).join(' ') : '—'}</td></tr>`;
+    if (siatkaOtwarta && siatkaOtwarta.clsId === cls.id) {
+      const d = siatkaOtwarta.dzien;
+      const nrs = (s[d] || []).filter(n => n !== null);
+      h += `<tr><td colspan="8" style="${td}background:#F6F8FB;"><span style="color:var(--ink-muted);margin-right:6px;">${escapeHtml(cls.name)} · ${ZALEGLE_DNI[d]} · numery lekcji:</span>` +
+        SIATKA_NR.map(n => `<button type="button" class="siatka-nr" data-nr="${n}" onclick="siatkaPrzelacz('${cls.id}',${d},${n})" style="width:30px;padding:3px 0;margin:1px;font-family:inherit;font-size:12.5px;border-radius:5px;cursor:pointer;border:1px solid ${nrs.includes(n) ? 'var(--ink)' : 'var(--line)'};background:${nrs.includes(n) ? 'var(--ink)' : 'var(--paper)'};color:${nrs.includes(n) ? 'var(--paper)' : 'var(--ink)'};">${n}</button>`).join('') +
+        `</td></tr>`;
+    }
   });
-  ust.innerHTML = h + '</table>';
+  h += '</table>';
+  // --- dni wolne
+  const zakresy = wolneZakresy(p ? p.wolne : []);
+  h += '<div style="margin-top:10px;"><b>Dni wolne</b> <span style="color:var(--ink-muted)">(' + (p ? (p.wolne || []).length : 0) + ')</span>: ' +
+    (zakresy.length ? zakresy.map(z => `<span style="display:inline-block;margin:1px 2px;padding:1px 6px;border:1px solid var(--line);border-radius:999px;background:var(--paper);">${z.od === z.do ? z.od.slice(5) : z.od.slice(5) + ' – ' + z.do.slice(5)} <button onclick="wolneUsun('${z.od}','${z.do}')" title="usuń" style="padding:0 4px;font-size:11px;">×</button></span>`).join('') : '<span style="color:var(--ink-muted)">—</span>') + '</div>';
+  h += '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px;">od <input type="date" id="wolneOd" style="padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:5px;"> do <input type="date" id="wolneDo" style="padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:5px;"> ' +
+    '<button onclick="wolneDodaj(document.getElementById(\'wolneOd\').value, document.getElementById(\'wolneDo\').value)" style="padding:3px 10px;font-size:12.5px;">dodaj</button>' +
+    '<textarea id="wolneTekst" rows="1" placeholder="albo wklej daty z kalendarium (RRRR-MM-DD lub DD.MM.RRRR, „od – do” w linii)" style="flex:1;min-width:220px;padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:5px;"></textarea>' +
+    '<button onclick="wolneWklej()" style="padding:3px 10px;font-size:12.5px;">wklej</button></div>';
+  ust.innerHTML = h;
 }
-function zalegleWpisz(clsId, date) {
+function zalegleWpisz(clsId, klucz) {
   activateClass(clsId);
   uiSelectedSchool = getCurrentClass().school;
-  state.currentDate = date;
-  document.getElementById('lessonDate').value = date;
+  state.currentDate = kluczData(klucz);
+  state.currentNr = kluczNr(klucz);
+  document.getElementById('lessonDate').value = state.currentDate;
   zamknijZalegle();
   switchTab('obecnosc');
   save();
   refreshAll();
-  showToast('Lekcja ' + zalegleData(date) + ' · ' + getCurrentClass().name + ' — wpisz frekwencję i zapisz.', 'info');
+  showToast('Lekcja ' + zalegleData(state.currentDate) + (state.currentNr === null ? '' : ' L' + state.currentNr) + ' · ' + getCurrentClass().name + ' — wpisz frekwencję i zapisz.', 'info');
 }
-function zalegleNieBylo(clsId, date) {
+function zalegleNieBylo(clsId, klucz) {
   const cls = state.classes.find(c => c.id === clsId);
   if (!cls) return;
-  const sel = document.getElementById('zaleglePowod_' + clsId + '_' + date);
+  const sel = document.getElementById('zaleglePowod_' + clsId + '_' + zalegleIdKlucza(klucz));
   cls.odwolane = cls.odwolane || {};
-  cls.odwolane[date] = sel ? sel.value : 'inne';
+  cls.odwolane[klucz] = sel ? sel.value : 'inne';
   save();
   renderZalegle();
   renderZalegleChip();
 }
-function zalegleCofnijNieBylo(clsId, date) {
+function zalegleCofnijNieBylo(clsId, klucz) {
   const cls = state.classes.find(c => c.id === clsId);
   if (!cls || !cls.odwolane) return;
-  delete cls.odwolane[date];
+  delete cls.odwolane[klucz];
   save(); renderZalegle(); renderZalegleChip();
 }
 function zaleglePlanKlasaZmien(clsId, val) {
   const cls = state.classes.find(c => c.id === clsId);
   if (!cls) return;
   cls.planKlasa = val;
-  save(); renderZalegle(); renderZalegleChip();
+  save(); renderZalegle(); renderZalegleChip(); renderLessonNr();
 }
-// Wczytanie planu: upsert po `od` (ten sam `od` = nowsza wersja tego samego planu).
+// Wczytanie pliku: plan o tym samym `od` = dokładka do siatki (klasy z pliku nadpisują swoje
+// klucze, ręcznie wpisane inne klasy zostają, dni wolne = suma). Inny `od` = nowy plan obok.
 function zaleglePlanZastosuj(plan) {
   if (!plan || typeof plan !== 'object' || !plan.od || !plan.klasy) throw new Error('To nie jest plan-wf.json (brak pól od/klasy).');
   state.planWf = state.planWf || { plany: [] };
-  state.planWf.plany = state.planWf.plany.filter(p => p.od !== plan.od);
-  state.planWf.plany.push({ od: plan.od, do: plan.do || '', klasy: plan.klasy, wolne: plan.wolne || [], wygenerowano: plan.wygenerowano || '' });
+  const stary = state.planWf.plany.find(p => p.od === plan.od);
+  if (stary) {
+    stary.klasy = Object.assign({}, stary.klasy || {}, plan.klasy);
+    stary.wolne = Array.from(new Set((stary.wolne || []).concat(plan.wolne || []))).sort();
+    if (plan.do) stary.do = plan.do;
+    stary.wygenerowano = plan.wygenerowano || stary.wygenerowano || '';
+    stary.zrodlo = plan.zrodlo || stary.zrodlo || '';
+  } else {
+    state.planWf.plany.push({ od: plan.od, do: plan.do || '', klasy: plan.klasy, wolne: plan.wolne || [], wygenerowano: plan.wygenerowano || '', zrodlo: plan.zrodlo || '' });
+  }
   state.planWf.plany.sort((a, b) => a.od < b.od ? -1 : 1);
   save();
 }
@@ -1968,7 +2164,7 @@ function zalegleWczytajPlik(event) {
     try { zaleglePlanZastosuj(JSON.parse(e.target.result)); }
     catch (err) { showToast('Nie wczytano planu: ' + err.message, 'error'); return; }
     showToast('Plan wczytany.', 'success');
-    renderZalegle(); renderZalegleChip();
+    renderZalegle(); renderZalegleChip(); renderLessonNr();
   };
   reader.readAsText(file);
   event.target.value = '';
@@ -2153,31 +2349,70 @@ function switchTab(name) {
 }
 
 // =====================================================
-// DATA LEKCJI
+// DATA LEKCJI + NUMER LEKCJI (klucz wpisu)
 // =====================================================
+// Klucz wpisu: sama data = jedyna/pierwsza lekcja dnia (stare wpisy, zero migracji);
+// 'data#nr' = lekcja o numerze z planu (dwie godziny z rzędu, zastępstwo). Wszystko, co
+// porównuje daty (półrocze, zwolnienia OD-DO, zakres karty), patrzy na kluczData(klucz).
+function kluczData(k) { return String(k || '').split('#')[0]; }
+function kluczNr(k) { const s = String(k || ''); const i = s.indexOf('#'); return i < 0 ? null : parseInt(s.slice(i + 1), 10); }
+function kluczZ(iso, nr) { return iso + (nr === null || nr === undefined ? '' : '#' + nr); }
+function attKey() { return kluczZ(state.currentDate, state.currentNr); }
+function kluczEtykieta(k) { const nr = kluczNr(k); return kluczData(k) + (nr === null ? '' : ' · lekcja ' + nr); }
+function ustawNrLekcji(v) {
+  state.currentNr = (v === '' || v === null || v === undefined) ? null : parseInt(v, 10);
+  renderAttendance();
+}
+// Podpowiedź przy dacie: numery lekcji z planu na ten dzień + wpisy, które już są.
+function renderLessonNr() {
+  const sel = document.getElementById('lessonNr');
+  if (!sel) return;
+  sel.value = state.currentNr === null ? '' : String(state.currentNr);
+  const hint = document.getElementById('lessonNrHint');
+  if (!hint) return;
+  const cls = getCurrentClass();
+  const d = state.currentDate;
+  const plan = cls ? zalegleLekcjeDnia(cls, d).filter(n => n !== null) : [];
+  const wpisy = Object.keys(state.attendance).filter(k => kluczData(k) === d).map(kluczNr);
+  const nrs = Array.from(new Set(plan.concat(wpisy.filter(n => n !== null)))).sort((a, b) => a - b);
+  const maPlain = wpisy.some(n => n === null);
+  if (!nrs.length && !maPlain) { hint.innerHTML = ''; return; }
+  const chip = (nr, label, tytul) => {
+    const akt = nr === state.currentNr;
+    const jest = wpisy.some(n => n === nr);
+    return `<button type="button" onclick="ustawNrLekcji(${nr === null ? "''" : nr})" title="${tytul}" style="padding:2px 8px;font-size:12px;border-radius:999px;border:1px solid ${akt ? 'var(--ink)' : 'var(--line)'};background:${akt ? 'var(--ink)' : 'var(--paper)'};color:${akt ? 'var(--paper)' : 'var(--ink)'};cursor:pointer;font-family:inherit;">${label}${jest ? ' ✓' : ''}</button>`;
+  };
+  let h = '';
+  if (maPlain || nrs.length) h += chip(null, 'bez nr', 'wpis pod samą datą');
+  nrs.forEach(nr => { h += chip(nr, 'L' + nr, plan.includes(nr) ? 'lekcja ' + nr + ' z planu' : 'wpis pod lekcją ' + nr); });
+  hint.innerHTML = '<span style="color:var(--ink-muted);font-size:12px;">plan: </span>' + h;
+}
 function changeDate() {
   state.currentDate = document.getElementById('lessonDate').value;
+  state.currentNr = null;
   renderAttendance();
 }
 function dateOffset(days) {
   const d = new Date(state.currentDate);
   d.setDate(d.getDate() + days);
   state.currentDate = d.toISOString().slice(0, 10);
+  state.currentNr = null;
   document.getElementById('lessonDate').value = state.currentDate;
   renderAttendance();
 }
 function setToday() {
   state.currentDate = new Date().toISOString().slice(0, 10);
+  state.currentNr = null;
   document.getElementById('lessonDate').value = state.currentDate;
   renderAttendance();
 }
 function deleteLesson() {
-  if (!state.attendance[state.currentDate]) return;
-  showConfirm('Usuń lekcję', 'Usunąć wszystkie wpisy obecności z dnia ' + state.currentDate + '?', () => {
-    delete state.attendance[state.currentDate];
+  if (!state.attendance[attKey()]) return;
+  showConfirm('Usuń lekcję', 'Usunąć wszystkie wpisy obecności z lekcji ' + kluczEtykieta(attKey()) + '?', () => {
+    delete state.attendance[attKey()];
     save();
     renderAttendance();
-    showToast('Usunięto lekcję ' + state.currentDate, 'info');
+    showToast('Usunięto lekcję ' + kluczEtykieta(attKey()), 'info');
   });
 }
 
@@ -2213,7 +2448,7 @@ function removeRelease(id, idx) {
 
 function finalizeLesson() {
   // Liczę kto już ma status, kto jeszcze nie, ilu jest aktywnych
-  const day = state.attendance[state.currentDate] || {};
+  const day = state.attendance[attKey()] || {};
   const activeStudents = state.students.filter(s => !s.longTermReleased);
 
   const withoutStatus = activeStudents.filter(s => !attRead(day[s.id]).s);
@@ -2227,12 +2462,12 @@ function finalizeLesson() {
   }
 
   if (withoutStatus.length === 0) {
-    showToast('Wszyscy aktywni uczniowie już mają status na ' + state.currentDate + '.', 'info');
+    showToast('Wszyscy aktywni uczniowie już mają status na ' + kluczEtykieta(attKey()) + '.', 'info');
     return;
   }
 
   // Krótki komunikat
-  const msg = `Lekcja ${state.currentDate}\n\n` +
+  const msg = `Lekcja ${kluczEtykieta(attKey())}\n\n` +
               `• ${withoutStatus.length - toZW.length} uczniów dostanie status C (ćwiczył)\n` +
               (toZW.length ? `• ${toZW.length} ze zwolnieniem OD–DO dostanie ZW: ${toZW.map(s => s.name || '?').join(', ')}\n` : '') +
               `• ${exceptions.length} wyjątków zachowanych\n` +
@@ -2241,9 +2476,9 @@ function finalizeLesson() {
 
   showConfirm('Zapisz lekcję', msg, () => {
     // Zapisz C dla wszystkich bez statusu (aktywnych)
-    if (!state.attendance[state.currentDate]) state.attendance[state.currentDate] = {};
+    if (!state.attendance[attKey()]) state.attendance[attKey()] = {};
     withoutStatus.forEach(s => {
-      state.attendance[state.currentDate][s.id] = isReleasedOn(s, state.currentDate) ? 'ZW' : 'C';
+      state.attendance[attKey()][s.id] = isReleasedOn(s, state.currentDate) ? 'ZW' : 'C';
     });
 
     save();
@@ -2276,8 +2511,9 @@ function attWrite(status, sp) {
 function getStudentStats(studentId, fromDate, toDate) {
   const stats = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0, total: 0 };
   Object.keys(state.attendance).forEach(date => {
-    if (fromDate && date < fromDate) return;
-    if (toDate && date >= toDate) return;
+    const dzien = kluczData(date);
+    if (fromDate && dzien < fromDate) return;
+    if (toDate && dzien >= toDate) return;
     const st = attRead(state.attendance[date][studentId]).s;
     if (st && stats[st] !== undefined) {
       stats[st]++;
@@ -2294,6 +2530,7 @@ function getStudentStats(studentId, fromDate, toDate) {
 
 function renderAttendance() {
   document.getElementById('lessonDate').value = state.currentDate;
+  renderLessonNr();
   const tbody = document.getElementById('attendanceBody');
   tbody.innerHTML = '';
 
@@ -2312,7 +2549,7 @@ function renderAttendance() {
     if (!s.longTermReleased) tr.addEventListener('mousedown', () => setKbdRow(s.id));
 
     const stats = getStudentStats(s.id);
-    const todayCell = attRead((state.attendance[state.currentDate] || {})[s.id]);
+    const todayCell = attRead((state.attendance[attKey()] || {})[s.id]);
     const todayStatus = todayCell.s;
 
     const rel = s.longTermReleased ? null : releaseOn(s, state.currentDate);
@@ -2361,7 +2598,7 @@ function renderAttendance() {
 }
 
 function updateSaveBar() {
-  const day = state.attendance[state.currentDate] || {};
+  const day = state.attendance[attKey()] || {};
   const activeStudents = state.students.filter(s => !s.longTermReleased);
   const withoutStatus = activeStudents.filter(s => !attRead(day[s.id]).s);
   const exceptions = activeStudents.filter(s => { const st = attRead(day[s.id]).s; return st && st !== 'C'; });
@@ -2392,7 +2629,7 @@ function openPicker(studentId) {
   document.getElementById('pickerDate').textContent = state.currentDate;
 
   // Checkbox spóźnienia = bieżący stan tego ucznia na ten dzień
-  const cur = attRead((state.attendance[state.currentDate] || {})[studentId]);
+  const cur = attRead((state.attendance[attKey()] || {})[studentId]);
   state.pickerLate = cur.sp;
   const lateBox = document.getElementById('pickerLate');
   if (lateBox) lateBox.checked = cur.sp;
@@ -2418,7 +2655,7 @@ function openPicker(studentId) {
       const btn = document.createElement('button');
       btn.className = 'status-btn status-nb';
       btn.style.cssText = 'padding: 8px 12px; font-size: 13px; text-align: left; display: flex; justify-content: space-between; align-items: center;';
-      btn.innerHTML = `<span>📅 <strong>${date}</strong> — usprawiedliw (NB → NU)</span> <span style="font-size: 11px;">kliknij →</span>`;
+      btn.innerHTML = `<span>📅 <strong>${kluczEtykieta(date)}</strong> — usprawiedliw (NB → NU)</span> <span style="font-size: 11px;">kliknij →</span>`;
       btn.onclick = () => usprawiedliwDate(studentId, date);
       list.appendChild(btn);
     });
@@ -2465,9 +2702,9 @@ const KARTA_MIESIACE = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 
 
 function kartaLekcje(studentId) {
   const od = state.kartaOd || '', do_ = state.kartaDo || '';
-  return Object.keys(state.attendance).sort().filter(d => (!od || d >= od) && (!do_ || d <= do_)).map(date => {
-    const c = attRead((state.attendance[date] || {})[studentId]);
-    return c.s ? { date, s: c.s, sp: c.sp } : null;
+  return Object.keys(state.attendance).sort().filter(k => { const d = kluczData(k); return (!od || d >= od) && (!do_ || d <= do_); }).map(klucz => {
+    const c = attRead((state.attendance[klucz] || {})[studentId]);
+    return c.s ? { date: kluczData(klucz), klucz, nr: kluczNr(klucz), s: c.s, sp: c.sp } : null;
   }).filter(Boolean);
 }
 function kartaPasuje(l, f) {
@@ -2648,17 +2885,17 @@ function closePicker() {
 function setStatus(status) {
   const sid = state.pickerStudentId;
   if (!sid) return;
-  if (!state.attendance[state.currentDate]) state.attendance[state.currentDate] = {};
+  if (!state.attendance[attKey()]) state.attendance[attKey()] = {};
   if (status === null) {
-    delete state.attendance[state.currentDate][sid];
+    delete state.attendance[attKey()][sid];
     // Jeśli pusty dzień, usuń
-    if (Object.keys(state.attendance[state.currentDate]).length === 0) {
-      delete state.attendance[state.currentDate];
+    if (Object.keys(state.attendance[attKey()]).length === 0) {
+      delete state.attendance[attKey()];
     }
   } else {
     const lateBox = document.getElementById('pickerLate');
     const sp = lateBox ? lateBox.checked : state.pickerLate;
-    state.attendance[state.currentDate][sid] = attWrite(status, sp);
+    state.attendance[attKey()][sid] = attWrite(status, sp);
   }
   save();
   closePicker();
@@ -2900,7 +3137,7 @@ function renderStats() {
     Object.values(day).forEach(c => { const st = attRead(c).s; if (counts[st] !== undefined) counts[st]++; });
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="left">${date}</td>
+      <td class="left">${kluczEtykieta(date)}</td>
       <td>${counts.C}</td>
       <td>${counts.NC}</td>
       <td>${counts.BS}</td>
@@ -2949,7 +3186,7 @@ function parseDictation() {
 
   const normalize = (s) => s.toLowerCase().replace(/[^a-ząćęłńóśźż\s]/g, ' ').replace(/\s+/g, ' ').trim();
 
-  if (!state.attendance[state.currentDate]) state.attendance[state.currentDate] = {};
+  if (!state.attendance[attKey()]) state.attendance[attKey()] = {};
 
   // Dzielę po przecinkach, średnikach, "i" / kropkach
   const segments = text.split(/[,;.\n]|(\s+i\s+)/i).filter(s => s && s.trim().length > 1);
@@ -3008,7 +3245,7 @@ function parseDictation() {
       const newestNB = nbDates[nbDates.length - 1]; // najnowszy
       state.attendance[newestNB][student.id] = attWrite('NU', attRead(state.attendance[newestNB][student.id]).sp);
       usprawiedliwiono++;
-      usprawiedliwionoInfo.push(`${student.name} (${newestNB})`);
+      usprawiedliwionoInfo.push(`${student.name} (${kluczEtykieta(newestNB)})`);
       return;
     }
 
@@ -3041,7 +3278,7 @@ function parseDictation() {
     const bestStudent = findBestStudent(words);
 
     if (bestStudent) {
-      state.attendance[state.currentDate][bestStudent.id] = attWrite(foundStatus, attRead((state.attendance[state.currentDate] || {})[bestStudent.id]).sp);
+      state.attendance[attKey()][bestStudent.id] = attWrite(foundStatus, attRead((state.attendance[attKey()] || {})[bestStudent.id]).sp);
       added++;
     } else {
       notFound.push(seg);
@@ -3052,7 +3289,7 @@ function parseDictation() {
   renderAttendance();
 
   let msg = '';
-  if (added > 0) msg += `✓ Przypisano ${added} statusów na ${state.currentDate}. `;
+  if (added > 0) msg += `✓ Przypisano ${added} statusów na ${kluczEtykieta(attKey())}. `;
   if (usprawiedliwiono > 0) {
     msg += `✓ Usprawiedliwiono ${usprawiedliwiono}: ${usprawiedliwionoInfo.join(', ')}. `;
   }
@@ -3471,7 +3708,7 @@ function importEncrypted(event) {
 // Pomija czyste „C” (VULCAN sam wstawia obecność po Zapisz), zwolnieni długoterminowo → ZW.
 function copyForVulcan() {
   const date = state.currentDate;
-  const day = state.attendance[date] || {};
+  const day = state.attendance[attKey()] || {};
   const lines = [];
   let skippedC = 0, noStatus = 0;
   state.students.forEach(s => {
@@ -3506,7 +3743,7 @@ function copyForVulcan() {
 function exportCSV() {
   const dates = Object.keys(state.attendance).sort();
   const rows = [];
-  const header = ['Lp', 'Uczen', ...dates, 'Cwiczyl', 'NC', 'BS', 'NB', 'NU', 'ZW', 'Baza', 'Procent'];
+  const header = ['Lp', 'Uczen', ...dates.map(k => k.replace('#', ' L')), 'Cwiczyl', 'NC', 'BS', 'NB', 'NU', 'ZW', 'Baza', 'Procent'];
   rows.push(header);
 
   state.students.forEach((s, i) => {
@@ -4867,11 +5104,11 @@ function moveKbdRow(delta) {
 function kbdSetStatus(status) {
   const sid = state.kbdStudentId;
   if (!sid) return;
-  if (!state.attendance[state.currentDate]) state.attendance[state.currentDate] = {};
-  const day = state.attendance[state.currentDate];
+  if (!state.attendance[attKey()]) state.attendance[attKey()] = {};
+  const day = state.attendance[attKey()];
   if (status === null) {
     delete day[sid];
-    if (Object.keys(day).length === 0) delete state.attendance[state.currentDate];
+    if (Object.keys(day).length === 0) delete state.attendance[attKey()];
     save();
     renderAttendance();
     return;
@@ -4886,7 +5123,7 @@ function kbdSetStatus(status) {
 function kbdToggleLate() {
   const sid = state.kbdStudentId;
   if (!sid) return;
-  const day = state.attendance[state.currentDate];
+  const day = state.attendance[attKey()];
   const cur = attRead(day ? day[sid] : undefined);
   if (!cur.s) { showToast('Najpierw nadaj status (c/n/b/w/u/z), potem \u23F1 klawiszem s.', 'warn'); return; }
   day[sid] = attWrite(cur.s, !cur.sp);

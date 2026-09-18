@@ -308,33 +308,54 @@ Lek: wiersz bez nazwiska i bez żadnych danych (obecność, pomiar, ocena) znika
 z zakładki Uczniowie i przy otwarciu dziennika. Klasa bez żadnego nazwiska (świeży start)
 zostaje nietknięta. Bramka: `test_puste_wiersze.py`.
 
-## Zaległe lekcje — plan + kalendarium vs wpisy (2026-09-18)
+## Zaległe lekcje — plan (siatka) + dni wolne vs wpisy (2026-09-18)
 
 Chip w pasku górnym: **„⚠ Zaległe: N"** albo **„✓ Frekwencja na bieżąco"**. Zaległość =
-dzień szkolny przed dziś, w którym plan mówi „WF z tą klasą", kalendarium nie mówi
-„wolne", a klasa nie ma wpisu frekwencji pod tą datą. Klik chipu otwiera listę:
-**wpisz** (przełącza klasę i datę, wchodzisz w Obecność) albo **nie było** z powodem
-(wycieczka / zawody / zastępstwo / odwołana) — pozycja znika na stałe, do cofnięcia
-w Ustawieniach okna.
+lekcja z planu (dzień tygodnia + numer lekcji) przed dziś, dzień nie jest wolny, a klasa
+nie ma wpisu frekwencji ani „nie było" pod tą lekcją. Klik chipu otwiera listę:
+**wpisz** (przełącza klasę, datę i numer lekcji, wchodzisz w Obecność) albo **nie było**
+z powodem (wycieczka / zawody / zastępstwo / odwołana) — pozycja znika na stałe, do
+cofnięcia w Ustawieniach okna.
 
-Skąd plan: `plan-roczny/plan-lekcji-RRRR-MM/zbuduj_plan_wf.py` → `plan-wf.json`
-(EduPage + `technikum-recznie.json` + kalendarium ICS + święta ustawowe). W dzienniku:
-chip → Ustawienia → „Wczytaj plan". Nowy plan (np. od 1.10) = nowy folder, nowy plik,
-wczytany obok starego (upsert po dacie `od`); stare miesiące liczą się dalej po starym
-planie.
+**Skąd plan — dwie drogi, siatka jest pierwsza.** Chip → Ustawienia → tabela klasa ×
+Pn–Pt: klik komórki otwiera numery lekcji 0–11, klik numeru wpisuje lekcję do planu (drugi
+klik zdejmuje). Pierwszy klik zakłada plan „od 1 września" — daty ważności od/do są do
+zmiany obok. Dni wolne: zakres od–do + „dodaj" albo wklejony tekst kalendarium (łapie
+`RRRR-MM-DD` i `DD.MM.RRRR`, „od – do" w jednej linii). Każdy nauczyciel wpisuje plan sam —
+to jest produkt, plik z EduPage to dodatek.
+
+Dodatek: `plan-roczny/plan-lekcji-RRRR-MM/zbuduj_plan_wf.py` → `plan-wf.json` (EduPage +
+`technikum-recznie.json` + kalendarium ICS + święta ustawowe; format v2: klasa → dzień →
+numery lekcji). „Wczytaj plan" o tym samym `od` **dokłada do siatki**: klasy z pliku
+nadpisują swoje wiersze, ręcznie wpisane inne klasy zostają, dni wolne się sumują. Inny
+`od` (np. od 1.10) = nowy plan obok, stare miesiące liczą się po starym. Stary format pliku
+(lista dni bez numerów) czyta się dalej: siatka pokazuje „?", zaległość liczy się per dzień.
 
 Dopasowanie klasy dziennika do klasy w planie idzie po nazwie (`7 b` → `7b`,
 `4d LO dz.` → `4dLO`); gdy nazwa nie pasuje (technikum), wybierz ręcznie w tabeli
-Ustawień albo „— nie licz —".
+Ustawień albo „— nie licz —". Klasa bez klucza dostaje przy pierwszym kliku w siatce
+klucz = własna nazwa.
 
 Dlaczego „nie było" jest obowiązkowe: plan nie wie o wycieczkach, zawodach i
 zastępstwach, więc bez tej siatki chip mówiłby „zaległe" częściej niż jest
 naprawdę i stałby się szumem. Dziś nie liczy się jako zaległe (trwająca praca).
-Dwie lekcje z tą samą klasą jednego dnia dziennik widzi jako jedną (1 lekcja/datę) —
-generator ostrzega, której klasy to dotyczy.
 
-Bramka: `py -3.14 test_zalegle.py` (20 sprawdzeń: liczenie, dni wolne, „nie było",
-„wpisz", magazyn, prawdziwy `plan-wf.json`).
+### Dwie lekcje jednego dnia — numer lekcji w kluczu wpisu
+
+Wpis frekwencji ma klucz `RRRR-MM-DD` (jedyna albo pierwsza lekcja dnia — wszystkie
+stare wpisy, zero migracji) **albo** `RRRR-MM-DD#nr` (lekcja o numerze z planu: druga
+godzina z rzędu, zastępstwo). W Obecności obok daty stoi selektor **lekcja:** (— / 0–11)
+i podpowiedź z planu na ten dzień (`bez nr`, `L2`, `L3 ✓` = ma już wpis) — klik ustawia
+numer, potem klawiatura/mysz/dyktowanie zapisują pod tym kluczem jak zawsze. Wpis pod
+samą datą pokrywa pierwszą lekcję dnia bez wpisu z numerem, wpis `#nr` dokładnie tę
+lekcję — dlatego dwie godziny z rzędu = dwa wpisy i dwie pozycje w Zaległych. Statystyki,
+karta ucznia, CSV (kolumna `2026-09-18 L4`) i „Kopiuj dla VULCAN" (wypełniasz okno
+kolumny właściwej lekcji, dwa wklejenia) liczą każdy klucz osobno; półrocze, zwolnienia
+OD–DO i zakres karty patrzą na samą datę z klucza.
+
+Bramka: `py -3.14 test_zalegle.py` (42 sprawdzenia: liczenie v1 i v2, dwie lekcje jednego
+dnia, klawiatura pod `#nr`, siatka, dni wolne, „nie było", „wpisz", magazyn, prawdziwy
+`plan-wf.json`).
 
 ## Uwaga operacyjna: jedno miejsce uruchamiania
 
