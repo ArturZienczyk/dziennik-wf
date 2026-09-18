@@ -21,7 +21,16 @@
 - Testy: `test_zalegle.py` (54, pasek tygodnia i siatka), `test_klawiatura.py` (22, klawiatura — **widok
   dzienny nie może jej zepsuć**), `test_uklad.py`, `test_scalanie.py` (31).
 
-## Co zbudować
+## KOLEJNOŚĆ (decyzja usera 18.09): NAJPIERW MOCKUP, NIE ŻYWA APKA
+User: „może nie rób od razu na żywej aplikacji, ale mockup, bo nie jestem pewien, jak to będzie wyglądać".
+- Krok 0: **osobny plik** `mockup-widok-dzienny.html` (statyczny HTML z danymi na sztywno: 1 dzień, 2–3
+  lekcje obok siebie, kilkunastu uczniów fikcyjnych, oba warianty belek) — CSS skopiowany z `dziennik_wf.html`
+  (ta sama paleta, fonty), żeby wyglądał jak apka. **2–3 warianty** belek i układu kolumn obok siebie
+  na jednej stronie (A/B/C), z podpisem, co się różni. Render 1400 + 390 px → PNG → `pulpit --sesja`
+  (albo SendUserFile) → **oko usera wybiera**. Dopiero po „pasuje" punkty 1–5 na żywej apce.
+- Mockup nie jest produktem: po wdrożeniu do usunięcia albo `_zrzuty/` jako ślad decyzji.
+
+## Co zbudować (po zatwierdzeniu mockupu)
 1. **Widok dzienny jako domyślny** w Obecności: lekcje dnia **obok siebie** (kolumny), nie jedna pod drugą.
    Każda kolumna = lekcja (`L3 · 2 inf`) z listą uczniów i ich statusami — user chce z jednego ekranu widzieć
    uczniów i obecności kilku lekcji tego dnia. Przełącznik **Dzień / Tydzień** (tydzień = obecny pasek).
