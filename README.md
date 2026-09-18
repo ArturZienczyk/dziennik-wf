@@ -308,6 +308,34 @@ Lek: wiersz bez nazwiska i bez żadnych danych (obecność, pomiar, ocena) znika
 z zakładki Uczniowie i przy otwarciu dziennika. Klasa bez żadnego nazwiska (świeży start)
 zostaje nietknięta. Bramka: `test_puste_wiersze.py`.
 
+## Zaległe lekcje — plan + kalendarium vs wpisy (2026-09-18)
+
+Chip w pasku górnym: **„⚠ Zaległe: N"** albo **„✓ Frekwencja na bieżąco"**. Zaległość =
+dzień szkolny przed dziś, w którym plan mówi „WF z tą klasą", kalendarium nie mówi
+„wolne", a klasa nie ma wpisu frekwencji pod tą datą. Klik chipu otwiera listę:
+**wpisz** (przełącza klasę i datę, wchodzisz w Obecność) albo **nie było** z powodem
+(wycieczka / zawody / zastępstwo / odwołana) — pozycja znika na stałe, do cofnięcia
+w Ustawieniach okna.
+
+Skąd plan: `plan-roczny/plan-lekcji-RRRR-MM/zbuduj_plan_wf.py` → `plan-wf.json`
+(EduPage + `technikum-recznie.json` + kalendarium ICS + święta ustawowe). W dzienniku:
+chip → Ustawienia → „Wczytaj plan". Nowy plan (np. od 1.10) = nowy folder, nowy plik,
+wczytany obok starego (upsert po dacie `od`); stare miesiące liczą się dalej po starym
+planie.
+
+Dopasowanie klasy dziennika do klasy w planie idzie po nazwie (`7 b` → `7b`,
+`4d LO dz.` → `4dLO`); gdy nazwa nie pasuje (technikum), wybierz ręcznie w tabeli
+Ustawień albo „— nie licz —".
+
+Dlaczego „nie było" jest obowiązkowe: plan nie wie o wycieczkach, zawodach i
+zastępstwach, więc bez tej siatki chip mówiłby „zaległe" częściej niż jest
+naprawdę i stałby się szumem. Dziś nie liczy się jako zaległe (trwająca praca).
+Dwie lekcje z tą samą klasą jednego dnia dziennik widzi jako jedną (1 lekcja/datę) —
+generator ostrzega, której klasy to dotyczy.
+
+Bramka: `py -3.14 test_zalegle.py` (20 sprawdzeń: liczenie, dni wolne, „nie było",
+„wpisz", magazyn, prawdziwy `plan-wf.json`).
+
 ## Uwaga operacyjna: jedno miejsce uruchamiania
 
 Dane siedzą w `localStorage`, który jest **osobny dla pliku na dysku i dla adresu
