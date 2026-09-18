@@ -59,3 +59,23 @@ User: „może nie rób od razu na żywej aplikacji, ale mockup, bo nie jestem p
 - Telefon: wczytać najnowszą kopię z Drive (od 18.09 kopia niesie plan) — sprawdzić, czy plan doszedł.
 - 5TS → „5 technikum" w zakładce Plan; nowy `plan-wf.json` (z `inne`) wczytany?
 - Po tygodniu: czy ręczny transfer telefon → laptop męczy (wtedy Drive API, osobna decyzja).
+
+## Decyzja oka usera (18.09, 22:30) — baza = wariant C, mockup C v2
+User wybrał **C** („od razu pokazuje, co należy kliknąć"). Uwagi wniesione do `mockup-widok-dzienny.html` sekcja „C v2"
+(zrzuty `_zrzuty/mockup_c2_1400.png`, `_zrzuty/mockup_c2_390.png`):
+1. Widok dnia → belka szkoła/klasa staje się ozdobnikiem: klasa wynika z otwartej lekcji. Tytuł klasy bez „zmień";
+   w Obecności tylko pokazuje, w pozostałych zakładkach (Uczniowie/Oceny/…) ten sam tytuł z ▾ wybiera klasę.
+2. „Zapisz lekcję — pozostali bez statusu jako ćwiczył" w stopce otwartej kolumny (zielony pasek jak save-bar).
+3. Forma żeńska „ćwiczyła" — klasy ZSS są jednorodne płciowo → ustawienie per klasa (dz./chł.), nie per uczeń;
+   dzienniki elektroniczne tego nie mają, u nas tylko etykiety (stopka, podsumowanie, legenda).
+4. Lekcje bez frekwencji (EZ/GW, `inne` z planu): wąska szara kolumna z kreskowanym obrysem na swoim miejscu w dniu.
+Otwarte: klik nagłówka kolumny = otwiera lekcję w tabeli (podgląd, nie edycja w kolumnie) — user nie zaprzeczył.
+Doprecyzowanie (22:45): w Obecności NIE ma belki klasy w ogóle (także na telefonie) — wybór klasy/szkoły, „+ klasa",
+zmiana nazwy przenoszą się do zakładki Uczniowie. Na telefonie ◀ dziś ▶ = jedna grupa `nowrap`, nic nie przeskakuje
+do drugiego wiersza (data w osobnym wierszu jest OK).
+Uwaga 5 (22:55) — „Kopiuj dla VULCAN" jest bardzo ważne, nie może być schowane w date-row. Decyzja: w stopce KAŻDEJ
+kolumny dnia obok „Zapisz lekcję" — jeden przycisk `copyForVulcan()` (tekst Nazwisko Imię + status jest agnostyczny),
+etykieta ze szkoły klasy: technikum → „📋 do Librusa", SP/LO (ZSS) → „📋 do VULCANa". Po zapisie stopka zostaje
+(„zapisano 9:52 · do VULCANa"). Mapowanie szkoła → e-dziennik = ustawienie per szkoła (domyślnie: nazwa zawiera
+„tech" → Librus, reszta VULCAN). Skrypt po stronie Librusa NIE istnieje — osobny szczebel (bookmarklet jak VULCAN);
+sam schowek działa już dziś dla obu.
