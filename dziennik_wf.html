@@ -191,44 +191,40 @@
   .przel { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin-left: auto; }
   .przel button { padding: 5px 12px; font-size: 13px; cursor: pointer; color: var(--ink-muted); background: var(--paper); border: none; font-family: inherit; }
   .przel button.on { background: var(--ink); color: var(--paper); }
-  .dzien-kolumny { display: flex; gap: 12px; align-items: flex-start; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
+  .dzien-kolumny { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; padding-bottom: 6px; }
   .kol-grupa { display: contents; }
-  .kol { flex: 1 1 0; min-width: 220px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; }
-  .kol.otwarta { flex: 2 1 0; min-width: 360px; border: 2px solid var(--ink); }
+  /* Guziki lekcji dnia (2026-09-19, decyzja usera po mockupie _zrzuty/guziki_mockup_1400.png):
+     pasek guzików L-nr + klasa + suma, klik = tabela tej klasy na całą szerokość pod paskiem.
+     Kolumny podglądu obok siebie miały cztery różne rytmy (wiersz 56 vs 27 px); pełna szerokość
+     oddaje tabeli liczniki, które w wąskiej kolumnie były schowane. */
+  .kol { flex: 0 0 auto; min-width: 150px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
   .kol.brak .kol-head { background: #FFF0F0; }
   .kol.jest .kol-head { background: #EEF7EE; }
   .kol.niebylo .kol-head { opacity: .6; text-decoration: line-through; }
-  .kol-head { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--line); background: var(--line-soft); border-radius: 7px 7px 0 0; }
+  .kol-head { display: grid; grid-template-columns: auto auto; column-gap: 8px; row-gap: 2px; align-items: baseline; padding: 8px 14px 9px; border-radius: 9px; background: var(--line-soft); }
   .kol.podglad .kol-head { cursor: pointer; }
   .kol.podglad .kol-head:hover { filter: brightness(.97); }
-  .kol-head .nr { font-size: 11px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .06em; }
-  .kol-head .kl { white-space: nowrap; font-family: 'Source Serif 4', Georgia, serif; font-size: 17px; font-weight: 500; }
+  .kol-head .nr { grid-column: 1; grid-row: 1; font-size: 11px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .06em; }
+  .kol-head .otw { grid-column: 2; grid-row: 1; justify-self: end; font-size: 10px; color: var(--ink-muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; background: var(--paper); white-space: nowrap; }
+  .kol-head .kl { grid-column: 1 / 3; grid-row: 2; white-space: nowrap; font-family: 'Source Serif 4', Georgia, serif; font-size: 18px; font-weight: 500; }
   .kol-head .plec { font-size: 11px; color: var(--ink-muted); font-weight: 400; }
-  .kol-head .sum { margin-left: auto; font-size: 12px; color: var(--ink-soft); text-align: right; line-height: 1.25; }
-  .kol-head .otw { font-size: 11px; color: var(--ink-muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; background: var(--paper); white-space: nowrap; }
-  .kol.otwarta .kol-head .otw { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-  .kol.podglad table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .kol.podglad td { padding: 3px 8px; border-bottom: 1px solid var(--line-soft); }
-  .kol.podglad td.lp { width: 26px; color: var(--ink-muted); font-size: 11px; text-align: right; }
-  .kol.podglad td.nm { color: var(--ink-soft); }
-  .kol.podglad td.s { text-align: right; width: 48px; }
-  .kol.podglad .st { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 20px; padding: 1px 5px; border-radius: 6px; font-size: 11px; font-weight: 500; border: 1px solid; opacity: .85; }
-  .kol.podglad .st.em { background: var(--bg); border-color: var(--line); color: var(--ink-muted); }
-  .kol.inne { flex: 0 0 150px; min-width: 120px; border-style: dashed; background: transparent; }
-  .kol.inne .kol-head { background: transparent; border-bottom: 1px dashed var(--line); }
-  .kol.inne .kl { color: var(--ink-muted); font-size: 15px; }
-  .kol.inne .tresc { padding: 10px 12px; font-size: 12px; color: var(--ink-muted); line-height: 1.5; }
+  .kol-head .sum { grid-column: 1 / 3; grid-row: 3; font-size: 12px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; line-height: 1.2; }
+  .kol.guzik-otw { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }  /* 2 px obrysu bez zmiany wysokości guzika */
+  .kol.guzik-otw .kol-head { background: var(--paper); }
+  .kol.guzik-otw .otw { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .kol.inne { border-style: dashed; background: transparent; }
+  .kol.inne .kol-head { background: transparent; }
+  .kol.inne .kl { color: var(--ink-muted); }
+  .kol.otwarta { flex: 1 0 100%; min-width: 0; border: 2px solid var(--ink); border-radius: 8px; }
+  .kol.otwarta > .kol-head { display: none; }
   .kol.otwarta .table-wrap { margin: 0; border: none; border-radius: 0; }
   .dzien-kolumny.tydzien { display: block; }
   .dzien-kolumny.tydzien .kol-grupa { display: none; }
-  .dzien-kolumny.tydzien .kol.otwarta { border: none; min-width: 0; }
-  .dzien-kolumny.tydzien .kol-head { display: none; }
+  .dzien-kolumny.tydzien .kol.otwarta { border: none; }
   .dzien-kolumny.tydzien .save-bar { margin-top: 12px; border: 1px solid #97C459; border-radius: 8px; }
-  /* W widoku dnia kolumny liczników schowane — są w Statystykach; zostaje uczeń, status, % dotąd */
-  .dzien-kolumny:not(.tydzien) table.attendance .stat { display: none; }
-  .zapisz-mini { display: flex; gap: 8px; align-items: center; padding: 6px 8px; background: var(--line-soft); border-top: 1px solid var(--line); border-radius: 0 0 7px 7px; font-size: 11.5px; color: var(--ink-muted); }
-  .zapisz-mini .info { flex: 1; }
-  .zapisz-mini button, .save-bar-kopiuj { background: var(--paper); color: var(--ink); border: 1px solid var(--ink); border-radius: 6px; padding: 5px 9px; font-family: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  /* Widok dnia: % jedną liczbą (ułamek pod spodem rozciągał wiersz) */
+  .dzien-kolumny:not(.tydzien) table.attendance .stat-detail, .dzien-kolumny:not(.tydzien) table.attendance td br { display: none; }
+  .save-bar-kopiuj { background: var(--paper); color: var(--ink); border: 1px solid var(--ink); border-radius: 6px; padding: 5px 9px; font-family: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; }
   .save-bar-kopiuj { padding: 9px 14px; font-size: 13px; }
   .tytul-klasy { display: inline-flex; align-items: baseline; gap: 8px; margin: 0 0 12px 0; }
   .tytul-klasy select { font-family: 'Source Serif 4', Georgia, serif; font-size: 22px; font-weight: 500; border: 1px solid transparent; border-radius: 6px; background: transparent; padding: 2px 6px; cursor: pointer; color: var(--ink); }
@@ -964,10 +960,9 @@
     .tab-content.active { padding: 8px; border-radius: 0 8px 8px 8px; }
     .dzien-row .lesson-count, .dzien-row .dzien-usun { display: none; }
     .dzien-row .data { font-size: 16px; }
-    .dzien-kolumny { display: flex; overflow-x: auto; }
-    .dzien-kolumny .kol.otwarta { min-width: 320px; }
-    .dzien-kolumny .kol { min-width: 230px; }
-    .dzien-kolumny .kol.inne { min-width: 130px; }
+    .dzien-kolumny { gap: 8px; }
+    .dzien-kolumny .kol { min-width: 0; }
+    .dzien-kolumny .kol-head { padding: 6px 10px 7px; }
     .reg-grid { grid-template-columns: 1fr; }
     .table-wrap, .oceny-wrap { -webkit-overflow-scrolling: touch; max-height: calc(100vh - var(--topbar-h, 0px) - 16px); overflow: auto; }
     table.attendance thead th, table.dziennik thead th { position: sticky; top: 0; z-index: 4; background: var(--line-soft); box-shadow: 0 2px 0 var(--ink); }
@@ -1183,7 +1178,7 @@
 
     </details>
 
-    <!-- Widok dnia: kolumny podglądu przed/po otwartej lekcji renderuje renderDzien(); otwarta = ta tabela -->
+    <!-- Widok dnia: pasek guzików lekcji (kolPrzed) renderuje renderDzien(); klik = ta tabela na całą szerokość. kolPo zostaje pusty (zgodność) -->
     <div id="dzienKolumny" class="dzien-kolumny">
       <div id="kolPrzed" class="kol-grupa"></div>
       <div class="kol otwarta" id="kolOtwarta">
@@ -2911,25 +2906,27 @@ function renderDzien() {
   let nrOtw = state.currentNr;
   if (nrOtw === null) { const z = lekcje.find(l => l.cls && l.cls.id === cur.id && kluczZ(iso, nrDlaLekcji(cur, iso, l.nr)) === kOtw); if (z) nrOtw = z.nr; }
   head.innerHTML = `<span class="nr">${nrOtw === null ? 'lekcja' : 'L' + nrOtw}</span><span class="kl">${escapeHtml(cur.name)}${cur.plec ? ' <span class="plec">' + (cur.plec === 'dz' ? 'dz.' : 'chł.') + '</span>' : ''}</span>` +
-    `<span class="sum">${pk === null ? '' : '<b>' + pk + '%</b> dotąd · '}${wpisani} z ${active.length} wpisanych</span><span class="otw">otwarta</span>`;
+    `<span class="sum">${pk === null ? '' : '<b>' + pk + '%</b> · '}${wpisani}/${active.length} wpisanych</span><span class="otw">otwarta</span>`;
   if (tydzien) return;
   let cel = przed, otwartaZPlanu = false;
   lekcje.forEach(({ cls, nr, nazwa }) => {
     if (!cls) {
-      cel.insertAdjacentHTML('beforeend', `<div class="kol inne" data-inne="${escapeHtml(nazwa)}"><div class="kol-head"><span class="nr">${nr === null ? '' : 'L' + nr}</span><span class="kl">${escapeHtml(nazwa)}</span></div><div class="tresc">inne zajęcia<br>bez frekwencji w tym dzienniku</div></div>`);
+      cel.insertAdjacentHTML('beforeend', `<div class="kol inne" data-inne="${escapeHtml(nazwa)}" title="inne zajęcia — bez frekwencji w tym dzienniku"><div class="kol-head"><span class="nr">${nr === null ? '' : 'L' + nr}</span><span class="kl">${escapeHtml(nazwa)}</span><span class="sum">bez frekwencji</span></div></div>`);
       return;
     }
     const k = kluczZ(iso, nrDlaLekcji(cls, iso, nr));
-    if (cls.id === cur.id && k === kOtw) { otwartaZPlanu = true; cel = po; return; }
+    if (cls.id === cur.id && k === kOtw) { otwartaZPlanu = true; cel.insertAdjacentHTML('beforeend', guzikOtwartej(cur, kOtw, head)); return; }
     cel.insertAdjacentHTML('beforeend', kolumnaPodgladu(cls, iso, nr, k, dzis));
   });
-  if (wolny && !lekcje.length) przed.insertAdjacentHTML('beforeend', `<div class="kol inne"><div class="kol-head"><span class="kl">dzień wolny</span></div><div class="tresc">z kalendarium — bez lekcji</div></div>`);
-  void otwartaZPlanu;
-  // Telefon (kolumny przewijane poziomo): otwarta lekcja ma być na ekranie od razu, nie za podglądami
-  const ko = document.getElementById('kolOtwarta');
-  if (ko && wrap.scrollWidth > wrap.clientWidth + 1) {
-    wrap.scrollLeft += ko.getBoundingClientRect().left - wrap.getBoundingClientRect().left - 8;
-  }
+  if (wolny && !lekcje.length) przed.insertAdjacentHTML('beforeend', `<div class="kol inne"><div class="kol-head"><span class="kl">dzień wolny</span><span class="sum">z kalendarium — bez lekcji</span></div></div>`);
+  // Otwarta lekcja spoza planu (albo bez planu): jej guzik na końcu paska
+  if (!otwartaZPlanu) przed.insertAdjacentHTML('beforeend', guzikOtwartej(cur, kOtw, head));
+  void po;
+}
+// Guzik otwartej lekcji w pasku dnia: kopia nagłówka otwartej (#kolOtwartaHead zostaje źródłem
+// tekstu dla testów i widoku Tydzień, w widoku dnia jest schowany CSS-em).
+function guzikOtwartej(cur, k, head) {
+  return `<div class="kol guzik-otw" data-cls="${cur.id}" data-klucz="${k}"><div class="kol-head">${head.innerHTML}</div></div>`;
 }
 function kolumnaPodgladu(cls, iso, nr, k, dzis) {
   const jest = !!(cls.attendance || {})[k];
@@ -2938,27 +2935,20 @@ function kolumnaPodgladu(cls, iso, nr, k, dzis) {
   const day = (cls.attendance || {})[k] || {};
   const counts = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0 };
   const active = (cls.students || []).filter(s => !s.longTermReleased);
-  let rows = '';
-  active.forEach((s, i) => {
-    const c = attRead(day[s.id]);
-    if (c.s && counts[c.s] !== undefined) counts[c.s]++;
-    const st = c.s ? `<span class="st ${STATUS_INFO[c.s] ? STATUS_INFO[c.s].cls : ''}">${ST_MALE[c.s] || c.s}${c.sp ? ' sp' : ''}</span>` : '<span class="st em">—</span>';
-    rows += `<tr><td class="lp">${i + 1}</td><td class="nm">${escapeHtml(nazwiskoSkrot(s.name))}</td><td class="s">${st}</td></tr>`;
-  });
+  active.forEach(s => { const c = attRead(day[s.id]); if (c.s && counts[c.s] !== undefined) counts[c.s]++; });
   let sum;
   if (niebylo) sum = 'nie było: ' + escapeHtml(cls.odwolane[k]);
   else if (jest) {
     const w = ['nć', 'bs', 'nb', 'nu', 'zw'].map((l, i) => { const key = ['NC', 'BS', 'NB', 'NU', 'ZW'][i]; return counts[key] ? counts[key] + ' ' + l : ''; }).filter(Boolean).join(' · ');
-    sum = counts.C + ' ćwiczyło' + (w ? ' · ' + w : '');
+    sum = counts.C + ' ćw.' + (w ? ' · ' + w : '');
   }
   else if (brak) sum = '<span style="color:var(--accent-warm)">brak wpisu</span>';
-  else sum = 'do wpisania';
+  else sum = 'do wpisu';
   const zap = _zapisanoO[_zapisanoKlucz(cls, k)];
-  const stopka = jest ? `<div class="zapisz-mini"><span class="info">${zap ? 'zapisano ' + zap : '✓ zapisana'}</span><button type="button" onclick="event.stopPropagation(); copyForVulcan('${cls.id}','${k}')" title="Wyjątki tej lekcji do schowka">📋 ${edziennikEtykieta(cls.school)}</button></div>` : '';
+  if (jest && zap) sum += ' · zapisano ' + zap;
   const klasa = 'kol podglad' + (jest ? ' jest' : '') + (brak ? ' brak' : '') + (niebylo ? ' niebylo' : '');
   return `<div class="${klasa}" data-cls="${cls.id}" data-klucz="${k}"><div class="kol-head" onclick="wybierzLekcje('${cls.id}','${iso}',${nr === null ? 'null' : nr})" title="otwórz tę lekcję do wpisu">` +
-    `<span class="nr">${nr === null ? '' : 'L' + nr}</span><span class="kl">${escapeHtml(cls.name)}${cls.plec ? ' <span class="plec">' + (cls.plec === 'dz' ? 'dz.' : 'chł.') + '</span>' : ''}</span><span class="sum">${sum}</span><span class="otw">otwórz</span></div>` +
-    `<table>${rows || '<tr><td class="nm" style="color:var(--ink-muted)">brak uczniów</td></tr>'}</table>${stopka}</div>`;
+    `<span class="nr">${nr === null ? '' : 'L' + nr}</span><span class="kl">${escapeHtml(cls.name)}${cls.plec ? ' <span class="plec">' + (cls.plec === 'dz' ? 'dz.' : 'chł.') + '</span>' : ''}</span><span class="sum">${sum}</span><span class="otw">otwórz</span></div></div>`;
 }
 function renderPlanTydzien() {
   const el = document.getElementById('planTydzien');

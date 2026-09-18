@@ -130,3 +130,17 @@ DZIŚ % DOTĄD", pełne nazwiska pogrubione, duże chipy statusu C/BS, kolumna %
 Nie ruszać: klucz `data#nr`, `attRead/attWrite`, klawiatura (test_klawiatura 22), podgląd = klik nagłówka.
 Bramka: `test_widok_dzienny.py` + nowy check „wysokość wiersza otwartej == wysokość wiersza podglądu (±2 px)".
 Pasek tygodnia i Reguły — bez uwag.
+
+## WDROŻONE 2 (2026-09-19) — guziki dnia zamiast kolumn (decyzja usera po dwóch mockupach)
+Mockup 1 (`_zrzuty/rytm_mockup_1400.png`, CSS `_zrzuty/mockup-rytm-kolumn.css`): kolumny obok siebie
+z jednym rytmem (wiersz 34 px, pełne nazwiska, te same chipy). User zamiast tego zaproponował: **lekcje dnia
+jako pasek guzików (L-nr + klasa + suma), klik = tabela klasy na całą szerokość pod paskiem.** Mockup 2
+(`_zrzuty/guziki_mockup_1400.png`, CSS `_zrzuty/mockup-guziki-dnia.css`) zatwierdzony okiem; wybrane:
+guziki + tabela z licznikami, suma pełna („3 ćw. · 1 nć" / „71% · 3/6 wpisanych" / „do wpisu" / „brak wpisu").
+„Wolna przestrzeń pod guzikami" = nie ma jej: tabela na całą szerokość odzyskuje liczniki C/NĆ/BS/NB/NU/ZW/Σ.
+W kodzie: CSS `.kol` = guzik (grid nr/otw/kl/sum), `.kol.guzik-otw` = klon `#kolOtwartaHead` wstawiany do
+`#kolPrzed` w miejscu z planu (`guzikOtwartej()`), `.kol.otwarta` = `flex: 1 0 100%`; `kolumnaPodgladu()` bez
+tabeli i stopki „do Librusa" (kopiowanie innej lekcji = klik guzika → stopka otwartej). `#kolPo` zostaje pusty.
+Telefon: guziki zawijają się, tabela przewija w `.table-wrap`. Test dopasowany + 3 nowe checki (guziki
+równej wysokości ±2 px, tabela na szerokość paska, ≥2 wiersze guzików na 390 px). Regresja 17 testów zielona,
+sw v13. Stracone świadomie: podgląd statusów sąsiednich lekcji bez klikania (w guziku tylko suma).
