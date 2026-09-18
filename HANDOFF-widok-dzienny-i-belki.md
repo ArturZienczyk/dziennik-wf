@@ -1,7 +1,7 @@
 # HANDOFF — plan: widok dzienny (godziny obok siebie) + belki, które zapraszają do kliknięcia
 
 **Data:** 2026-09-18 wieczór. Dla: czysta sesja w `D:\Projects\nauczyciel\wf\dziennik-wf` (osobne repo,
-`git push origin main`, GitHub Pages, **`sw.js` CACHE_VERSION v11 — podbij przy każdej zmianie html**).
+`git push origin main`, GitHub Pages, **`sw.js` CACHE_VERSION v12 (po C v2) — podbij przy każdej zmianie html**).
 **Słowa usera (18.09, po wdrożeniu scalania kopii + Drive):**
 
 > plan chciałbym jako widok tygodniowy i dzienny, ale pierwszy wybór to ten dzienny — ale nie żeby był

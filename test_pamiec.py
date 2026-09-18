@@ -62,6 +62,8 @@ with sync_playwright() as pw:
     check("magazyn faktycznie zapchany (inaczej test niczego nie sprawdza)", pelny)
 
     # --- dodanie klasy przy pelnym magazynie ---
+    page.click('button.tab:has-text("Uczniowie")')  # pasek klasy mieszka w Uczniowie (C v2, 2026-09-18)
+    page.wait_for_timeout(200)
     page.click('button:has-text("+ klasa")')
     page.wait_for_timeout(300)
     page.fill("#classPromptName", "7b")
@@ -70,7 +72,7 @@ with sync_playwright() as pw:
 
     widoczne = page.evaluate(
         "() => { const s = document.querySelectorAll('#classBar select');"
-        " const ost = s[s.length - 1]; return ost ? Array.from(ost.options).map(o => o.text) : []; }"
+        " const ost = s[1]; return ost ? Array.from(ost.options).map(o => o.text) : []; }"
     )
     check("klasa pojawia sie w pasku mimo pelnej pamieci", "7b" in widoczne, widoczne)
 
@@ -93,6 +95,8 @@ with sync_playwright() as pw:
     )
 
     # --- wpisy frekwencji tez musza przezyc ---
+    page.click('button.tab:has-text("Obecno")')
+    page.wait_for_timeout(300)
     page.click("h1")
     page.keyboard.press("n")
     page.wait_for_timeout(400)

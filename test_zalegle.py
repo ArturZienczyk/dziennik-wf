@@ -63,6 +63,8 @@ with sync_playwright() as pw:
     page.wait_for_timeout(400)
     page.evaluate("() => zamekPierwszeHaslo('test-haslo-123')")
     page.wait_for_timeout(600)
+    # Pasek tygodnia widać w widoku Tydzień (C v2, 2026-09-18: domyślny jest Dzień — test_widok_dzienny.py)
+    page.evaluate("() => ustawWidok('tydzien')")
 
     # 1. bez planu: chip „brak planu”
     check("chip bez planu", "brak planu" in page.inner_text("#zalegleChip"))

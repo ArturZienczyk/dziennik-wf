@@ -112,7 +112,7 @@
   }
   .subtitle { font-size: 13px; color: var(--ink-muted); margin: 0; font-style: italic; }
   /* Pasek górny przyklejony: tytuł + klasa + zakładki zostają przy przewijaniu (2026-09-18) */
-  .topbar { position: sticky; top: 0; z-index: 20; background: var(--bg); margin: -1.5rem -1.5rem 14px -1.5rem; padding: 10px 1.5rem 0 1.5rem; box-shadow: 0 1px 0 var(--line); }
+  .topbar { position: sticky; top: 0; z-index: 20; background: var(--bg); margin: -1.5rem -1.5rem 0 -1.5rem; padding: 10px 1.5rem 0 1.5rem; }
   .topbar-row { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; margin-bottom: 4px; }
   .topbar h1 { font-size: 22px; margin: 0; }
   #classBar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-left: auto; }
@@ -179,14 +179,88 @@
     margin-left: auto; font-size: 13px; color: var(--ink-muted);
   }
 
-  /* Pasek zapisu lekcji */
+  /* Widok dnia (2026-09-18, mockup C v2): lekcje dnia OBOK siebie — otwarta lekcja to dotychczasowa
+     tabela (jedyne miejsce wpisu; klawiatura bez zmian), pozostałe to podglądy (klik nagłówka = otwórz),
+     „inne" (EZ/GW) to wąska kreskowana kolumna na swoim miejscu w dniu. Tydzień = dotychczasowy pasek. */
+  .dzien-row { gap: 10px; }
+  .dzien-row .data { font-family: 'Source Serif 4', Georgia, serif; font-size: 18px; }
+  .dzien-row input[type="date"] { padding: 4px 6px; font-size: 12px; color: var(--ink-muted); }
+  .dzien-row .nav { display: inline-flex; gap: 6px; white-space: nowrap; flex: 0 0 auto; }
+  .dzien-row .nav button, .dzien-row .dzien-usun { padding: 6px 11px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); font-family: inherit; font-size: 13px; cursor: pointer; }
+  .dzien-row .dzien-usun { color: var(--accent-warm); border-color: #E5C5C0; }
+  .przel { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin-left: auto; }
+  .przel button { padding: 5px 12px; font-size: 13px; cursor: pointer; color: var(--ink-muted); background: var(--paper); border: none; font-family: inherit; }
+  .przel button.on { background: var(--ink); color: var(--paper); }
+  .dzien-kolumny { display: flex; gap: 12px; align-items: flex-start; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
+  .kol-grupa { display: contents; }
+  .kol { flex: 1 1 0; min-width: 220px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; }
+  .kol.otwarta { flex: 2 1 0; min-width: 360px; border: 2px solid var(--ink); }
+  .kol.brak .kol-head { background: #FFF0F0; }
+  .kol.jest .kol-head { background: #EEF7EE; }
+  .kol.niebylo .kol-head { opacity: .6; text-decoration: line-through; }
+  .kol-head { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--line); background: var(--line-soft); border-radius: 7px 7px 0 0; }
+  .kol.podglad .kol-head { cursor: pointer; }
+  .kol.podglad .kol-head:hover { filter: brightness(.97); }
+  .kol-head .nr { font-size: 11px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .06em; }
+  .kol-head .kl { white-space: nowrap; font-family: 'Source Serif 4', Georgia, serif; font-size: 17px; font-weight: 500; }
+  .kol-head .plec { font-size: 11px; color: var(--ink-muted); font-weight: 400; }
+  .kol-head .sum { margin-left: auto; font-size: 12px; color: var(--ink-soft); text-align: right; line-height: 1.25; }
+  .kol-head .otw { font-size: 11px; color: var(--ink-muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; background: var(--paper); white-space: nowrap; }
+  .kol.otwarta .kol-head .otw { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .kol.podglad table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .kol.podglad td { padding: 3px 8px; border-bottom: 1px solid var(--line-soft); }
+  .kol.podglad td.lp { width: 26px; color: var(--ink-muted); font-size: 11px; text-align: right; }
+  .kol.podglad td.nm { color: var(--ink-soft); }
+  .kol.podglad td.s { text-align: right; width: 48px; }
+  .kol.podglad .st { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 20px; padding: 1px 5px; border-radius: 6px; font-size: 11px; font-weight: 500; border: 1px solid; opacity: .85; }
+  .kol.podglad .st.em { background: var(--bg); border-color: var(--line); color: var(--ink-muted); }
+  .kol.inne { flex: 0 0 150px; min-width: 120px; border-style: dashed; background: transparent; }
+  .kol.inne .kol-head { background: transparent; border-bottom: 1px dashed var(--line); }
+  .kol.inne .kl { color: var(--ink-muted); font-size: 15px; }
+  .kol.inne .tresc { padding: 10px 12px; font-size: 12px; color: var(--ink-muted); line-height: 1.5; }
+  .kol.otwarta .table-wrap { margin: 0; border: none; border-radius: 0; }
+  .dzien-kolumny.tydzien { display: block; }
+  .dzien-kolumny.tydzien .kol-grupa { display: none; }
+  .dzien-kolumny.tydzien .kol.otwarta { border: none; min-width: 0; }
+  .dzien-kolumny.tydzien .kol-head { display: none; }
+  .dzien-kolumny.tydzien .save-bar { margin-top: 12px; border: 1px solid #97C459; border-radius: 8px; }
+  /* W widoku dnia kolumny liczników schowane — są w Statystykach; zostaje uczeń, status, % dotąd */
+  .dzien-kolumny:not(.tydzien) table.attendance .stat { display: none; }
+  .zapisz-mini { display: flex; gap: 8px; align-items: center; padding: 6px 8px; background: var(--line-soft); border-top: 1px solid var(--line); border-radius: 0 0 7px 7px; font-size: 11.5px; color: var(--ink-muted); }
+  .zapisz-mini .info { flex: 1; }
+  .zapisz-mini button, .save-bar-kopiuj { background: var(--paper); color: var(--ink); border: 1px solid var(--ink); border-radius: 6px; padding: 5px 9px; font-family: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .save-bar-kopiuj { padding: 9px 14px; font-size: 13px; }
+  .tytul-klasy { display: inline-flex; align-items: baseline; gap: 8px; margin: 0 0 12px 0; }
+  .tytul-klasy select { font-family: 'Source Serif 4', Georgia, serif; font-size: 22px; font-weight: 500; border: 1px solid transparent; border-radius: 6px; background: transparent; padding: 2px 6px; cursor: pointer; color: var(--ink); }
+  .tytul-klasy select:hover { border-color: var(--line); background: var(--line-soft); }
+  .tytul-klasy .s { font-size: 13px; color: var(--ink-muted); }
+  #classBar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  /* Reguły (2026-09-18): cytat PZO + manipulatory + szkoły/e-dziennik + okna Systematyczności */
+  .reg-grid { display: grid; grid-template-columns: 1.2fr 1.3fr 1fr; gap: 14px; }
+  .reg-box { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; font-size: 13px; }
+  .reg-box h3 { margin: 0 0 10px 0; }
+  .reg-box p { margin: 8px 0; color: var(--ink-soft); }
+  .reg-box blockquote { margin: 6px 0 10px 0; padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--bg); font-style: italic; color: var(--ink-soft); font-size: 12.5px; }
+  .reg-box .zrodlo { font-size: 12px; color: var(--ink-muted); }
+  .reg-box .uwaga { font-size: 12px; color: var(--ink-muted); }
+  .wzor { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; margin: 4px 0 8px 0; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; }
+  .wzor .kreska { width: 100%; height: 1px; background: var(--ink); }
+  .przyklad { background: var(--bg); border-radius: 6px; padding: 8px 10px; }
+  .reg-row { display: flex; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line-soft); cursor: default; }
+  .reg-row small { color: var(--ink-muted); }
+  .reg-row input[type="checkbox"] { width: 18px; height: 18px; flex: 0 0 18px; }
+  .reg-row input[type="number"], .reg-row input[type="date"], .reg-row select { flex: 0 0 auto; border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; background: var(--bg); font-family: inherit; font-size: 13px; }
+  .reg-row input[type="number"] { width: 64px; text-align: center; }
+  .reg-row .fill { flex: 1; }
+
+  /* Pasek zapisu lekcji — w widoku dnia stopka otwartej kolumny */
   .save-bar {
     display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
-    background: #EAF3DE; border: 1px solid #97C459;
-    padding: 12px 16px; border-radius: 8px; margin-bottom: 16px;
+    background: #EAF3DE; border-top: 1px solid #97C459;
+    padding: 10px 12px; border-radius: 0 0 6px 6px;
   }
   .save-bar-status {
-    flex: 1; font-size: 13px; color: #173404; min-width: 200px;
+    flex: 1; font-size: 13px; color: #173404; min-width: 120px;
   }
   .save-bar-status strong { font-weight: 500; }
   .save-bar-btn {
@@ -200,18 +274,20 @@
   .save-bar.complete .save-bar-status { color: var(--ink-muted); }
 
   /* Zakładki */
-  .tabs {
-    display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 16px;
-  }
+  /* Zakładki C (2026-09-18, mockup C v2): karty zrośnięte z treścią — aktywna zlewa się z białym
+     panelem pod nią (jak karta w przeglądarce), nieaktywne stoją na szarym tle. Afordancja
+     „tu się klika" bez nowej palety. */
+  .tabs { display: flex; gap: 3px; align-items: flex-end; padding: 0 6px 1px 6px; margin-bottom: 0; }
   .tab {
-    padding: 10px 16px; border: none; background: transparent; cursor: pointer;
-    font-family: inherit; font-size: 14px; color: var(--ink-muted); border-bottom: 2px solid transparent;
+    padding: 8px 16px; border: 1px solid var(--line); border-bottom: none; background: var(--line-soft);
+    cursor: pointer; font-family: inherit; font-size: 14px; color: var(--ink-muted); border-radius: 8px 8px 0 0;
   }
-  .tab.active { color: var(--ink); font-weight: 500; border-bottom-color: var(--ink); }
-  .tab:hover { background: var(--bg); }
+  .tab:hover { background: var(--paper); color: var(--ink); }
+  .tab.active { background: var(--paper); color: var(--ink); font-weight: 500; border-color: var(--ink); padding-top: 10px; margin-bottom: -2px; border-bottom: 1px solid var(--paper); position: relative; z-index: 21; }
+  .tab.tab-zamek { margin-left: auto; }
 
   .tab-content { display: none; }
-  .tab-content.active { display: block; }
+  .tab-content.active { display: block; background: var(--paper); border: 1px solid var(--ink); border-radius: 8px; padding: 14px; margin-bottom: 14px; }
 
   /* Legenda statusów */
   .legend-row {
@@ -879,11 +955,20 @@
 
     /* Odzyskać szerokość ekranu na telefonie (było 1.5rem z obu stron) */
     .container { padding: 0.6rem; }
-    .topbar { margin: -0.6rem -0.6rem 10px -0.6rem; padding: 6px 0.6rem 0 0.6rem; }
+    .topbar { margin: -0.6rem -0.6rem 0 -0.6rem; padding: 6px 0.6rem 0 0.6rem; }
     .topbar h1 { font-size: 18px; }
     .topbar .subtitle { display: none; }
-    .topbar .tabs { overflow-x: auto; }
+    .topbar .tabs { overflow-x: auto; overflow-y: hidden; padding-bottom: 2px; }
     .tab { padding: 8px 10px; font-size: 13px; white-space: nowrap; }
+    .tab.active { margin-bottom: 0; }
+    .tab-content.active { padding: 8px; border-radius: 0 8px 8px 8px; }
+    .dzien-row .lesson-count, .dzien-row .dzien-usun { display: none; }
+    .dzien-row .data { font-size: 16px; }
+    .dzien-kolumny { display: flex; overflow-x: auto; }
+    .dzien-kolumny .kol.otwarta { min-width: 320px; }
+    .dzien-kolumny .kol { min-width: 230px; }
+    .dzien-kolumny .kol.inne { min-width: 130px; }
+    .reg-grid { grid-template-columns: 1fr; }
     .table-wrap, .oceny-wrap { -webkit-overflow-scrolling: touch; max-height: calc(100vh - var(--topbar-h, 0px) - 16px); overflow: auto; }
     table.attendance thead th, table.dziennik thead th { position: sticky; top: 0; z-index: 4; background: var(--line-soft); box-shadow: 0 2px 0 var(--ink); }
     table.attendance thead th:nth-child(1), table.attendance thead th:nth-child(2) { z-index: 5; }
@@ -989,9 +1074,8 @@
   <div class="topbar">
     <div class="topbar-row">
       <h1>Dziennik WF</h1>
-      <p class="subtitle">dane zapisują się lokalnie</p>
-      <div id="classBar"></div>
-      <div id="zalegleChip"></div>
+      <p class="subtitle">dane zapisują się lokalnie · klasa i szkoła: zakładka Uczniowie</p>
+      <div id="zalegleChip" style="margin-left:auto"></div>
     </div>
     <div class="tabs">
       <button class="tab active" onclick="switchTab('obecnosc')">📋 Obecność</button>
@@ -1000,6 +1084,7 @@
       <button class="tab" onclick="switchTab('oceny')">📝 Oceny</button>
       <button class="tab" onclick="switchTab('statystyki')">📊 Statystyki</button>
       <button class="tab" onclick="switchTab('plan')">🗓 Plan</button>
+      <button class="tab" onclick="switchTab('reguly')">📐 Reguły</button>
       <button class="tab tab-zamek" onclick="zamekZablokuj('ręcznie')" title="Zasłoń dziennik (odsłania PIN albo hasło)">🔒 Zablokuj</button>
     </div>
   </div>
@@ -1019,32 +1104,22 @@
   <!-- =================================================== -->
   <div id="tab-obecnosc" class="tab-content active">
 
-    <div class="date-row">
-      <label>Data lekcji:</label>
-      <input type="date" id="lessonDate" onchange="changeDate()">
+    <div class="date-row dzien-row">
+      <span class="data" id="dzienData"></span>
+      <input type="date" id="lessonDate" onchange="changeDate()" title="wybierz inny dzień">
       <span id="lessonNrZapas" style="display:none;gap:6px;align-items:center;">
       <label for="lessonNr" title="Bez planu w Ustawieniach: numer lekcji rozróżnia dwie godziny z tą samą klasą jednego dnia. Puste = jedyna lekcja dnia.">lekcja nr:</label>
       <select id="lessonNr" onchange="ustawNrLekcji(this.value)" style="padding:6px 8px;font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:6px;"><option value="">—</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option></select>
       </span>
       <span id="lessonNrHint" style="display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap;"></span>
-      <button onclick="dateOffset(-1)">◀ poprz.</button>
-      <button onclick="dateOffset(1)">nast. ▶</button>
-      <button onclick="setToday()">dziś</button>
-      <button class="danger" onclick="deleteLesson()" title="usuń tę lekcję">🗑 usuń lekcję</button>
-      <button onclick="copyForVulcan()" title="Kopiuje do schowka wyjątki z tego dnia (bez „ćwiczył”) w formacie Nazwisko Imię + status, do wklejenia w panel skryptu VULCAN">📋 Kopiuj dla VULCAN</button>
+      <span class="nav"><button type="button" onclick="dateOffset(-1)" title="poprzedni dzień">◀</button><button type="button" onclick="setToday()">dziś</button><button type="button" onclick="dateOffset(1)" title="następny dzień">▶</button></span>
+      <button type="button" class="dzien-usun" onclick="deleteLesson()" title="usuń wpisy tej lekcji">🗑</button>
       <span class="lesson-count" id="lessonCount"></span>
+      <span class="przel" id="widokPrzel"><button type="button" data-w="dzien" onclick="ustawWidok('dzien')">Dzień</button><button type="button" data-w="tydzien" onclick="ustawWidok('tydzien')">Tydzień</button></span>
     </div>
 
-    <!-- Tydzień z planu: kafelek = lekcja (klasa + numer), klik = ta lekcja w dzienniku -->
+    <!-- Tydzień z planu (widok Tydzień): kafelek = lekcja (klasa + numer), klik = ta lekcja w dzienniku -->
     <div id="planTydzien" class="plan-tydzien"></div>
-
-    <!-- Przycisk szybkiego zapisu -->
-    <div class="save-bar" id="saveBar">
-      <div class="save-bar-status" id="saveBarStatus"></div>
-      <button class="primary save-bar-btn" onclick="finalizeLesson()">
-        💾 Zapisz lekcję — pozostali jako "ćwiczył"
-      </button>
-    </div>
 
     <details class="pomoc" data-pomoc="obecnosc">
       <summary>❔ Jak to działa — klawisze, statusy, procent</summary>
@@ -1108,25 +1183,39 @@
 
     </details>
 
-    <div class="table-wrap">
-      <table class="attendance kolumny" id="attendanceTable">
-        <thead>
-          <tr>
-            <th class="left">#</th>
-            <th class="left">Uczeń</th>
-            <th>Status dziś</th>
-            <th>Ćwiczył</th>
-            <th>NĆ</th>
-            <th>BS</th>
-            <th>NB</th>
-            <th>NU</th>
-            <th>ZW</th>
-            <th>Łącznie</th>
-            <th>% ćwiczył</th>
-          </tr>
-        </thead>
-        <tbody id="attendanceBody"></tbody>
-      </table>
+    <!-- Widok dnia: kolumny podglądu przed/po otwartej lekcji renderuje renderDzien(); otwarta = ta tabela -->
+    <div id="dzienKolumny" class="dzien-kolumny">
+      <div id="kolPrzed" class="kol-grupa"></div>
+      <div class="kol otwarta" id="kolOtwarta">
+        <div class="kol-head" id="kolOtwartaHead"></div>
+        <div class="table-wrap">
+          <table class="attendance kolumny" id="attendanceTable">
+            <thead>
+              <tr>
+                <th class="left">#</th>
+                <th class="left">Uczeń</th>
+                <th>Status dziś</th>
+                <th class="stat">Ćwiczył</th>
+                <th class="stat">NĆ</th>
+                <th class="stat">BS</th>
+                <th class="stat">NB</th>
+                <th class="stat">NU</th>
+                <th class="stat">ZW</th>
+                <th class="stat">Łącznie</th>
+                <th>% dotąd</th>
+              </tr>
+            </thead>
+            <tbody id="attendanceBody"></tbody>
+          </table>
+        </div>
+        <!-- Stopka otwartej kolumny: zapis (reszta = ćwiczył) + kopiuj do e-dziennika szkoły -->
+        <div class="save-bar" id="saveBar">
+          <div class="save-bar-status" id="saveBarStatus"></div>
+          <button class="primary save-bar-btn" id="saveBarBtn" onclick="finalizeLesson()">✓ Zapisz lekcję</button>
+          <button type="button" class="save-bar-kopiuj" id="saveBarKopiuj" onclick="copyForVulcan()" title="Wyjątki tej lekcji (bez „ćwiczył”) do schowka: Nazwisko Imię + status, do wklejenia w panel skryptu e-dziennika">📋 do VULCANa</button>
+        </div>
+      </div>
+      <div id="kolPo" class="kol-grupa"></div>
     </div>
 
   </div>
@@ -1135,6 +1224,9 @@
   <!-- ZAKŁADKA: UCZNIOWIE -->
   <!-- =================================================== -->
   <div id="tab-uczniowie" class="tab-content">
+    <!-- Wybór szkoły/klasy, + klasa, zmiana nazwy, usuń, płeć klasy (2026-09-18: przeniesione z paska górnego —
+         w Obecności klasa wynika z otwartej lekcji; tu wpisuje się uczniów, więc tu wybiera się klasę) -->
+    <div id="classBar"></div>
     <div class="toolbar">
       <button class="primary" onclick="addStudent()">+ Dodaj ucznia</button>
       <button class="primary" onclick="exportEncrypted()" title="Kopia zaszyfrowana hasłem — tę można wysłać mailem">🔒 Zapisz kopię (szyfrowana)</button>
@@ -1195,6 +1287,7 @@
   <!-- ZAKŁADKA: POMIARY -->
   <!-- =================================================== -->
   <div id="tab-pomiary" class="tab-content">
+    <div class="tytul-klasy klasa-tytul"></div>
 
     <div class="quick-add" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
       <label for="newTestName" style="margin:0;">Nowy test:</label>
@@ -1240,6 +1333,7 @@
   <!-- ZAKŁADKA: OCENY -->
   <!-- =================================================== -->
   <div id="tab-oceny" class="tab-content">
+    <div class="tytul-klasy klasa-tytul"></div>
 
     <details class="pomoc" data-pomoc="oceny">
       <summary>❔ Jak działają oceny — kolumny, waga, średnia, klawisze</summary>
@@ -1327,7 +1421,50 @@
     </div>
   </div>
 
+  <!-- =================================================== -->
+  <!-- ZAKŁADKA: REGUŁY (2026-09-18) — cytat PZO, manipulatory liczenia, szkoły → e-dziennik, okna Systematyczności -->
+  <!-- =================================================== -->
+  <div id="tab-reguly" class="tab-content">
+    <div class="reg-grid">
+      <div class="reg-box">
+        <h3>Jak liczona jest frekwencja</h3>
+        <p class="zrodlo">Źródło: <b>Przedmiotowe Zasady Oceniania z WF</b> (ZSS), obszar „Systematyczność” — <code>wf/pzo/PZO-wf-SSP.docx</code>, <code>PZO-wf-SLO.docx</code></p>
+        <blockquote>Nieobecności nieusprawiedliwione wliczane są do puli wszystkich zajęć. Nieobecności usprawiedliwione (zaświadczenie lekarskie lub rodzica) oraz związane z działalnością na rzecz szkoły nie są wliczane do ogólnej liczby zajęć.</blockquote>
+        <div class="wzor"><span>ćwiczył</span><span class="kreska"></span><span id="regWzorMianownik">ćwiczył + nie ćwiczył + brak stroju + nieobecny nieuspr.</span></div>
+        <p>Usprawiedliwiony (NU) i zwolniony (ZW) wypadają z bazy. Spóźnienie nie zmienia procentu (PZO milczy). Klasyfikacja: udział w co najmniej <b>50%</b> zajęć w semestrze.</p>
+        <p class="przyklad">Przykład: 20 lekcji, 16 ćwiczył, 1 nć, 1 bs, 1 nu, 1 zw → 16 / 18 = <b>89%</b> → ocena <b>dobra</b> (75–89).</p>
+        <p>Widełki %→ocena (SSP): 96–100 cel · 90–95 bdb · 75–89 db · 53–74 dst · 41–52 dop · 20–40 ndst.</p>
+        <p class="uwaga">Rozjazd z PZO: dokument mówi o ocenie co <b>2 miesiące</b> — stąd 4 okna Systematyczności (obok); SLO daje <b>punkty</b> (max 20/okno), apka pokazuje procent — decyzja jeszcze nie zapadła.</p>
+      </div>
+      <div class="reg-box">
+        <h3>Manipulatory</h3>
+        <p class="uwaga">Domyślne wartości = dotychczasowe liczenie apki (nic nie zmienia się samo). Zmiana przelicza Statystyki, % dotąd i Systematyczność wstecz — wpisy zostają, zmienia się tylko liczenie.</p>
+        <label class="reg-row"><input type="checkbox" id="regBsBaza" onchange="regulaUstaw('bsBaza', this.checked)"><span class="fill"><b>Brak stroju liczy się jak nieobecność</b><br><small>wyłącz → BS wypada z bazy jak usprawiedliwienie</small></span></label>
+        <label class="reg-row"><input type="checkbox" id="regNcBaza" onchange="regulaUstaw('ncBaza', this.checked)"><span class="fill"><b>Nie ćwiczył liczy się jak nieobecność</b><br><small>wyłącz → NĆ wypada z bazy</small></span></label>
+        <label class="reg-row"><input type="checkbox" id="regSpPol" onchange="regulaUstaw('spPol', this.checked)"><span class="fill"><b>Spóźnienie obniża procent</b><br><small>włącz → ćwiczył ze spóźnieniem liczy się jak pół lekcji</small></span></label>
+        <label class="reg-row"><input type="checkbox" id="regNuBaza" onchange="regulaUstaw('nuBaza', this.checked)"><span class="fill"><b>Nieobecność usprawiedliwiona wchodzi do bazy</b><br><small>włącz → NU obniża procent (jak frekwencja ogólna w e-dzienniku)</small></span></label>
+        <div class="reg-row"><input type="number" id="regProgZielony" min="1" max="100" onchange="regulaUstaw('progZielony', this.value)"><span class="fill"><b>Próg zielony</b> <small>· poniżej: bursztyn</small></span></div>
+        <div class="reg-row"><input type="number" id="regProgCzerwony" min="1" max="100" onchange="regulaUstaw('progCzerwony', this.value)"><span class="fill"><b>Próg czerwony</b> <small>· poniżej: czerwień</small></span></div>
+        <h3 style="margin-top:16px;">Okna Systematyczności — <span id="regOknaKlasa"></span></h3>
+        <p class="uwaga">Dwie oceny na półrocze (decyzja 18.09.2026): I.1, I.2, II.1, II.2. Środek półrocza liczy się sam z granicy; wpisz datę, żeby go przesunąć.</p>
+        <div class="reg-row"><input type="date" id="regBrk" onchange="oknoUstaw('semesterBreak', this.value)"><span class="fill"><b>Granica półrocza</b> <small>· 1. dzień II półrocza; puste = jedno okno (cała historia)</small></span></div>
+        <div class="reg-row"><input type="date" id="regPolI" onchange="oknoUstaw('polI', this.value)"><span class="fill"><b>Środek I półrocza</b> <small id="regPolIAuto"></small></span></div>
+        <div class="reg-row"><input type="date" id="regPolII" onchange="oknoUstaw('polII', this.value)"><span class="fill"><b>Środek II półrocza</b> <small id="regPolIIAuto"></small></span></div>
+        <p class="uwaga" id="regOknaOpis"></p>
+      </div>
+      <div class="reg-box">
+        <h3>Szkoły i e-dziennik</h3>
+        <div id="regSzkoly"></div>
+        <p class="uwaga">Stąd etykieta przycisku w kolumnie dnia („do VULCANa” / „do Librusa”). Przy „+ klasa” to samo pytanie pada od razu. Skrypt wklejania istnieje dziś tylko dla VULCANa; schowek działa dla obu.</p>
+        <h3 style="margin-top:16px;">Forma: ćwiczył / ćwiczyła</h3>
+        <div id="regPlec"></div>
+        <p class="uwaga">Klasy ZSS są jednorodne płciowo — ustawienie per klasa (w Uczniowie), nie per uczeń. Zmienia tylko etykiety (stopka, legenda), nie liczenie.</p>
+      </div>
+    </div>
+  </div>
+
   <div id="tab-statystyki" class="tab-content">
+    <div class="tytul-klasy klasa-tytul"></div>
     <div class="summary-grid" id="summaryGrid"></div>
 
     <h2>Frekwencja indywidualna</h2>
@@ -1438,6 +1575,10 @@
     <div style="margin-bottom:14px;">
       <label style="display:block;font-size:13px;color:var(--ink-muted);margin-bottom:4px;">Szkoła (możesz zostawić puste)</label>
       <input type="text" id="classPromptSchool" onkeydown="if(event.key==='Enter')classPromptOk()" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-family:inherit;font-size:14px;box-sizing:border-box;">
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:13px;color:var(--ink-muted);margin-bottom:4px;">E-dziennik tej szkoły (etykieta „📋 do …” w kolumnie dnia)</label>
+      <select id="classPromptEdziennik" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-family:inherit;font-size:14px;background:var(--paper);"><option value="vulcan">VULCAN</option><option value="librus">Librus</option></select>
     </div>
     <div style="margin-bottom:20px;">
       <label style="display:block;font-size:13px;color:var(--ink-muted);margin-bottom:4px;">Nazwa klasy (np. 5b)</label>
@@ -1609,6 +1750,10 @@ let state = {
   // inne = zajęcia widoczne w pasku tygodnia bez frekwencji (EZ, GW, dyżur)
   // — siatka z Ustawień (klik) i/lub plik z zbuduj_plan_wf.py; v1 (nazwa: [dni]) czyta się dalej
   planWf: null,
+  // ustawienia (2026-09-18): { szkoly: {nazwa: {edziennik:'vulcan'|'librus'}}, reguly: {bsBaza, ncBaza, spPol, nuBaza, progZielony, progCzerwony} }
+  // Wspólne dla klas; w kopii obok planWf. Brak = domyślne (dotychczasowe liczenie, e-dziennik po nazwie szkoły).
+  ustawienia: null,
+  widok: 'dzien',       // Obecność: 'dzien' (kolumny lekcji dnia) | 'tydzien' (pasek Pn–Pt) — preferencja UI, localStorage
   students: [],
   // attendance: { klucz: { studentId: 'C' | 'NC' | 'BS' | 'ZW' | 'NB' } }
   // klucz = 'YYYY-MM-DD' (jedyna/pierwsza lekcja dnia) albo 'YYYY-MM-DD#nr' (lekcja nr z planu:
@@ -1640,9 +1785,41 @@ function makeClass(school, name, students) {
     measurements: {},
     gradeColumns: [],
     grades: {},
-    semesterBreak: ''   // data 1. dnia II półrocza; '' = jedno okno (cała historia)
+    semesterBreak: '',  // data 1. dnia II półrocza; '' = jedno okno (cała historia)
+    polI: '',           // środek I półrocza ('' = wyliczony); okna Systematyczności I.1/I.2
+    polII: '',          // środek II półrocza ('' = wyliczony); okna II.1/II.2
+    plec: ''            // '' | 'dz' | 'chl' — etykieta ćwiczył/ćwiczyła (klasy ZSS jednorodne płciowo)
   };
 }
+// ---- Ustawienia wspólne (reguły liczenia, e-dziennik per szkoła) ----
+const REGULY_DOMYSLNE = { bsBaza: true, ncBaza: true, spPol: false, nuBaza: false, progZielony: 90, progCzerwony: 75 };
+function ustawienia() {
+  if (!state.ustawienia || typeof state.ustawienia !== 'object') state.ustawienia = {};
+  if (!state.ustawienia.szkoly) state.ustawienia.szkoly = {};
+  if (!state.ustawienia.reguly) state.ustawienia.reguly = {};
+  return state.ustawienia;
+}
+function reguly() { return Object.assign({}, REGULY_DOMYSLNE, ustawienia().reguly); }
+function regulaUstaw(k, v) {
+  const r = ustawienia().reguly;
+  if (k === 'progZielony' || k === 'progCzerwony') { const n = parseInt(v, 10); if (!(n >= 1 && n <= 100)) { renderReguly(); return; } r[k] = n; }
+  else r[k] = !!v;
+  save(); refreshAll();
+  showToast('Reguła zapisana — Statystyki i Systematyczność przeliczone.', 'success');
+}
+// Klasa koloru procentu wg progów z Reguł (jedno miejsce zamiast 90/75 w trzech funkcjach)
+function pctKlasa(p) { const R = reguly(); return p >= R.progZielony ? 'high' : (p >= R.progCzerwony ? 'mid' : 'low'); }
+// E-dziennik szkoły: ustawione ręcznie albo domyślnie po nazwie (technikum → Librus, reszta VULCAN)
+function edziennikSzkoly(school) {
+  const s = ustawienia().szkoly[school || ''];
+  if (s && s.edziennik) return s.edziennik;
+  return /tech/i.test(school || '') ? 'librus' : 'vulcan';
+}
+function edziennikUstaw(school, v) { const S = ustawienia().szkoly; S[school || ''] = Object.assign({}, S[school || ''], { edziennik: v }); }
+function edziennikEtykieta(school) { return edziennikSzkoly(school) === 'librus' ? 'do Librusa' : 'do VULCANa'; }
+// Forma czasownika per klasa (dziewczęta → ćwiczyła)
+function cwLabel(cls) { cls = cls || getCurrentClass(); return cls && cls.plec === 'dz' ? 'ćwiczyła' : 'ćwiczył'; }
+function ustawPlec(v) { const c = getCurrentClass(); if (!c) return; c.plec = v || ''; save(); refreshAll(); }
 function getCurrentClass() {
   return state.classes.find(c => c.id === state.currentClassId) || state.classes[0] || null;
 }
@@ -1683,7 +1860,7 @@ function listkiKlasy(cls) {
     if (cls.measurements[sid] && Object.keys(cls.measurements[sid]).length) L['m|' + sid] = J(cls.measurements[sid]);
   });
   (cls.students || []).forEach(s => { L['s|' + s.id] = J(s); });
-  L['k'] = J({ school: cls.school || '', name: cls.name || '', semesterBreak: cls.semesterBreak || '', planKlasa: cls.planKlasa });
+  L['k'] = J({ school: cls.school || '', name: cls.name || '', semesterBreak: cls.semesterBreak || '', planKlasa: cls.planKlasa, polI: cls.polI || '', polII: cls.polII || '', plec: cls.plec || '' });
   return L;
 }
 const _liscieBaza = {};   // cls.id → liście z ostatniego zapisu (baza do diffu)
@@ -1711,7 +1888,7 @@ function _sciezkaZastosuj(lk, Z, p) {
   else if (typ === 'gc') { lk.gradeColumns = lk.gradeColumns || []; const i = lk.gradeColumns.findIndex(c => c.id === a); if (jest) { if (i >= 0) lk.gradeColumns[i] = val; else { lk.gradeColumns.push(val); lk.grades = lk.grades || {}; lk.grades[a] = lk.grades[a] || {}; } } else if (i >= 0) lk.gradeColumns.splice(i, 1); }
   else if (typ === 'm') { lk.measurements = lk.measurements || {}; if (jest) lk.measurements[a] = val; else delete lk.measurements[a]; }
   else if (typ === 's') { lk.students = lk.students || []; const i = lk.students.findIndex(s => s.id === a); if (jest) { if (i >= 0) lk.students[i] = val; else lk.students.push(val); } else if (i >= 0) lk.students.splice(i, 1); }
-  else if (typ === 'k') { if (jest) { lk.school = val.school; lk.name = val.name; lk.semesterBreak = val.semesterBreak; if (val.planKlasa === undefined) delete lk.planKlasa; else lk.planKlasa = val.planKlasa; } }
+  else if (typ === 'k') { if (jest) { lk.school = val.school; lk.name = val.name; lk.semesterBreak = val.semesterBreak; if (val.planKlasa === undefined) delete lk.planKlasa; else lk.planKlasa = val.planKlasa; lk.polI = val.polI || ''; lk.polII = val.polII || ''; lk.plec = val.plec || ''; } }
 }
 function _sciezkaOpis(lk, p, bylo, jest) {
   const [typ, a, b] = p.split('|');
@@ -1745,9 +1922,18 @@ function scalKopie(data) {
     });
   });
   if (data.planWf && Array.isArray(data.planWf.plany)) data.planWf.plany.forEach(pl => { try { zaleglePlanZastosuj(pl); } catch (e) { /* stary plan bez od/klasy */ } });
+  ustawieniaScal(data.ustawienia);
   if (!state.currentClassId || !state.classes.find(c => c.id === state.currentClassId)) state.currentClassId = data.currentClassId || state.classes[0].id;
   stemplujBaza();
   return w;
+}
+// Ustawienia z kopii: szkoły dopisują się, gdy lokalnie brak wpisu; reguły z kopii tylko, gdy lokalnie
+// nic nie ustawiono (ustawienia nie mają znaczników per liść — to kilka pól, nie dane lekcji).
+function ustawieniaScal(u) {
+  if (!u || typeof u !== 'object') return;
+  const U = ustawienia();
+  Object.keys(u.szkoly || {}).forEach(s => { if (!U.szkoly[s]) U.szkoly[s] = u.szkoly[s]; });
+  if (!Object.keys(U.reguly).length && u.reguly) U.reguly = Object.assign({}, u.reguly);
 }
 // Wspólne dla obu importów (szyfrowany / stary jawny). zastapWszystko = dawny tryb podmiany.
 function importZastosuj(data, zastapWszystko) {
@@ -1756,6 +1942,7 @@ function importZastosuj(data, zastapWszystko) {
       state.classes = data.classes;
       state.currentClassId = data.currentClassId || data.classes[0].id;
       if (data.planWf) state.planWf = data.planWf;
+      if (data.ustawienia) state.ustawienia = data.ustawienia;
       stemplujBaza();
       activateClass(state.currentClassId); uiSelectedSchool = null; save(); refreshAll();
       showToast('Wczytano — dane zastąpione w całości.', 'success');
@@ -1951,6 +2138,7 @@ function save(natychmiast) {
     classes: state.classes,
     currentClassId: state.currentClassId,
     planWf: state.planWf,
+    ustawienia: state.ustawienia,
     pin: zamek.pin,
     savedAt: Date.now()          // rozstrzyga, który magazyn ma nowszą wersję
   };
@@ -2383,6 +2571,8 @@ function zalegleWczytajPlik(event) {
 
 function refreshAll() {
   renderClassBar();
+  renderKlasaTytul();
+  renderReguly();
   renderZalegleChip();
   renderAttendance();
   renderStudents();
@@ -2411,7 +2601,18 @@ function renderClassBar() {
     `<select onchange="onClassChange(this.value)" style="${selStyle}">${cOpts}</select>` +
     `<button onclick="uiAddClass()" style="${btnStyle}">+ klasa</button>` +
     `<button onclick="uiRenameClass()" style="${btnStyle}">zmień nazwę</button>` +
-    `<button onclick="uiDeleteClass()" style="${btnStyle};border-color:#E5C5C0;color:var(--accent-warm)">usuń klasę</button>`;
+    `<button onclick="uiDeleteClass()" style="${btnStyle};border-color:#E5C5C0;color:var(--accent-warm)">usuń klasę</button>` +
+    `<span style="font-size:13px;color:var(--ink-muted);margin-left:8px" title="Klasy ZSS są jednorodne płciowo — zmienia etykiety ćwiczył/ćwiczyła">Forma:</span>` +
+    `<select id="klasaPlec" onchange="ustawPlec(this.value)" style="${selStyle};font-size:13px"><option value="" ${cur && !cur.plec ? 'selected' : ''}>ćwiczył (domyślnie)</option><option value="chl" ${cur && cur.plec === 'chl' ? 'selected' : ''}>chłopcy — ćwiczył</option><option value="dz" ${cur && cur.plec === 'dz' ? 'selected' : ''}>dziewczęta — ćwiczyła</option></select>`;
+}
+// Tytuł klasy w Pomiarach / Ocenach / Statystykach: duża nazwa z ▾ = wybór klasy (bez paska szkoła/klasa)
+function renderKlasaTytul() {
+  const cur = getCurrentClass();
+  document.querySelectorAll('.klasa-tytul').forEach(el => {
+    if (!cur) { el.innerHTML = ''; return; }
+    const opts = state.classes.map(c => `<option value="${c.id}" ${c.id === cur.id ? 'selected' : ''}>${escapeHtml((c.school ? c.school + ' · ' : '') + c.name)}</option>`).join('');
+    el.innerHTML = `<select onchange="onClassChange(this.value)" title="wybierz klasę">${opts}</select><span class="s">${cur.school ? escapeHtml(cur.school) + ' · ' : ''}klasa ▾</span>`;
+  });
 }
 
 function onSchoolChange(v) {
@@ -2429,6 +2630,8 @@ function showClassPrompt(title, school, name, onOk) {
   document.getElementById('classPromptTitle').textContent = title;
   document.getElementById('classPromptSchool').value = school || '';
   document.getElementById('classPromptName').value = name || '';
+  const ed = document.getElementById('classPromptEdziennik');
+  if (ed) ed.value = edziennikSzkoly(school || '');
   classPromptCallback = onOk;
   document.getElementById('classPromptModal').classList.add('active');
   setTimeout(() => { const n = document.getElementById('classPromptName'); n.focus(); n.select(); }, 50);
@@ -2440,6 +2643,8 @@ function classPromptCancel() {
 function classPromptOk() {
   const school = document.getElementById('classPromptSchool').value.trim();
   const name = document.getElementById('classPromptName').value.trim();
+  const ed = document.getElementById('classPromptEdziennik');
+  if (ed && name) edziennikUstaw(school, ed.value);
   const cb = classPromptCallback;
   classPromptCallback = null;
   document.getElementById('classPromptModal').classList.remove('active');
@@ -2558,6 +2763,7 @@ function switchTab(name) {
   if (name === 'oceny') renderOceny();
   if (name === 'obecnosc') renderAttendance();
   if (name === 'plan') renderPlanUstawienia();
+  if (name === 'reguly') renderReguly();
 }
 
 // =====================================================
@@ -2628,6 +2834,132 @@ function tydzienPoniedzialek(iso) {
 }
 // Pasek tygodnia: Pn–Pt bieżącego tygodnia (wg daty lekcji), wszystkie klasy z planu.
 // Kolor kafelka: zielony = wpis jest, czerwony = dzień miniony bez wpisu, szary = „nie było”.
+// Wszystkie lekcje dnia z planu (wszystkie klasy + „inne"), posortowane po numerze — wspólne dla paska
+// tygodnia i widoku dnia. { wolny, lekcje: [{cls|null, nr, nazwa}] }
+function lekcjeDniaWszystkie(iso) {
+  const plany = zaleglePlany();
+  const dzien = zalegleDzienTyg(iso);
+  const wolny = plany.some(p => planObejmuje(p, iso) && (p.wolne || []).includes(iso));
+  const lekcje = [];
+  state.classes.forEach(cls => {
+    zalegleLekcjeDnia(cls, iso).forEach(nr => lekcje.push({ cls, nr, nazwa: cls.name }));
+  });
+  plany.forEach(p => {
+    if (!planObejmuje(p, iso) || wolny) return;
+    Object.keys(p.inne || {}).forEach(nazwa => (planSiatkaZ(p.inne, nazwa)[dzien] || []).forEach(nr => lekcje.push({ cls: null, nr, nazwa })));
+  });
+  lekcje.sort((a, b) => (a.nr === null) - (b.nr === null) || (a.nr || 0) - (b.nr || 0) || (b.cls ? 1 : 0) - (a.cls ? 1 : 0) || a.nazwa.localeCompare(b.nazwa));
+  return { wolny, lekcje };
+}
+// Przełącznik Dzień / Tydzień (preferencja UI, nie dane — localStorage, nie kopia)
+function ustawWidok(w) {
+  state.widok = w === 'tydzien' ? 'tydzien' : 'dzien';
+  try { localStorage.setItem('dziennik_wf_widok', state.widok); } catch (e) {}
+  renderAttendance();
+}
+try { state.widok = localStorage.getItem('dziennik_wf_widok') === 'tydzien' ? 'tydzien' : 'dzien'; } catch (e) {}
+const DZIEN_NAZWY = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
+const MIESIAC_DOP = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'];
+function dataSlownie(iso) {
+  const d = new Date(iso + 'T12:00:00');
+  if (isNaN(d)) return iso;
+  return DZIEN_NAZWY[d.getDay()] + ', ' + d.getDate() + ' ' + MIESIAC_DOP[d.getMonth()];
+}
+// Skrót nazwiska do podglądu: „Kowalski Jan" → „Kowalski J."
+function nazwiskoSkrot(name) {
+  const p = String(name || '').trim().split(/\s+/);
+  if (p.length < 2) return p[0] || '—';
+  return p[0] + ' ' + p.slice(1).map(x => x[0] + '.').join(' ');
+}
+const ST_MALE = { C: '✓', NC: 'nć', BS: 'bs', NB: 'nb', NU: 'nu', ZW: 'zw' };
+// Zapisy w tej sesji: klucz klasy+lekcji → HH:MM (stopka „zapisano 9:52"; nie trafia do danych)
+const _zapisanoO = {};
+function _zapisanoKlucz(cls, k) { return cls.id + '|' + k; }
+function terazHHMM() { const d = new Date(); return d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0'); }
+// Średni % klasy (jak karta „Średni % ćwiczył" w Statystykach) dla danej klasy
+function procentKlasy(cls) {
+  let c = 0, b = 0;
+  (cls.students || []).forEach(s => { if (s.longTermReleased) return; const st = getStudentStatsKlasy(cls, s.id); c += st.cwiczyl; b += st.baza; });
+  return b > 0 ? Math.round(c / b * 100) : null;
+}
+// Widok dnia: kolumny podglądu przed/po otwartej lekcji. Otwarta = bieżąca klasa + data + nr (tabela z klawiaturą).
+// Bez planu (albo bieżąca lekcja poza planem) otwarta kolumna stoi sama — jak dotąd.
+function renderDzien() {
+  const wrap = document.getElementById('dzienKolumny');
+  const przed = document.getElementById('kolPrzed'), po = document.getElementById('kolPo');
+  const head = document.getElementById('kolOtwartaHead');
+  if (!wrap || !przed || !po || !head) return;
+  const tydzien = state.widok === 'tydzien';
+  wrap.classList.toggle('tydzien', tydzien);
+  const pt = document.getElementById('planTydzien');
+  if (pt) pt.style.display = tydzien && pt.innerHTML ? '' : 'none';
+  document.querySelectorAll('#widokPrzel button').forEach(b => b.classList.toggle('on', b.dataset.w === state.widok));
+  const dd = document.getElementById('dzienData');
+  if (dd) dd.textContent = dataSlownie(state.currentDate);
+  przed.innerHTML = ''; po.innerHTML = '';
+  const cur = getCurrentClass();
+  if (!cur) { head.innerHTML = ''; return; }
+  const iso = state.currentDate, dzis = new Date().toISOString().slice(0, 10);
+  const kOtw = attKey();
+  // nagłówek otwartej kolumny
+  const active = cur.students.filter(s => !s.longTermReleased);
+  const day = cur.attendance[kOtw] || {};
+  const wpisani = active.filter(s => attRead(day[s.id]).s).length;
+  const pk = procentKlasy(cur);
+  const { wolny, lekcje } = lekcjeDniaWszystkie(iso);
+  // Numer w nagłówku: z klucza, a gdy klucz bez nr (pierwsza lekcja dnia) — z planu
+  let nrOtw = state.currentNr;
+  if (nrOtw === null) { const z = lekcje.find(l => l.cls && l.cls.id === cur.id && kluczZ(iso, nrDlaLekcji(cur, iso, l.nr)) === kOtw); if (z) nrOtw = z.nr; }
+  head.innerHTML = `<span class="nr">${nrOtw === null ? 'lekcja' : 'L' + nrOtw}</span><span class="kl">${escapeHtml(cur.name)}${cur.plec ? ' <span class="plec">' + (cur.plec === 'dz' ? 'dz.' : 'chł.') + '</span>' : ''}</span>` +
+    `<span class="sum">${pk === null ? '' : '<b>' + pk + '%</b> dotąd · '}${wpisani} z ${active.length} wpisanych</span><span class="otw">otwarta</span>`;
+  if (tydzien) return;
+  let cel = przed, otwartaZPlanu = false;
+  lekcje.forEach(({ cls, nr, nazwa }) => {
+    if (!cls) {
+      cel.insertAdjacentHTML('beforeend', `<div class="kol inne" data-inne="${escapeHtml(nazwa)}"><div class="kol-head"><span class="nr">${nr === null ? '' : 'L' + nr}</span><span class="kl">${escapeHtml(nazwa)}</span></div><div class="tresc">inne zajęcia<br>bez frekwencji w tym dzienniku</div></div>`);
+      return;
+    }
+    const k = kluczZ(iso, nrDlaLekcji(cls, iso, nr));
+    if (cls.id === cur.id && k === kOtw) { otwartaZPlanu = true; cel = po; return; }
+    cel.insertAdjacentHTML('beforeend', kolumnaPodgladu(cls, iso, nr, k, dzis));
+  });
+  if (wolny && !lekcje.length) przed.insertAdjacentHTML('beforeend', `<div class="kol inne"><div class="kol-head"><span class="kl">dzień wolny</span></div><div class="tresc">z kalendarium — bez lekcji</div></div>`);
+  void otwartaZPlanu;
+  // Telefon (kolumny przewijane poziomo): otwarta lekcja ma być na ekranie od razu, nie za podglądami
+  const ko = document.getElementById('kolOtwarta');
+  if (ko && wrap.scrollWidth > wrap.clientWidth + 1) {
+    wrap.scrollLeft += ko.getBoundingClientRect().left - wrap.getBoundingClientRect().left - 8;
+  }
+}
+function kolumnaPodgladu(cls, iso, nr, k, dzis) {
+  const jest = !!(cls.attendance || {})[k];
+  const niebylo = !!(cls.odwolane || {})[k];
+  const brak = !jest && !niebylo && iso < dzis;
+  const day = (cls.attendance || {})[k] || {};
+  const counts = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0 };
+  const active = (cls.students || []).filter(s => !s.longTermReleased);
+  let rows = '';
+  active.forEach((s, i) => {
+    const c = attRead(day[s.id]);
+    if (c.s && counts[c.s] !== undefined) counts[c.s]++;
+    const st = c.s ? `<span class="st ${STATUS_INFO[c.s] ? STATUS_INFO[c.s].cls : ''}">${ST_MALE[c.s] || c.s}${c.sp ? ' sp' : ''}</span>` : '<span class="st em">—</span>';
+    rows += `<tr><td class="lp">${i + 1}</td><td class="nm">${escapeHtml(nazwiskoSkrot(s.name))}</td><td class="s">${st}</td></tr>`;
+  });
+  let sum;
+  if (niebylo) sum = 'nie było: ' + escapeHtml(cls.odwolane[k]);
+  else if (jest) {
+    const w = ['nć', 'bs', 'nb', 'nu', 'zw'].map((l, i) => { const key = ['NC', 'BS', 'NB', 'NU', 'ZW'][i]; return counts[key] ? counts[key] + ' ' + l : ''; }).filter(Boolean).join(' · ');
+    sum = counts.C + ' ćwiczyło' + (w ? ' · ' + w : '');
+  }
+  else if (brak) sum = '<span style="color:var(--accent-warm)">brak wpisu</span>';
+  else sum = 'do wpisania';
+  const zap = _zapisanoO[_zapisanoKlucz(cls, k)];
+  const stopka = jest ? `<div class="zapisz-mini"><span class="info">${zap ? 'zapisano ' + zap : '✓ zapisana'}</span><button type="button" onclick="event.stopPropagation(); copyForVulcan('${cls.id}','${k}')" title="Wyjątki tej lekcji do schowka">📋 ${edziennikEtykieta(cls.school)}</button></div>` : '';
+  const klasa = 'kol podglad' + (jest ? ' jest' : '') + (brak ? ' brak' : '') + (niebylo ? ' niebylo' : '');
+  return `<div class="${klasa}" data-cls="${cls.id}" data-klucz="${k}"><div class="kol-head" onclick="wybierzLekcje('${cls.id}','${iso}',${nr === null ? 'null' : nr})" title="otwórz tę lekcję do wpisu">` +
+    `<span class="nr">${nr === null ? '' : 'L' + nr}</span><span class="kl">${escapeHtml(cls.name)}${cls.plec ? ' <span class="plec">' + (cls.plec === 'dz' ? 'dz.' : 'chł.') + '</span>' : ''}</span><span class="sum">${sum}</span><span class="otw">otwórz</span></div>` +
+    `<table>${rows || '<tr><td class="nm" style="color:var(--ink-muted)">brak uczniów</td></tr>'}</table>${stopka}</div>`;
+}
 function renderPlanTydzien() {
   const el = document.getElementById('planTydzien');
   if (!el) return;
@@ -2642,16 +2974,7 @@ function renderPlanTydzien() {
   for (let i = 0; i < 5; i++) {
     const d = new Date(pn + 'T12:00:00'); d.setDate(d.getDate() + i);
     const iso = d.toISOString().slice(0, 10);
-    const wolny = plany.some(p => planObejmuje(p, iso) && (p.wolne || []).includes(iso));
-    const lekcje = [];
-    state.classes.forEach(cls => {
-      zalegleLekcjeDnia(cls, iso).forEach(nr => lekcje.push({ cls, nr, nazwa: cls.name }));
-    });
-    plany.forEach(p => {
-      if (!planObejmuje(p, iso) || wolny) return;
-      Object.keys(p.inne || {}).forEach(nazwa => (planSiatkaZ(p.inne, nazwa)[i] || []).forEach(nr => lekcje.push({ cls: null, nr, nazwa })));
-    });
-    lekcje.sort((a, b) => (a.nr === null) - (b.nr === null) || (a.nr || 0) - (b.nr || 0) || (b.cls ? 1 : 0) - (a.cls ? 1 : 0) || a.nazwa.localeCompare(b.nazwa));
+    const { wolny, lekcje } = lekcjeDniaWszystkie(iso);
     h += `<div class="plan-dzien${iso === dzis ? ' dzis' : ''}${wolny ? ' wolny' : ''}"><div class="dz-naglowek"><span>${ZALEGLE_DNI[i]} ${iso.slice(8, 10)}.${iso.slice(5, 7)}</span>${wolny ? '<span>wolne</span>' : ''}</div>`;
     if (!lekcje.length && !wolny) h += '<div style="font-size:12px;color:var(--ink-muted);">—</div>';
     lekcje.forEach(({ cls, nr, nazwa }) => {
@@ -2769,6 +3092,7 @@ function finalizeLesson() {
 
     save();
     autoBackupDaily();
+    const cc = getCurrentClass(); if (cc) _zapisanoO[_zapisanoKlucz(cc, attKey())] = terazHHMM();
     renderAttendance();
     showToast('✓ Zapisano lekcję. ' + (withoutStatus.length - toZW.length) + ' uczniów ma status C' + (toZW.length ? ', ' + toZW.length + ' ZW (zwolnienie OD–DO)' : '') + '.', 'success');
   });
@@ -2795,21 +3119,31 @@ function attWrite(status, sp) {
 // (wszystkie istniejące wywołania getStudentStats(id) działają bez zmian).
 // Zakres: [fromDate, toDate) — dzień granicy należy do II półrocza.
 function getStudentStats(studentId, fromDate, toDate) {
-  const stats = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0, total: 0 };
-  Object.keys(state.attendance).forEach(date => {
+  return getStudentStatsZ(state.attendance, studentId, fromDate, toDate);
+}
+function getStudentStatsKlasy(cls, studentId, fromDate, toDate) {
+  return getStudentStatsZ(cls.attendance || {}, studentId, fromDate, toDate);
+}
+function getStudentStatsZ(attendance, studentId, fromDate, toDate) {
+  const stats = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0, total: 0, Csp: 0 };
+  Object.keys(attendance).forEach(date => {
     const dzien = kluczData(date);
     if (fromDate && dzien < fromDate) return;
     if (toDate && dzien >= toDate) return;
-    const st = attRead(state.attendance[date][studentId]).s;
+    const c = attRead(attendance[date][studentId]);
+    const st = c.s;
     if (st && stats[st] !== undefined) {
       stats[st]++;
       stats.total++;
+      if (st === 'C' && c.sp) stats.Csp++;
     }
   });
-  // Baza: ćwiczył + NĆ + BS + NB (nieusprawiedliwiony)
-  // Wypadają: NU (usprawiedliwiony) i ZW (zwolnienie)
-  stats.baza = stats.C + stats.NC + stats.BS + stats.NB;
-  stats.cwiczyl = stats.C;
+  // Baza wg PZO (obszar „Systematyczność"): ćwiczył + NĆ + BS + NB (nieusprawiedliwiony);
+  // wypadają NU (usprawiedliwiony) i ZW (zwolnienie). Manipulatory z zakładki Reguły
+  // (domyślne = dokładnie to liczenie) pozwalają zrównać z e-dziennikiem.
+  const R = reguly();
+  stats.baza = stats.C + (R.ncBaza ? stats.NC : 0) + (R.bsBaza ? stats.BS : 0) + stats.NB + (R.nuBaza ? stats.NU : 0);
+  stats.cwiczyl = R.spPol ? stats.C - stats.Csp * 0.5 : stats.C;
   stats.percent = stats.baza > 0 ? (stats.cwiczyl / stats.baza * 100) : null;
   return stats;
 }
@@ -2856,7 +3190,7 @@ function renderAttendance() {
 
     let pctHtml = '—';
     if (!s.longTermReleased && stats.baza > 0) {
-      const cls = stats.percent >= 90 ? 'high' : (stats.percent >= 75 ? 'mid' : 'low');
+      const cls = pctKlasa(stats.percent);
       pctHtml = `<span class="percent-cell ${cls}">${stats.percent.toFixed(0)}%</span><br><span class="stat-detail">${stats.cwiczyl}/${stats.baza}</span>`;
     }
 
@@ -2864,13 +3198,13 @@ function renderAttendance() {
       <td class="left">${i + 1}</td>
       <td class="left"><input type="text" class="student-name" value="${escapeHtml(s.name)}" placeholder="Imię nazwisko" oninput="updateStudentName('${s.id}', this.value)"></td>
       <td>${statusHtml}</td>
-      <td>${stats.C || ''}</td>
-      <td>${stats.NC || ''}</td>
-      <td>${stats.BS || ''}</td>
-      <td>${stats.NB || ''}</td>
-      <td>${stats.NU || ''}</td>
-      <td>${stats.ZW || ''}</td>
-      <td>${stats.total || ''}</td>
+      <td class="stat">${stats.C || ''}</td>
+      <td class="stat">${stats.NC || ''}</td>
+      <td class="stat">${stats.BS || ''}</td>
+      <td class="stat">${stats.NB || ''}</td>
+      <td class="stat">${stats.NU || ''}</td>
+      <td class="stat">${stats.ZW || ''}</td>
+      <td class="stat">${stats.total || ''}</td>
       <td>${pctHtml}</td>
     `;
     tbody.appendChild(tr);
@@ -2878,10 +3212,12 @@ function renderAttendance() {
 
   // Pasek z liczbą lekcji
   const lessonsTotal = Object.keys(state.attendance).length;
-  document.getElementById('lessonCount').textContent = `Łącznie zapisanych lekcji: ${lessonsTotal}`;
+  document.getElementById('lessonCount').textContent = `zapisanych lekcji: ${lessonsTotal}`;
 
   // Aktualizuję pasek "Zapisz lekcję"
   updateSaveBar();
+  // Widok dnia: kolumny obok otwartej lekcji (po updateSaveBar — stopka zna stan)
+  renderDzien();
 }
 
 function updateSaveBar() {
@@ -2894,14 +3230,22 @@ function updateSaveBar() {
   const bar = document.getElementById('saveBar');
   const status = document.getElementById('saveBarStatus');
 
+  const cw = cwLabel();
+  const cur = getCurrentClass();
+  const kop = document.getElementById('saveBarKopiuj');
+  if (kop) kop.textContent = '📋 ' + edziennikEtykieta(cur ? cur.school : '');
+  const btn = document.getElementById('saveBarBtn');
   let msg = '';
   if (withoutStatus.length === 0) {
     bar.classList.add('complete');
-    msg = `<strong>✓ Lekcja zapisana.</strong> ${alreadyC.length}× ćwiczył · ${exceptions.length} wyjątków · razem ${activeStudents.length} uczniów`;
+    const zap = cur ? _zapisanoO[_zapisanoKlucz(cur, attKey())] : null;
+    msg = `<strong>✓ ${zap ? 'Zapisano ' + zap : 'Lekcja zapisana'}.</strong> ${alreadyC.length}× ${cw} · ${exceptions.length} wyjątków · razem ${activeStudents.length} uczniów`;
+    if (btn) btn.style.display = 'none';
   } else {
     bar.classList.remove('complete');
+    if (btn) btn.style.display = '';
     const relN = withoutStatus.filter(s => isReleasedOn(s, state.currentDate)).length;
-    msg = `<strong>${withoutStatus.length}</strong> uczeń/uczniów bez statusu · ${exceptions.length} wyjątków zaznaczonych · <strong>Enter</strong> (albo klik "Zapisz") → pozostali dostaną <strong>C</strong>` + (relN ? ` (${relN} ze zwolnieniem OD–DO → <strong>ZW</strong>)` : '');
+    msg = `Bez statusu: <strong>${withoutStatus.length}</strong> — <strong>Enter</strong> albo „Zapisz” zapisuje ich jako <strong>${cw}</strong>` + (relN ? ` (${relN} ze zwolnieniem OD–DO → <strong>ZW</strong>)` : '') + ` · ${exceptions.length} wyjątków`;
   }
   status.innerHTML = msg;
 }
@@ -3396,7 +3740,7 @@ function renderStats() {
   state.students.forEach((s, i) => {
     if (s.longTermReleased) return; // pomijamy w statystykach
     const stats = getStudentStats(s.id);
-    const cls = stats.percent === null ? '' : (stats.percent >= 90 ? 'high' : (stats.percent >= 75 ? 'mid' : 'low'));
+    const cls = stats.percent === null ? '' : pctKlasa(stats.percent);
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="left">${i + 1}</td>
@@ -3650,6 +3994,7 @@ function snapshotData() {
     classes: state.classes,
     currentClassId: state.currentClassId,
     planWf: state.planWf,        // plan (siatka, dni wolne, inne zajęcia) — bez tego telefon nie ma planu (empiria 18.09)
+    ustawienia: state.ustawienia, // reguły liczenia + e-dziennik per szkoła
     exported: new Date().toISOString()
   };
 }
@@ -3979,12 +4324,17 @@ function importEncrypted(event) {
 // Kopiuj dla VULCAN — JEDEN dzień (bieżący), surowe kody apki (C+sp, BS, NĆ…),
 // projekcję na symbole VULCANa robi skrypt vulcan-frekwencja.user.js (jedno miejsce mapy).
 // Pomija czyste „C” (VULCAN sam wstawia obecność po Zapisz), zwolnieni długoterminowo → ZW.
-function copyForVulcan() {
-  const date = state.currentDate;
-  const day = state.attendance[attKey()] || {};
+// Bez argumentów: bieżąca lekcja (jak dotąd). Z (clsId, klucz): lekcja innej klasy z podglądu w widoku dnia —
+// tekst „Nazwisko Imię<TAB>status" jest taki sam dla VULCANa i Librusa, różni się tylko etykieta przycisku.
+function copyForVulcan(clsId, klucz) {
+  const cls = clsId ? state.classes.find(c => c.id === clsId) : null;
+  const key = klucz || attKey();
+  const date = kluczData(key);
+  const students = cls ? (cls.students || []) : state.students;
+  const day = (cls ? (cls.attendance || {}) : state.attendance)[key] || {};
   const lines = [];
   let skippedC = 0, noStatus = 0;
-  state.students.forEach(s => {
+  students.forEach(s => {
     if (!s.name || !s.name.trim()) return;
     let token;
     if (s.longTermReleased) token = 'ZW';
@@ -4446,8 +4796,64 @@ function setSemesterBreak(v) {
   if (!c) return;
   c.semesterBreak = (v || '').trim();
   save();
-  renderOceny();
+  renderOceny(); renderReguly();
   showToast(c.semesterBreak ? 'Granica półrocza: ' + c.semesterBreak : 'Granica półrocza wyczyszczona — jedno okno', 'success');
+}
+function oknoUstaw(pole, v) {
+  if (pole === 'semesterBreak') { setSemesterBreak(v); return; }
+  const c = getCurrentClass();
+  if (!c) return;
+  c[pole] = (v || '').trim();
+  save(); renderOceny(); renderReguly();
+  showToast('Okna Systematyczności przeliczone.', 'success');
+}
+// Cztery okna (decyzja 18.09.2026, wf/pzo/README.md): dwie oceny na półrocze — I.1 | I.2 | II.1 | II.2.
+// Granica półrocza (semesterBreak) dzieli rok; środek każdego półrocza liczy się sam (połowa odcinka
+// 1.09 → granica → 30.06) albo z ręcznej daty polI / polII. Bez granicy: jedno okno (jak dotąd).
+function dataISO(d) { return d.toISOString().slice(0, 10); }
+function srodek(a, b) { const da = new Date(a + 'T12:00:00'), db = new Date(b + 'T12:00:00'); return dataISO(new Date((da.getTime() + db.getTime()) / 2)); }
+function oknaGranice(cls) {
+  const brk = (cls && cls.semesterBreak || '').trim();
+  if (!brk) return null;
+  const rok = parseInt(brk.slice(0, 4), 10), mies = parseInt(brk.slice(5, 7), 10);
+  const rokStart = (mies >= 9 ? rok : rok - 1) + '-09-01';
+  const rokKoniec = (mies >= 9 ? rok + 1 : rok) + '-06-30';
+  const polIAuto = srodek(rokStart, brk), polIIAuto = srodek(brk, rokKoniec);
+  const polI = (cls.polI || '').trim() || polIAuto, polII = (cls.polII || '').trim() || polIIAuto;
+  return { brk, polI, polII, polIAuto, polIIAuto, rokStart, rokKoniec };
+}
+function oknaSystematycznosci(cls) {
+  const g = oknaGranice(cls);
+  if (!g) return [ { id: SYS_PREFIX + '0', shortName: 'Syst.', fullName: 'Systematyczność — cała historia (ustaw granicę półrocza w Regułach, by rozdzielić)', from: null, to: null } ];
+  return [
+    { id: SYS_PREFIX + '11', shortName: 'Syst. I.1',  fullName: 'Systematyczność I półrocze, okno 1 (auto z frekwencji, do ' + g.polI + ')',  from: null,   to: g.polI },
+    { id: SYS_PREFIX + '12', shortName: 'Syst. I.2',  fullName: 'Systematyczność I półrocze, okno 2 (od ' + g.polI + ' do ' + g.brk + ')',     from: g.polI, to: g.brk },
+    { id: SYS_PREFIX + '21', shortName: 'Syst. II.1', fullName: 'Systematyczność II półrocze, okno 1 (od ' + g.brk + ' do ' + g.polII + ')',   from: g.brk,  to: g.polII },
+    { id: SYS_PREFIX + '22', shortName: 'Syst. II.2', fullName: 'Systematyczność II półrocze, okno 2 (od ' + g.polII + ')',                    from: g.polII, to: null }
+  ];
+}
+// Zakładka Reguły: manipulatory, okna klasy, szkoły → e-dziennik, forma
+function renderReguly() {
+  const el = document.getElementById('tab-reguly');
+  if (!el) return;
+  const R = reguly();
+  const set = (id, prop, v) => { const x = document.getElementById(id); if (x) x[prop] = v; };
+  set('regBsBaza', 'checked', R.bsBaza); set('regNcBaza', 'checked', R.ncBaza); set('regSpPol', 'checked', R.spPol); set('regNuBaza', 'checked', R.nuBaza);
+  set('regProgZielony', 'value', R.progZielony); set('regProgCzerwony', 'value', R.progCzerwony);
+  const m = ['ćwiczył', R.ncBaza ? 'nie ćwiczył' : '', R.bsBaza ? 'brak stroju' : '', 'nieobecny nieuspr.', R.nuBaza ? 'nieobecny uspr.' : ''].filter(Boolean).join(' + ');
+  set('regWzorMianownik', 'textContent', m);
+  const c = getCurrentClass();
+  set('regOknaKlasa', 'textContent', c ? (c.school ? c.school + ' · ' : '') + c.name : '');
+  const g = c ? oknaGranice(c) : null;
+  set('regBrk', 'value', c ? (c.semesterBreak || '') : '');
+  set('regPolI', 'value', c ? (c.polI || '') : ''); set('regPolII', 'value', c ? (c.polII || '') : '');
+  set('regPolIAuto', 'textContent', g ? '· puste = ' + g.polIAuto : '· najpierw granica półrocza');
+  set('regPolIIAuto', 'textContent', g ? '· puste = ' + g.polIIAuto : '· najpierw granica półrocza');
+  set('regOknaOpis', 'textContent', g ? `Okna: I.1 do ${g.polI} · I.2 ${g.polI}–${g.brk} · II.1 ${g.brk}–${g.polII} · II.2 od ${g.polII}. Kolumny Syst. w Ocenach liczą się z tych okien.` : 'Bez granicy półrocza: jedna kolumna Syst. z całej historii.');
+  const sz = document.getElementById('regSzkoly');
+  if (sz) sz.innerHTML = distinctSchools().map(s => `<div class="reg-row"><span class="fill"><b>${s ? escapeHtml(s) : '— bez szkoły —'}</b> <small>${state.classes.filter(x => x.school === s).map(x => escapeHtml(x.name)).join(', ')}</small></span><select onchange="edziennikUstaw(${JSON.stringify(s)}, this.value); save(); refreshAll();"><option value="vulcan" ${edziennikSzkoly(s) === 'vulcan' ? 'selected' : ''}>VULCAN</option><option value="librus" ${edziennikSzkoly(s) === 'librus' ? 'selected' : ''}>Librus</option></select></div>`).join('');
+  const pl = document.getElementById('regPlec');
+  if (pl) pl.innerHTML = state.classes.map(x => `<div class="reg-row"><span class="fill"><b>${escapeHtml(x.name)}</b> <small>${escapeHtml(x.school || '')}</small></span><span>${x.plec === 'dz' ? 'ćwiczyła (dz.)' : x.plec === 'chl' ? 'ćwiczył (chł.)' : 'ćwiczył'}</span></div>`).join('');
 }
 
 function syncSystematicznoscColumns() {
@@ -4460,11 +4866,7 @@ function syncSystematicznoscColumns() {
     if (k.indexOf(SYS_PREFIX) === 0) delete state.grades[k];
   });
 
-  const brk = getSemesterBreak().trim();
-  const windows = brk
-    ? [ { id: SYS_PREFIX + '1', shortName: 'Syst. I',  fullName: 'Systematyczność I półrocze (auto z frekwencji)',  from: null, to: brk },
-        { id: SYS_PREFIX + '2', shortName: 'Syst. II', fullName: 'Systematyczność II półrocze (auto z frekwencji)', from: brk,  to: null } ]
-    : [ { id: SYS_PREFIX + '0', shortName: 'Syst.',    fullName: 'Systematyczność — cała historia (ustaw granicę półrocza, by rozdzielić)', from: null, to: null } ];
+  const windows = oknaSystematycznosci(getCurrentClass());
 
   // Na początek listy — systematyczność to rdzeń oceny WF u nauczyciela.
   const newCols = windows.map(w => ({
@@ -5013,6 +5415,7 @@ function zamekZastosujDane(data) {
     state.classes = data.classes;
     state.currentClassId = data.currentClassId || data.classes[0].id;
     if (data.planWf) state.planWf = data.planWf;
+    if (data.ustawienia) state.ustawienia = data.ustawienia;
   } else if (data && data.students) {
     migrateFlat(data);            // nic nie ginie — stare dane → klasa "Bez przypisania"
   } else {

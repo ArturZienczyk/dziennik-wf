@@ -70,7 +70,7 @@ with sync_playwright() as pw:
         " state.attendance['2026-09-17']={u1:'C', u2:attWrite('C',true), u3:'BS', u4:attWrite('NC',true), u5:'NB', u7:'NU'};"
         " save(); renderStudents(); renderAttendance(); }"
     )
-    page.click('button:has-text("Kopiuj dla VULCAN")')
+    page.click('#saveBarKopiuj')  # C v2: „📋 do VULCANa” w stopce kolumny
     page.wait_for_timeout(300)
     clip = page.evaluate("() => navigator.clipboard.readText()")
     lines = clip.replace("\r", "").split("\n")
