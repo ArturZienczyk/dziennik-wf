@@ -102,3 +102,31 @@ z żywą apką (osobny punkt listy, po widoku dziennym).
    uczniu + % klasy w nagłówku (getStudentStats). 7. Kolumna „inne" (EZ/GW) w dniu. 8. Systematyczność: 4 okna
    (I.1 I.2 II.1 II.2). 9. test_widok_dzienny.py + regresja (zalegle 54, klawiatura 22, uklad, scalanie 31),
    README, sw v12, push + purge jsDelivr. Mockup po wdrożeniu → _zrzuty/ (ślad decyzji).
+
+## WDROŻONE (2026-09-19, commit 8df499e) + UWAGA OKA USERA — następny szczebel
+Punkty 1–9 z ZATWIERDZONE są w `dziennik_wf.html` (test `test_widok_dzienny.py`, regresja 15 testów zielona,
+sw v12, push). Mockup leży w `_zrzuty/mockup-widok-dzienny.html`, zrzuty `_zrzuty/cv2_*.png`.
+
+**User (19.09, po obejrzeniu):** „w widoku dziennym trzeba jakoś ujednolicić te godziny, bo osobno to wygląda
+dobrze, ale razem nie do końca do siebie pasuje". Diagnoza (zrzut `cv2_dzien_1400.png`): kolumny dnia mają
+**różną gęstość i różny język** — otwarta = pełna tabela (wiersze ~50 px, nagłówek kapitalikami „# UCZEŃ STATUS
+DZIŚ % DOTĄD", pełne nazwiska pogrubione, duże chipy statusu C/BS, kolumna % z ułamkiem), podglądy = wiersze
+~27 px, „Nazwisko I.", małe chipy „✓/nć", bez nagłówka tabeli; do tego nagłówki kolumn o różnej wysokości
+(sum zawija się w wąskich). Obok siebie widać cztery różne rytmy zamiast jednego.
+
+**Propozycja (do zrobienia w czystej sesji, przed kodem 1 mockup w `_zrzuty/`, oko usera):**
+1. **Jeden rytm wiersza dla wszystkich kolumn**: ta sama wysokość wiersza (np. 34 px), ten sam format nazwiska
+   (pełne „Nazwisko Imię" wszędzie albo skrót wszędzie — proponuję pełne, bo nauczyciel czyta nazwiska),
+   te same chipy statusu (litera C/NĆ/BS… w tym samym rozmiarze; podgląd tylko przygaszony `opacity`).
+   Otwarta różni się **obrysem i stopką**, nie gęstością.
+2. **Nagłówek tabeli otwartej** (# / UCZEŃ / STATUS DZIŚ / % DOTĄD) schować w widoku dnia albo dać ten sam
+   cienki nagłówek wszystkim kolumnom — jeden z dwóch, nie mieszanka.
+3. **Nagłówki kolumn równej wysokości**: `sum` w jednej linii (skrót: „3 ✓ · 1 nć"), stała wysokość `.kol-head`,
+   `otw` zawsze w tym samym miejscu; kolumna „inne" z tym samym nagłówkiem.
+4. **Wyrównanie wierszy między kolumnami**: klasy mają różną liczbę uczniów — kolumny wyrównane do góry
+   (`align-items:flex-start` już jest), ale wiersz 1 w każdej kolumnie ma zaczynać się na tej samej wysokości
+   (nagłówek stałej wysokości załatwia to).
+5. Procent „% dotąd" w otwartej: jedna liczba w wierszu (bez ułamka pod spodem), żeby wiersz nie rósł.
+Nie ruszać: klucz `data#nr`, `attRead/attWrite`, klawiatura (test_klawiatura 22), podgląd = klik nagłówka.
+Bramka: `test_widok_dzienny.py` + nowy check „wysokość wiersza otwartej == wysokość wiersza podglądu (±2 px)".
+Pasek tygodnia i Reguły — bez uwag.
