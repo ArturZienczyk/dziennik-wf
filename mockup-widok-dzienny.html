@@ -78,6 +78,24 @@
 .kol.mini .zapisz { padding:6px 8px; }
 .kol.mini .zapisz button { padding:5px 9px; font-size:12px; }
 .kol.mini .zapisz .info { font-size:11.5px; }
+.kol td.pr { width:44px; text-align:right; font-size:11px; color:var(--ink-muted); font-variant-numeric:tabular-nums; }
+.kol td.pr.mid { color:#8a5a12; } .kol td.pr.low { color:var(--accent-warm); font-weight:600; }
+.reg-grid { display:grid; grid-template-columns:1.2fr 1.3fr 1fr; gap:14px; }
+.reg-box { background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:14px 16px; font-size:13px; }
+.reg-box h3 { font-family:'Source Serif 4',Georgia,serif; font-size:16px; font-weight:500; margin:0 0 10px 0; }
+.reg-box p { margin:8px 0; color:var(--ink-soft); }
+.wzor { display:inline-flex; flex-direction:column; align-items:center; gap:3px; margin:4px 0 8px 0; font-family:'IBM Plex Mono',monospace; font-size:12.5px; }
+.wzor .kreska { width:100%; height:1px; background:var(--ink); }
+.przyklad { background:var(--bg); border-radius:6px; padding:8px 10px; }
+.reg-row { display:flex; gap:10px; align-items:center; padding:7px 0; border-bottom:1px solid var(--line-soft); }
+.reg-row small { color:var(--ink-muted); }
+.sw { flex:0 0 34px; height:20px; border-radius:10px; background:var(--line); position:relative; }
+.sw::after { content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:var(--paper); box-shadow:0 1px 2px rgba(0,0,0,.2); }
+.sw.on { background:var(--green); } .sw.on::after { left:16px; }
+.pole { flex:0 0 auto; min-width:56px; text-align:center; border:1px solid var(--line); border-radius:6px; padding:3px 8px; background:var(--bg); font-variant-numeric:tabular-nums; }
+.pole.sel { margin-left:auto; background:var(--paper); }
+.uwaga { font-size:12px; color:var(--ink-muted); }
+@media (max-width:700px) { .reg-grid { grid-template-columns:1fr; } }
 </style>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Mockup — widok dzienny + belki (A/B/C)</title>
@@ -254,11 +272,11 @@ h1 { font-family:'Source Serif 4',Georgia,serif; font-size:22px; font-weight:500
 
 <!-- ================= C v2 ================= -->
 <div class="wariant" style="border-bottom:none">
-<div class="wariant-opis"><b>C v2 — po Twoich uwagach.</b> (1) W Obecności nie ma belki klasy — klasa wynika z otwartej lekcji. Wybór klasy/szkoły, „+ klasa”, zmiana nazwy mieszkają w zakładce Uczniowie (tam wpisuje się uczniów). (1b) ◀ dziś ▶ jako jedna grupa, na telefonie nie łamie się na dwa wiersze. (2) „Zapisz lekcję” w stopce otwartej kolumny: pozostali bez statusu → ćwiczył. (3) Forma żeńska: klasa dziewcząt ma ustawienie „ćwiczyła” — widać w stopce i w podsumowaniu (4d LO). (4) Lekcje bez frekwencji (EZ, GW) jako wąska, szara kolumna z kreskowanym obrysem — jest na swoim miejscu w dniu, ale nie prosi o wpis. (5) „Kopiuj do e-dziennika” w stopce każdej kolumny obok „Zapisz”: jeden przycisk, etykieta ze szkoły klasy — technikum → „do Librusa”, SP/LO → „do VULCANa”. Po zapisie stopka zostaje: „zapisano 9:52 · 📋 do VULCANa”.</div>
+<div class="wariant-opis"><b>C v2 — po Twoich uwagach.</b> (1) W Obecności nie ma belki klasy — klasa wynika z otwartej lekcji. Wybór klasy/szkoły, „+ klasa”, zmiana nazwy mieszkają w zakładce Uczniowie (tam wpisuje się uczniów). (1b) ◀ dziś ▶ jako jedna grupa, na telefonie nie łamie się na dwa wiersze. (2) „Zapisz lekcję” w stopce otwartej kolumny: pozostali bez statusu → ćwiczył. (3) Forma żeńska: klasa dziewcząt ma ustawienie „ćwiczyła” — widać w stopce i w podsumowaniu (4d LO). (4) Lekcje bez frekwencji (EZ, GW) jako wąska, szara kolumna z kreskowanym obrysem — jest na swoim miejscu w dniu, ale nie prosi o wpis. (6) Frekwencja dotychczasowa: szary procent przy uczniu w otwartej kolumnie (poniżej 75% na czerwono, 75–89 na bursztynowo), procent klasy w nagłówku; liczony jak w Statystykach. (5) „Kopiuj do e-dziennika” w stopce każdej kolumny obok „Zapisz”: jeden przycisk, etykieta ze szkoły klasy — technikum → „do Librusa”, SP/LO → „do VULCANa”. Po zapisie stopka zostaje: „zapisano 9:52 · 📋 do VULCANa”.</div>
 <div class="topbar topbarC">
   <div class="topbar-row"><h1>Dziennik WF</h1>
     <span class="subtitle" style="margin-left:auto">klasa i szkoła: zakładka Uczniowie</span></div>
-  <div class="tabsC"><button class="tab active">📋 Obecność</button><button class="tab">👥 Uczniowie</button><button class="tab">📏 Pomiary</button><button class="tab">📝 Oceny</button><button class="tab">📊 Statystyki</button><button class="tab">🗓 Plan</button><button class="tab zamek">🔒 Zablokuj</button></div>
+  <div class="tabsC"><button class="tab active">📋 Obecność</button><button class="tab">👥 Uczniowie</button><button class="tab">📏 Pomiary</button><button class="tab">📝 Oceny</button><button class="tab">📊 Statystyki</button><button class="tab">🗓 Plan</button><button class="tab">📐 Reguły</button><button class="tab zamek">🔒 Zablokuj</button></div>
 </div>
 <div class="trescC">
 <div class="dzien-row"><span class="data">czwartek, 18 września</span><span class="nav"><button class="small-btn">◀</button><button class="small-btn">dziś</button><button class="small-btn">▶</button></span>
@@ -267,8 +285,8 @@ h1 { font-family:'Source Serif 4',Georgia,serif; font-size:22px; font-weight:500
   <div class="kol mini jest podglad"><div class="kol-head"><span class="nr">L2</span><span class="kl">4d LO <span class="plec">dz.</span></span><span class="sum">13 ćwiczyło · 1 nć</span><span class="otw">otwórz</span></div>
   <table><tr><td class="lp">1</td><td class="nm">Adamczyk M.</td><td class="s"><span class="st c">✓</span></td></tr><tr><td class="lp">2</td><td class="nm">Bartosik K.</td><td class="s"><span class="st c">✓</span></td></tr><tr><td class="lp">3</td><td class="nm">Cieślak P.</td><td class="s"><span class="st nc">nć</span></td></tr><tr><td class="lp">4</td><td class="nm">Dudek A.</td><td class="s"><span class="st c">✓</span></td></tr><tr><td class="lp">5</td><td class="nm">Frąckowiak O.</td><td class="s"><span class="st c">✓</span></td></tr><tr><td class="lp">6</td><td class="nm">Górska T.</td><td class="s"><span class="st c">✓</span></td></tr><tr><td class="lp">7</td><td class="nm">Iwańska J.</td><td class="s"><span class="st c">✓</span></td></tr><tr><td class="lp">8</td><td class="nm">Jóźwiak B.</td><td class="s"><span class="st c">✓</span></td></tr><tr><td class="lp">9</td><td class="nm">Kowal R.</td><td class="s"><span class="st c">✓</span></td></tr><tr><td class="lp">10</td><td class="nm">Lis W.</td><td class="s"><span class="st c">✓</span></td></tr></table>
   <div class="zapisz gotowe"><span class="info">zapisano 9:52</span><button class="kopiuj">📋 do VULCANa</button></div></div>
-  <div class="kol otwarta"><div class="kol-head"><span class="nr">L3</span><span class="kl">2 inf</span><span class="sum">9 z 11 wpisanych</span><span class="otw">otwarta</span></div>
-  <table><tr><td class="lp">1</td><td class="nm">Kaczmarek D.</td><td class="s"><span class="st c">✓</span></td></tr><tr><td class="lp">2</td><td class="nm">Lewicki F.</td><td class="s"><span class="st c">✓</span></td></tr><tr><td class="lp">3</td><td class="nm">Majewski S.</td><td class="s"><span class="st bs">bs</span></td></tr><tr><td class="lp">4</td><td class="nm">Nowicki H.</td><td class="s"><span class="st c">✓</span></td></tr><tr><td class="lp">5</td><td class="nm">Olejnik W.</td><td class="s"><span class="st zw">zw</span></td></tr><tr><td class="lp">6</td><td class="nm">Pawlak R.</td><td class="s"><span class="st c">✓</span></td></tr><tr><td class="lp">7</td><td class="nm">Rutkowski E.</td><td class="s"><span class="st c">✓ sp</span></td></tr><tr><td class="lp">8</td><td class="nm">Sikora N.</td><td class="s"><span class="st c">✓</span></td></tr><tr><td class="lp">9</td><td class="nm">Tomczyk I.</td><td class="s"><span class="st c">✓</span></td></tr><tr><td class="lp">10</td><td class="nm">Urbański L.</td><td class="s"><span class="st em">—</span></td></tr><tr><td class="lp">11</td><td class="nm">Wróbel Z.</td><td class="s"><span class="st em">—</span></td></tr></table>
+  <div class="kol otwarta"><div class="kol-head"><span class="nr">L3</span><span class="kl">2 inf</span><span class="sum"><b>91%</b> dotąd · 9 z 11 wpisanych</span><span class="otw">otwarta</span></div>
+  <table><tr><td class="lp">1</td><td class="nm">Kaczmarek D.</td><td class="pr ">96%</td><td class="s"><span class="st c">✓</span></td></tr><tr><td class="lp">2</td><td class="nm">Lewicki F.</td><td class="pr mid">88%</td><td class="s"><span class="st c">✓</span></td></tr><tr><td class="lp">3</td><td class="nm">Majewski S.</td><td class="pr low">71%</td><td class="s"><span class="st bs">bs</span></td></tr><tr><td class="lp">4</td><td class="nm">Nowicki H.</td><td class="pr ">100%</td><td class="s"><span class="st c">✓</span></td></tr><tr><td class="lp">5</td><td class="nm">Olejnik W.</td><td class="pr ">—</td><td class="s"><span class="st zw">zw</span></td></tr><tr><td class="lp">6</td><td class="nm">Pawlak R.</td><td class="pr ">92%</td><td class="s"><span class="st c">✓</span></td></tr><tr><td class="lp">7</td><td class="nm">Rutkowski E.</td><td class="pr mid">83%</td><td class="s"><span class="st c">✓ sp</span></td></tr><tr><td class="lp">8</td><td class="nm">Sikora N.</td><td class="pr ">96%</td><td class="s"><span class="st c">✓</span></td></tr><tr><td class="lp">9</td><td class="nm">Tomczyk I.</td><td class="pr ">100%</td><td class="s"><span class="st c">✓</span></td></tr><tr><td class="lp">10</td><td class="nm">Urbański L.</td><td class="pr mid">79%</td><td class="s"><span class="st em">—</span></td></tr><tr><td class="lp">11</td><td class="nm">Wróbel Z.</td><td class="pr low">58%</td><td class="s"><span class="st em">—</span></td></tr></table>
   <div class="zapisz"><span class="info">Bez statusu: <b>2</b> — zapisuję ich jako <b>ćwiczył</b>.</span><button>✓ Zapisz lekcję</button><button class="kopiuj" title="Wyjątki tej lekcji (bez „ćwiczył”) do schowka, do wklejenia w panel skryptu">📋 do Librusa</button></div></div>
   <div class="kol inne"><div class="kol-head"><span class="nr">L4</span><span class="kl">EZ 4a</span></div><div class="tresc">edukacja zdrowotna<br>bez frekwencji w tym dzienniku</div></div>
   <div class="kol mini brak podglad"><div class="kol-head"><span class="nr">L5</span><span class="kl">7b</span><span class="sum" style="color:var(--accent-warm)">brak wpisu</span><span class="otw">otwórz</span></div>
@@ -277,6 +295,42 @@ h1 { font-family:'Source Serif 4',Georgia,serif; font-size:22px; font-weight:500
 </div>
 </div>
 
+
+<!-- ================= C v2: zakładka Reguły ================= -->
+<div class="wariant">
+<div class="wariant-opis"><b>C v2 — zakładka „Reguły”.</b> Jedno miejsce, gdzie dziennik mówi, jak liczy, i gdzie można to przestawić (manipulatory). Domyślne wartości = dzisiejsze zachowanie apki (nic nie zmienia się samo). Każdy przełącznik ma zdanie „co to zmienia”. Obok: dodawanie szkoły pyta o e-dziennik — stąd etykieta „do VULCANa / do Librusa”.</div>
+<div class="topbar topbarC">
+  <div class="topbar-row"><h1>Dziennik WF</h1></div>
+  <div class="tabsC"><button class="tab">📋 Obecność</button><button class="tab">👥 Uczniowie</button><button class="tab">📏 Pomiary</button><button class="tab">📝 Oceny</button><button class="tab">📊 Statystyki</button><button class="tab">🗓 Plan</button><button class="tab active">📐 Reguły</button><button class="tab zamek">🔒 Zablokuj</button></div>
+</div>
+<div class="trescC">
+  <div class="reg-grid">
+    <div class="reg-box">
+      <h3>Jak liczona jest frekwencja</h3>
+      <div class="wzor"><span class="licz">ćwiczył</span><span class="kreska"></span><span class="mian">ćwiczył + nie ćwiczył + brak stroju + nieobecny</span></div>
+      <p>Usprawiedliwiony (nu) i zwolniony (zw) <b>wypadają z bazy</b> — ani nie pomagają, ani nie szkodzą. Spóźnienie nie obniża procentu. Wynik ląduje w Statystykach i, per półrocze, jako „Systematyczność” w Ocenach.</p>
+      <p class="przyklad">Przykład: 20 lekcji, 16 ćwiczył, 1 nć, 1 bs, 1 nu, 1 zw → 16 / 18 = <b>89%</b>.</p>
+    </div>
+    <div class="reg-box">
+      <h3>Manipulatory</h3>
+      <label class="reg-row"><span class="sw on"></span><span><b>Brak stroju liczy się jak nieobecność</b><br><small>wyłącz → bs wypada z bazy jak usprawiedliwienie</small></span></label>
+      <label class="reg-row"><span class="sw on"></span><span><b>Nie ćwiczył liczy się jak nieobecność</b><br><small>wyłącz → nć wypada z bazy</small></span></label>
+      <label class="reg-row"><span class="sw"></span><span><b>Spóźnienie obniża procent</b><br><small>włącz → ✓ sp liczy się jak pół lekcji</small></span></label>
+      <label class="reg-row"><span class="sw"></span><span><b>Nieobecność usprawiedliwiona wchodzi do bazy</b><br><small>włącz → nu obniża procent (jak w VULCANie przy frekwencji ogólnej)</small></span></label>
+      <div class="reg-row"><span class="pole">90%</span><span><b>Próg zielony</b> <small>· poniżej: bursztyn</small></span></div>
+      <div class="reg-row"><span class="pole">75%</span><span><b>Próg czerwony</b></span></div>
+      <div class="reg-row"><span class="pole">31.01</span><span><b>Granica półrocza</b> <small>· Systematyczność II liczona od zera</small></span></div>
+      <p class="uwaga">Zmiana manipulatora przelicza Statystyki i Systematyczność wstecz — wpisy zostają, zmienia się tylko liczenie.</p>
+    </div>
+    <div class="reg-box">
+      <h3>Szkoły i e-dziennik</h3>
+      <div class="reg-row"><span><b>ZSS</b> <small>SP + LO</small></span><span class="pole sel">VULCAN ▾</span></div>
+      <div class="reg-row"><span><b>Technikum</b></span><span class="pole sel">Librus ▾</span></div>
+      <p class="uwaga">Stąd etykieta przycisku w kolumnie dnia („do VULCANa” / „do Librusa”). Przy „+ szkoła” to samo pytanie pada od razu.</p>
+    </div>
+  </div>
+</div>
+</div>
 <!-- ================= C ================= -->
 <div class="wariant" style="border-bottom:none">
 <div class="wariant-opis"><b>C — zakładki-karty zrośnięte z treścią + klasa jako tytuł.</b> Zakładki jak w przeglądarce: aktywna zlewa się z białą treścią pod nią (widać, że „jesteś w tej zakładce”). Nazwa klasy to duży tytuł z przyciskiem „zmień” — klik zmienia klasę; szkoła małym tekstem obok. Kolumny dnia: otwarta lekcja szeroka (2/3), pozostałe wąskie podglądy z boku.</div>

@@ -79,3 +79,9 @@ etykieta ze szkoły klasy: technikum → „📋 do Librusa", SP/LO (ZSS) → �
 („zapisano 9:52 · do VULCANa"). Mapowanie szkoła → e-dziennik = ustawienie per szkoła (domyślnie: nazwa zawiera
 „tech" → Librus, reszta VULCAN). Skrypt po stronie Librusa NIE istnieje — osobny szczebel (bookmarklet jak VULCAN);
 sam schowek działa już dziś dla obu.
+Uwagi 6-8 (23:10): (6) e-dziennik = pytanie przy dodawaniu szkoły (VULCAN/Librus), widoczne też w Reguły → „Szkoły
+i e-dziennik". (7) Frekwencja dotychczasowa: szary % przy uczniu w otwartej kolumnie (+ % klasy w nagłówku), liczony
+jak getStudentStats. (8) Zakładka „Reguły": opis liczenia + manipulatory (bs/nć w bazie, spóźnienie, nu w bazie,
+progi 90/75, granica półrocza) — domyślne = dzisiejsze zachowanie. USER: „one [reguły] są opisane w e-dzienniku" —
+treść Reguł ma odzwierciedlać zasady VULCAN/Librus, nie własną formułę; manipulatory służą do ZRÓWNANIA liczenia
+z e-dziennikiem. Potrzebny od usera: tekst/zrzut reguł z VULCANa i Librusa (albo link do pomocy).
