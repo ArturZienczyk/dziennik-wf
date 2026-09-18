@@ -2105,8 +2105,10 @@ function renderZalegle() {
       const otw = siatkaOtwarta && siatkaOtwarta.clsId === cls.id && siatkaOtwarta.dzien === d;
       h += `<td style="${td}text-align:center;"><button type="button" class="siatka-kom" data-cls="${cls.id}" data-dzien="${d}" onclick="siatkaOtworz('${cls.id}',${d})" title="kliknij: numery lekcji w ${ZALEGLE_DNI[d]}" style="min-width:44px;padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid ${otw ? 'var(--ink)' : 'var(--line)'};border-radius:5px;background:${nrs.length ? '#EEF3FA' : 'var(--paper)'};cursor:pointer;">${nrs.length ? nrs.map(n => n === null ? '?' : n).join(' ') : '·'}</button></td>`;
     }
-    h += `<td style="${td}"><select onchange="zaleglePlanKlasaZmien('${cls.id}', this.value)" style="padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:5px;">` +
-      `<option value="">— nie licz —</option>` + klucze.map(k => `<option value="${escapeHtml(k)}" ${k === cur ? 'selected' : ''}>${escapeHtml(k)}</option>`).join('') + `</select>${auto && cur ? ' <span style="color:var(--ink-muted)">(auto)</span>' : ''}</td>` +
+    const dubel = cur ? state.classes.filter(c => c.id !== cls.id && zaleglePlanKlasa(c) === cur).map(c => c.name) : [];
+    h += `<td style="${td}"><select onchange="zaleglePlanKlasaZmien('${cls.id}', this.value)" style="padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid ${dubel.length ? '#C0392B' : 'var(--line)'};border-radius:5px;">` +
+      `<option value="">— nie licz —</option>` + klucze.map(k => `<option value="${escapeHtml(k)}" ${k === cur ? 'selected' : ''}>${escapeHtml(k)}</option>`).join('') + `</select>${auto && cur ? ' <span style="color:var(--ink-muted)">(auto)</span>' : ''}` +
+      (dubel.length ? `<div class="plan-dubel" style="color:#C0392B;font-size:12px;">⚠ ta sama klasa planu co ${escapeHtml(dubel.join(', '))} — obie dostają te same lekcje</div>` : '') + `</td>` +
       `<td style="${td}color:var(--ink-muted);">${Object.keys(cls.odwolane || {}).length ? Object.keys(cls.odwolane).sort().map(k => `${k.slice(5).replace('#', ' L')} <button onclick="zalegleCofnijNieBylo('${cls.id}','${k}')" title="${escapeHtml(cls.odwolane[k])} — cofnij" style="padding:0 5px;font-size:11px;">×</button>`).join(' ') : '—'}</td></tr>`;
     if (siatkaOtwarta && siatkaOtwarta.clsId === cls.id) {
       const d = siatkaOtwarta.dzien;
