@@ -262,7 +262,13 @@
   .kol.niebylo.guzik-otw .kol-head { background: transparent; }
   .kol.otwarta.niebylo { border: 2px dashed #9A9184; background: var(--paper); }
   .kol.otwarta.niebylo .niebylo-info { display: inline-block; margin: 8px 12px 0; padding: 3px 10px; border: 1px dashed #B9B1A2; border-radius: 999px; background: var(--line-soft); font-size: 12.5px; color: var(--ink-soft); }
-  .kol.niebylo .kol-head .sum { white-space: normal; overflow: visible; }   /* przycisk „jednak była” musi być klikalny, nie obcięty */
+  /* Kafelek zamknięty przy 9 lekcjach ma ~124 px: sam powód (bez „nie było:” — mówi to kreska i ramka; komentarz w dymku
+     i w kafelku otwartym) w jednej linii z wielokropkiem, „jednak była” zawsze w drugiej — wysokość stała, nie zależy od komentarza */
+  .kol.niebylo .kol-head .sum { white-space: normal; overflow: visible; }
+  .kol.niebylo .kol-head .sum .niebylo-zmien { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+  .kol.niebylo .kol-head .sum .niebylo-cofnij { margin: 3px 0 0; }
+  .kol.niebylo .kol-head .sum:has(.niebylo-zmien)::before { content: none; }
+  .kol.niebylo .kol-head .sum .niebylo-zmien::before { content: '— '; color: var(--ink-muted); }
   .niebylo-cofnij { font-family: inherit; font-size: 11px; padding: 1px 7px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); cursor: pointer; margin-left: 4px; }
   .niebylo-cofnij:hover { border-color: var(--ink); }
   /* „nie było: powód · komentarz” na kafelku = przycisk: klik zmienia powód/komentarz bez „jednak była” (user 19.09) */
@@ -3306,7 +3312,7 @@ function kolumnaPodgladu(cls, iso, nr, k, dzis) {
   active.forEach(s => { const c = attRead(day[s.id]); if (c.s && counts[c.s] !== undefined) counts[c.s]++; });
   let sum;
   if (zast) sum = `<span class="zast-tag">zastępstwo</span>${zast.zaKogo ? 'za ' + escapeHtml(zast.zaKogo) : 'bez frekwencji tu'}`;
-  else if (niebylo) sum = `<button type="button" class="niebylo-zmien" onclick="event.stopPropagation(); nieByloOkno('${cls.id}','${k}')" title="zmień powód albo dopisz komentarz">nie było: ${escapeHtml(cls.odwolane[k])}</button> <button type="button" class="niebylo-cofnij" onclick="event.stopPropagation(); zalegleCofnijNieBylo('${cls.id}','${k}')" title="zdejmij „nie było” — lekcja wraca do zaległych / do wpisu">jednak była</button>`;
+  else if (niebylo) sum = `<button type="button" class="niebylo-zmien" onclick="event.stopPropagation(); nieByloOkno('${cls.id}','${k}')" title="nie było: ${escapeHtml(cls.odwolane[k])} — kliknij, żeby zmienić powód albo dopisać komentarz">${escapeHtml(String(cls.odwolane[k]).split(' · ')[0])}</button> <button type="button" class="niebylo-cofnij" onclick="event.stopPropagation(); zalegleCofnijNieBylo('${cls.id}','${k}')" title="zdejmij „nie było” — lekcja wraca do zaległych / do wpisu">jednak była</button>`;
   else if (jest) {
     const w = ['nć', 'bs', 'nb', 'nu', 'zw'].map((l, i) => { const key = ['NC', 'BS', 'NB', 'NU', 'ZW'][i]; return counts[key] ? counts[key] + ' ' + l : ''; }).filter(Boolean).join(' · ');
     sum = counts.C + ' ćw.' + (w ? ' · ' + w : '');

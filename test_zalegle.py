@@ -59,6 +59,8 @@ with sync_playwright() as pw:
         else None,
     )
 
+    # Lista i chip liczą "dziś" z new Date() — bez zamrożenia zegara fixture dryfuje co dzień
+    page.clock.set_fixed_time(DZIS + "T10:00:00")
     page.goto("http://127.0.0.1:%d/dziennik_wf.html" % PORT)
     page.wait_for_timeout(400)
     page.evaluate("() => zamekPierwszeHaslo('test-haslo-123')")

@@ -26,6 +26,8 @@ TOP = "(sel) => Math.round(document.querySelector(sel).getBoundingClientRect().t
 with sync_playwright() as pw:
     b = pw.chromium.launch()
     page = b.new_context(viewport=LAPTOP).new_page()
+    # Piatek: widok Dzien w weekend bez lekcji chowa tabele (rect 0) — bez zamrozenia test dryfowal z data
+    page.clock.set_fixed_time("2026-09-18T10:00:00")
     page.goto(FILE)
     page.wait_for_timeout(1200)
     page.evaluate("() => zamekPierwszeHaslo('x-haslo-123')")
