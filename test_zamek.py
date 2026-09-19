@@ -90,7 +90,7 @@ with sync_playwright() as pw:
     )
 
     page.fill("#zamekInput", HASLO)
-    page.click('#zamek button:has-text("Zamknij dziennik tym hasłem")')
+    page.click('#zamek button:has-text("Ustaw hasło i otwórz dziennik")')
     page.wait_for_timeout(800)
     st = page.evaluate(ZAMEK_STAN)
     check(
@@ -299,7 +299,7 @@ with sync_playwright() as pw:
         page.evaluate("() => state.classes.length") == 0,
     )
     page.screenshot(path=str(SHOTS / "zamek_migracja.png"))
-    page.click('#zamek button:has-text("Zamknij dziennik tym hasłem")')
+    page.click('#zamek button:has-text("Ustaw hasło i otwórz dziennik")')
     page.wait_for_timeout(1000)
     st = page.evaluate(ZAMEK_STAN)
     check("migracja: otwarte", st["otwarty"], st)

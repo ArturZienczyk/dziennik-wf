@@ -882,6 +882,13 @@
   }
 
   .cell-ocena { padding: 0; position: relative; }
+  /* Kolumna liczona (Syst.): bez afordancji edycji — kursor, hover i „+” tylko w kolumnach wpisywanych (audyt 19.09, Norman: signifier przed akcją) */
+  .col-ocena.kol-auto { cursor: default; background: var(--bg); }
+  .col-ocena.kol-auto:hover { background: var(--bg); }
+  .col-ocena .auto-badge { display: block; margin-top: 3px; font-size: 10px; color: var(--ink-muted); letter-spacing: 0; text-transform: none; }
+  .cell-ocena.kol-auto .cell-ocena-content { cursor: default; }
+  .cell-ocena.kol-auto.empty .cell-ocena-content:hover { background: transparent; }
+  .cell-ocena.kol-auto.empty .cell-ocena-content::before, .cell-ocena.kol-auto.empty .cell-ocena-content:hover::before { content: '—'; color: var(--line); }
   .cell-ocena-content {
     display: flex; align-items: center; justify-content: center;
     padding: 14px 6px;
@@ -1178,7 +1185,7 @@
   #zamek .zamek-karta { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 28px 26px; max-width: 440px; width: 100%; box-shadow: 0 8px 30px rgba(30,45,79,0.10); }
   #zamek h2 { margin: 0 0 10px 0; font-size: 20px; color: var(--accent); }
   #zamek .zamek-hint { font-size: 13px; line-height: 1.5; color: var(--ink-muted); margin: 0 0 12px 0; }
-  #zamek .zamek-uwaga { color: var(--accent-warm); }
+  #zamek .zamek-uwaga { color: var(--accent-warm); font-size: 12.5px; }
   #zamek .zamek-pole { position: relative; margin: 6px 0 10px 0; }
   #zamek .zamek-pole input { width: 100%; padding: 10px 70px 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-family: inherit; font-size: 15px; box-sizing: border-box; }
   #zamek .zamek-pole input.zamek-pin { padding-right: 12px; letter-spacing: 8px; font-size: 22px; text-align: center; }
@@ -1238,8 +1245,8 @@
       </span>
       <span id="lessonNrHint" style="display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap;"></span>
       <span class="nav"><button type="button" onclick="dateOffset(-1)" title="poprzedni dzień">◀</button><button type="button" onclick="setToday()">dziś</button><button type="button" onclick="dateOffset(1)" title="następny dzień">▶</button></span>
-      <button type="button" class="dzien-usun" onclick="deleteLesson()" title="usuń wpisy tej lekcji">🗑</button>
       <span class="lesson-count" id="lessonCount"></span>
+      <button type="button" class="dzien-usun" onclick="deleteLesson()" title="usuń wszystkie wpisy obecności tej lekcji">🗑 usuń wpisy</button>
       <span class="przel" id="widokPrzel"><button type="button" data-w="dzien" onclick="ustawWidok('dzien')">Dzień</button><button type="button" data-w="tydzien" onclick="ustawWidok('tydzien')">Tydzień</button></span>
     </div>
 
@@ -2879,7 +2886,7 @@ function renderKlasaTytul() {
   document.querySelectorAll('.klasa-tytul').forEach(el => {
     if (!cur) { el.innerHTML = ''; return; }
     const opts = state.classes.map(c => `<option value="${c.id}" ${c.id === cur.id ? 'selected' : ''}>${escapeHtml((c.school ? c.school + ' · ' : '') + c.name)}</option>`).join('');
-    el.innerHTML = `<select onchange="onClassChange(this.value)" title="wybierz klasę">${opts}</select><span class="s">${cur.school ? escapeHtml(cur.school) + ' · ' : ''}klasa ▾</span>`;
+    el.innerHTML = `<select onchange="onClassChange(this.value)" title="wybierz klasę">${opts}</select><span class="s">zmień klasę</span>`;
   });
 }
 
@@ -5259,9 +5266,10 @@ function renderOcenyHead() {
   state.gradeColumns.forEach((col, idx) => {
     const wagaClass = col.weight === 2 ? 'w2' : (col.weight === 0 ? 'w0' : '');
     const wagaText = col.weight === 0 ? 'info' : '×' + col.weight;
-    h += `<th class="col-ocena" title="${escapeHtml(col.fullName || col.shortName)}" onclick="editColumn('${col.id}')">`;
+    h += `<th class="col-ocena${col.auto ? ' kol-auto' : ''}" title="${escapeHtml(col.fullName || col.shortName)}" onclick="editColumn('${col.id}')">`;
     h += `<span class="skrot">${escapeHtml(col.shortName)}</span>`;
     h += `<span class="waga-badge ${wagaClass}">${wagaText}</span>`;
+    if (col.auto) h += `<span class="auto-badge" title="liczona automatycznie z frekwencji — nie wpisuje się ręcznie">🔒 auto</span>`;
     h += `<span class="data-col">${shortDate(col.date)}</span>`;
     h += '</th>';
   });
@@ -5296,13 +5304,14 @@ function renderOcenyBody() {
       const v = (state.grades[col.id] || {})[student.id];
       const cellAttrs = `data-col="${col.id}" data-sid="${student.id}" `
         + `onclick="editGradeCell(this)" ondblclick="openGradeModal('${col.id}','${student.id}')"`;
+      const autoCls = col.auto ? ' kol-auto' : '';
       if (v === undefined || v === null) {
-        h += `<td class="cell-ocena empty" ${cellAttrs}>`;
+        h += `<td class="cell-ocena empty${autoCls}" ${cellAttrs}>`;
         h += `<span class="cell-ocena-content"></span></td>`;
       } else {
         const valClass = getGradeValClass(v);
         const menCls = v === 0 ? 'men warn' : 'men';
-        h += `<td class="cell-ocena ${valClass}" ${cellAttrs}>`;
+        h += `<td class="cell-ocena ${valClass}${autoCls}" ${cellAttrs}>`;
         h += `<span class="cell-ocena-content"><span class="val">${v}</span><span class="${menCls}">${gradeMenLabel(v)}</span></span></td>`;
       }
     });
@@ -5908,14 +5917,14 @@ const ZAMEK_HTML = {
     <p class="zamek-hint">Ta przeglądarka nie udostępnia szyfrowania (Web Crypto), a dziennik trzyma dane wyłącznie zaszyfrowane.
     Otwórz go w Chrome albo Edge — z pliku na dysku lub z adresu https://.</p>`,
   'ustaw': () => `
-    <h2>Zamknij dziennik hasłem</h2>
+    <h2>Ustaw hasło, żeby zacząć</h2>
     <p class="zamek-hint">${zamek.stareHaslo
       ? 'Od teraz dziennik jest zamknięty <b>tym samym hasłem, co kopie</b> — jedno do zapamiętania. Poniżej jest wpisane Twoje dotychczasowe hasło kopii (kliknij „pokaż”, żeby je zobaczyć — to <b>ostatni raz</b>, gdy apka je pokazuje). Możesz je tu zmienić.'
       : 'Dziennik i kopie zapasowe będą zamknięte jednym hasłem (min. 6 znaków).'}</p>
     <p class="zamek-hint zamek-uwaga">Zapomniane hasło = dane nie do odzyskania. Nikt (ani ta apka) nie może go odtworzyć. Zapisz je w bezpiecznym miejscu.</p>
     <div class="zamek-pole"><input type="password" id="zamekInput" autocomplete="new-password" placeholder="hasło (min. 6 znaków)"><button type="button" class="zamek-pokaz" onclick="zamekPolePokaz()">pokaż</button></div>
     <div id="zamekBlad" class="zamek-blad"></div>
-    <div class="zamek-akcje"><button class="zamek-btn" onclick="zamekUI_ustaw()">Zamknij dziennik tym hasłem</button></div>`,
+    <div class="zamek-akcje"><button class="zamek-btn" onclick="zamekUI_ustaw()">Ustaw hasło i otwórz dziennik</button></div>`,
   'haslo': () => `
     <h2>Dziennik WF jest zamknięty</h2>
     <p class="zamek-hint">Podaj hasło dziennika (to samo, co hasło kopii).</p>
