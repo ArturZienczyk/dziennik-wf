@@ -213,6 +213,14 @@
   .kol.guzik-otw .kol-head { background: var(--paper); }
   .kol.guzik-otw .otw { background: var(--ink); color: var(--paper); border-color: var(--ink); }
   .kol.inne { flex-grow: 0; border-style: dashed; background: transparent; }
+  /* Sobota/niedziela i dzień wolny bez lekcji (user 2026-09-19): bez guzika i tabeli, tylko komunikat
+     + „otwórz lekcję mimo to" (np. zawody w sobotę). Zapisana lekcja tego dnia pokazuje się normalnie. */
+  .dzien-kolumny.bez-lekcji .kol.otwarta { display: none; }
+  .kol.wolny { max-width: none; }
+  .kol.wolny .kol-head { grid-template-columns: auto; }
+  .kol.wolny .kol-head .kl { grid-column: 1; grid-row: 1; }
+  .kol.wolny .kol-head .sum { grid-column: 1; grid-row: 2; }
+  .kol.wolny button { grid-column: 1; grid-row: 3; justify-self: start; white-space: nowrap; margin-top: 6px; font: inherit; font-size: 12px; padding: 3px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); cursor: pointer; }
   .kol.inne .kol-head { background: transparent; }
   .kol.inne .kl { color: var(--ink-muted); }
   .kol.otwarta { flex: 1 0 100%; min-width: 0; max-width: none; border: 2px solid var(--ink); border-radius: 8px; }
@@ -2916,6 +2924,9 @@ function renderDzien() {
   head.innerHTML = `<span class="nr">${nrOtw !== null ? 'L' + nrOtw : (lekcje.length && !wPlanie) ? 'poza planem' : 'lekcja'}</span><span class="kl">${escapeHtml(cur.name)}${cur.plec ? ' <span class="plec">' + (cur.plec === 'dz' ? 'dz.' : 'chł.') + '</span>' : ''}</span>` +
     `<span class="sum">${pk === null ? '' : '<b>' + pk + '%</b> · '}${wpisani}/${active.length} wpisanych</span><span class="otw">otwarta</span>`;
   if (tydzien) return;
+  const weekend = [0, 6].includes(new Date(iso + 'T12:00:00').getDay());
+  const bezLekcji = (weekend || wolny) && !lekcje.length && !cur.attendance[kOtw] && state.dzienWolnyOtw !== iso;
+  wrap.classList.toggle('bez-lekcji', bezLekcji);
   let cel = przed, otwartaZPlanu = false;
   lekcje.forEach(({ cls, nr, nazwa }) => {
     if (!cls) {
@@ -2926,9 +2937,9 @@ function renderDzien() {
     if (cls.id === cur.id && k === kOtw) { otwartaZPlanu = true; cel.insertAdjacentHTML('beforeend', guzikOtwartej(cur, kOtw, head)); return; }
     cel.insertAdjacentHTML('beforeend', kolumnaPodgladu(cls, iso, nr, k, dzis));
   });
-  if (wolny && !lekcje.length) przed.insertAdjacentHTML('beforeend', `<div class="kol inne"><div class="kol-head"><span class="kl">dzień wolny</span><span class="sum">z kalendarium — bez lekcji</span></div></div>`);
+  if ((wolny || weekend) && !lekcje.length) przed.insertAdjacentHTML('beforeend', `<div class="kol inne wolny"><div class="kol-head"><span class="kl">${weekend ? 'weekend' : 'dzień wolny'}</span><span class="sum">${wolny ? 'z kalendarium — ' : ''}brak lekcji</span>${bezLekcji ? `<button type="button" onclick="state.dzienWolnyOtw='${iso}'; renderAttendance()">otwórz lekcję mimo to</button>` : ''}</div></div>`);
   // Otwarta lekcja spoza planu (albo bez planu): jej guzik na końcu paska
-  if (!otwartaZPlanu) przed.insertAdjacentHTML('beforeend', guzikOtwartej(cur, kOtw, head));
+  if (!otwartaZPlanu && !bezLekcji) przed.insertAdjacentHTML('beforeend', guzikOtwartej(cur, kOtw, head));
   void po;
 }
 // Guzik otwartej lekcji w pasku dnia: kopia nagłówka otwartej (#kolOtwartaHead zostaje źródłem
