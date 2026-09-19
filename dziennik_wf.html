@@ -443,6 +443,8 @@
   table.attendance.kolumny tbody td:not(.left):not(:first-child) { border-left: 1px solid var(--line-soft); }
   table.attendance.kolumny thead th:not(.left) { border-left-color: var(--line); }
   table.attendance tbody tr.long-term-released { background: var(--bg); color: var(--ink-muted); font-style: italic; }
+  tr.long-term-released .cell-name { color: var(--ink-muted); font-style: italic; }
+  tr.long-term-released .cell-name::after { content: ' · zwol.'; font-size: 11px; }
 
   .student-name {
     border: none; background: transparent; font-family: inherit;
@@ -3561,7 +3563,7 @@ function renderAttendance() {
     }
 
     let pctHtml = '—';
-    if (!s.longTermReleased && stats.baza > 0) {
+    if (stats.baza > 0) {
       const cls = pctKlasa(stats.percent);
       pctHtml = `<span class="percent-cell ${cls}">${stats.percent.toFixed(0)}%</span><br><span class="stat-detail">${stats.cwiczyl}/${stats.baza}</span>`;
     }
@@ -4138,10 +4140,10 @@ function renderStats() {
   let totalLessons = Object.keys(state.attendance).filter(wZakresie).length;
 
   state.students.forEach((s, i) => {
-    if (s.longTermReleased) return; // pomijamy w statystykach
     const stats = getStudentStats(s.id, Z.from, Z.to);
     const cls = stats.percent === null ? '' : pctKlasa(stats.percent);
     const tr = document.createElement('tr');
+    if (s.longTermReleased) tr.classList.add('long-term-released');
     tr.innerHTML = `
       <td class="left">${i + 1}</td>
       <td class="left">${s.name ? '<button type="button" class="stats-name-btn" onclick="openKarta(\'' + s.id + '\')" title="Otwórz kartę ucznia: historia, oś czasu, krzywa, lista lekcji">' + escapeHtml(s.name) + '</button>' : '<span style="color:var(--ink-muted);">—</span>'}</td>
@@ -5292,7 +5294,7 @@ function syncSystematicznoscColumns() {
   windows.forEach(w => {
     state.grades[w.id] = {};
     state.students.forEach(s => {
-      if (s.longTermReleased) return;
+      // zwolniony długoterminowo: procent z lekcji, które odbył (dni po zwolnieniu są poza bazą) — nie pomijaj
       const st = getStudentStats(s.id, w.from || undefined, w.to || undefined);
       if (st.percent !== null) state.grades[w.id][s.id] = Math.round(st.percent);
     });
@@ -5368,10 +5370,8 @@ function renderOcenyBody() {
   let h = '';
 
   state.students.forEach((student, idx) => {
-    if (student.longTermReleased) return; // pomijamy zwolnionych
-
     const alarmCount = countAlarmGrades(student.id);
-    const rowClass = alarmCount >= 2 ? 'alarm-row' : '';
+    const rowClass = (alarmCount >= 2 ? 'alarm-row' : '') + (student.longTermReleased ? ' long-term-released' : '');
 
     h += `<tr class="${rowClass}">`;
     h += `<td class="cell-lp">${idx + 1}</td>`;

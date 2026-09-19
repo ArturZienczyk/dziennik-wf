@@ -29,6 +29,13 @@ Poprzedni handoff `HANDOFF-plan-produkt.md`: punkty 1–3 zrobione, **punkt 4 (P
 - Test `test_niebylo_komentarz.py` 19/19; zrzuty `_zrzuty/niebylo_komentarz_modal.png`, `niebylo_komentarz_1400.png`.
 - Otwarte z obu handoffów: tylko follow-upy poza zakresem (`test_zalegle.py` 2 FAIL dryf daty; karta ucznia ×undefined/NaN; `test_uklad.py` 1).
 
+## STAN 19.09 noc (sw v29) — zwolniony długoterminowo NIE traci Systematyczności (user: 8c, „ma kreskę”)
+- Przyczyna: `syncSystematicznoscColumns`, „% dotąd” (tabela dnia), `renderOcenyBody` i tabela Statystyk pomijały
+  ucznia z `longTermReleased` w całości — ptaszek ma wyłączać lekcje OD zwolnienia (te i tak są poza bazą: brak wpisu /
+  ZW), nie kasować odbytych. Fix: liczyć z zapisów; wiersz w Ocenach/Statystykach zostaje, wyszarzony (`.long-term-released`,
+  dopisek „· zwol.” przy nazwisku). Średnia kolumny i karty podsumowań nadal bez zwolnionych (świadomie, nie ruszane).
+- Zwolniony bez żadnych zapisów: „—” jak dotąd, bez NaN. Test `test_zwolniony_systematycznosc.py` 11/11, zrzut `_zrzuty/zwolniona_oceny_1400.png`.
+
 ## Słowa usera (19.09, po obejrzeniu wdrożenia na prawdziwych danych)
 
 > czy tutaj jest to kreskowane mimo że nie było, ma kolor kremowy, nie wiem czy nie jest zbyt mało wyróżniające,
