@@ -603,7 +603,37 @@
     body.karta-print .kafel.on { outline: none; }
     .karta table.lista { page-break-inside: auto; }
     .karta table.lista tr { page-break-inside: avoid; }
+    /* Karta ucznia na 1 stronę (19.09): lista lekcji tylko na życzenie (checkbox), kafle 8 w rzędzie,
+       ciaśniej — oś czasu pokazuje już każdą lekcję, lista dublowała ją na 2-3 stronach. */
+    body.karta-print:not(.karta-print-lista) .karta-lista-sekcja { display: none; }
+    body.karta-print .karta-okna { gap: 6px; }
+    body.karta-print .karta-kafle { grid-template-columns: repeat(8, 1fr); gap: 4px; }
+    body.karta-print .kafel { padding: 4px 6px; font-size: 11px; }
+    body.karta-print .kafel b, body.karta-print .kafel strong { font-size: 15px; }
+    body.karta-print .karta h4 { margin: 8px 0 4px; }
+    body.karta-print .karta-filtr { display: none; }
+    body.karta-print .karta svg { max-height: 150px; width: 100%; }
+    body.karta-print .karta .dwie { gap: 12px; font-size: 11px; }
+    body.karta-print .karta .dwie td, body.karta-print .karta .dwie th { padding: 2px 5px; }
+    body.karta-print .karta .dwie h4 { margin-top: 4px; }
+    /* Statystyki klasy na 1 stronę (19.09): bez nagłówka, zakładek, listy lekcji i stopki. */
+    body.stats-print > :not(.container), body.stats-print .container > :not(#tab-statystyki) { display: none !important; }
+    body.stats-print #tab-statystyki { display: block !important; border: none; padding: 0; }
+    body.stats-print .stats-toolbar > :not(.stats-zakres-opis), body.stats-print details.stats-lekcje, body.stats-print .stats-hint { display: none !important; }
+    body.stats-print .stats-zakres-opis { font-size: 13px; color: var(--ink); }
+    body.stats-print .summary-grid { grid-template-columns: repeat(4, 1fr); }
+    body.stats-print .table-wrap { overflow: visible; border: none; }
+    body.stats-print .stats-name-btn { text-decoration: none; color: inherit; }
   }
+  .stats-toolbar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin: 0 0 12px; }
+  .stats-zakres { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .stats-zakres button { border: none; background: var(--paper); padding: 6px 12px; font-family: inherit; font-size: 13px; cursor: pointer; color: var(--ink-muted); }
+  .stats-zakres button + button { border-left: 1px solid var(--line); }
+  .stats-zakres button.on { background: var(--ink); color: var(--paper); }
+  .stats-zakres button:disabled { opacity: .4; cursor: default; }
+  .stats-zakres-opis { font-size: 13px; color: var(--ink-muted); }
+  details.stats-lekcje > summary { cursor: pointer; font-family: inherit; font-weight: 600; font-size: 17px; margin: 18px 0 8px; }
+  .karta-druk-opt { font-size: 12px; color: var(--ink-muted); display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; }
 
   footer {
     margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line);
@@ -1475,10 +1505,19 @@
 
   <div id="tab-statystyki" class="tab-content">
     <div class="tytul-klasy klasa-tytul"></div>
+    <div class="stats-toolbar">
+      <div class="stats-zakres" id="statsZakres" title="Granica półrocza z zakładki Reguły">
+        <button type="button" data-z="rok" onclick="statsZakres('rok')">Cały rok</button>
+        <button type="button" data-z="I" onclick="statsZakres('I')">I półrocze</button>
+        <button type="button" data-z="II" onclick="statsZakres('II')">II półrocze</button>
+      </div>
+      <span class="stats-zakres-opis" id="statsZakresOpis"></span>
+      <button onclick="drukujStatystyki()" title="1 strona: podsumowanie + tabela klasy (bez listy lekcji)" style="margin-left:auto;">🖨 Drukuj / PDF</button>
+    </div>
     <div class="summary-grid" id="summaryGrid"></div>
 
     <h2>Frekwencja indywidualna</h2>
-    <p style="font-size:13px;color:var(--ink-muted);margin:0 0 8px 0;">Kliknij nazwisko → karta ucznia (cała historia, oś czasu, krzywa, lista lekcji; do druku na rozmowę z rodzicem).</p>
+    <p class="stats-hint" style="font-size:13px;color:var(--ink-muted);margin:0 0 8px 0;">Kliknij nazwisko → karta ucznia (cała historia, oś czasu, krzywa, lista lekcji; do druku na rozmowę z rodzicem).</p>
     <div class="table-wrap">
       <table class="attendance kolumny">
         <thead>
@@ -1500,7 +1539,8 @@
       </table>
     </div>
 
-    <h2>Lista wszystkich lekcji</h2>
+    <details class="stats-lekcje">
+    <summary>Lista wszystkich lekcji <span id="statsLekcjeN"></span></summary>
     <div class="table-wrap">
       <table class="attendance kolumny">
         <thead>
@@ -1518,6 +1558,7 @@
         <tbody id="lessonsListBody"></tbody>
       </table>
     </div>
+    </details>
   </div>
 
   <footer>
@@ -3381,7 +3422,8 @@ function kartaFiltruj(f) {
 }
 function drukujKarte() {
   document.body.classList.add('karta-print');
-  const off = () => document.body.classList.remove('karta-print');
+  document.body.classList.toggle('karta-print-lista', !!state.kartaDrukLista);
+  const off = () => document.body.classList.remove('karta-print', 'karta-print-lista');
   window.addEventListener('afterprint', off, { once: true });
   window.print();
   setTimeout(off, 2000);
@@ -3500,7 +3542,7 @@ function renderKarta() {
   const cls = getCurrentClass();
   const f = state.kartaFilter;
   let h = '<div class="karta-head"><div><h3>' + (escapeHtml(s.name) || 'uczeń') + '</h3><div class="sub">' + escapeHtml((cls && cls.name) || '') + ' · karta ucznia · stan na ' + kartaData(new Date().toISOString().slice(0, 10)) + (s.longTermReleased ? ' · <b>zwolniony długoterminowo</b>' : '') + (getReleases(s).length ? ' · zwolnienia OD–DO: ' + getReleases(s).map(r => relData(r.od) + '–' + relData(r.do)).join(', ') : '') + '</div></div>'
-    + '<div class="karta-actions"><button onclick="drukujKarte()">🖨 Drukuj / PDF</button><button onclick="closeKarta()">Zamknij</button></div></div>'
+    + '<div class="karta-actions"><label class="karta-druk-opt" title="Domyślnie wydruk to 1 strona: bilans, oś czasu, krzywa, oceny, pomiary. Zaznacz, żeby dodać listę wszystkich lekcji (2-3 strony więcej)."><input type="checkbox" id="kartaDrukLista"' + (state.kartaDrukLista ? ' checked' : '') + ' onchange="state.kartaDrukLista = this.checked"> z listą lekcji</label><button onclick="drukujKarte()">🖨 Drukuj / PDF</button><button onclick="closeKarta()">Zamknij</button></div></div>'
     + '<div class="karta-zakres"><label>Zakres: od <input type="date" id="kartaOd" value="' + (state.kartaOd || '') + '" onchange="kartaZakres(this.value, document.getElementById(\'kartaDo\').value)"></label>'
     + '<label>do <input type="date" id="kartaDo" value="' + (state.kartaDo || '') + '" onchange="kartaZakres(document.getElementById(\'kartaOd\').value, this.value)"></label>'
     + ((state.kartaOd || state.kartaDo) ? '<button type="button" onclick="kartaZakres(\'\', \'\')">✕ cała historia</button><span class="karta-uwaga">Bilans i krzywa liczone tylko z tego zakresu.</span>' : '<span class="karta-uwaga">Puste = cała historia. Wpisz np. ostatni miesiąc.</span>') + '</div>';
@@ -3517,7 +3559,7 @@ function renderKarta() {
 
   h += '<h4>2 · Oś czasu</h4>' + kartaOsCzasu(lekcje);
   h += '<h4>3 · Procent ćwiczył narastająco</h4>' + kartaKrzywa(lekcje);
-  h += '<h4>4 · Wszystkie lekcje</h4>' + kartaLista(lekcje);
+  h += '<div class="karta-lista-sekcja"><h4>4 · Wszystkie lekcje</h4>' + kartaLista(lekcje) + '</div>';
   h += '<div class="dwie"><div><h4>Oceny</h4>' + kartaOceny(s.id) + '</div><div><h4>Pomiary</h4>' + kartaPomiary(s) + '</div></div>';
   box.innerHTML = h;
 }
@@ -3744,15 +3786,41 @@ function pomiarBlur(studentId, field, el) {
 // =====================================================
 // STATYSTYKI
 // =====================================================
+// Zakres statystyk klasy (19.09): rok | I | II półrocze — granica z Reguł (getSemesterBreak).
+// Preferencja UI, nie dane (localStorage, nie kopia). Bez granicy: tylko „Cały rok".
+function statsZakresAkt() {
+  const brk = getSemesterBreak();
+  let z = state.statsZakres || 'rok';
+  if (!brk && z !== 'rok') z = 'rok';
+  return { z, brk, from: z === 'II' ? brk : null, to: z === 'I' ? brk : null };
+}
+function statsZakres(z) {
+  state.statsZakres = z;
+  try { localStorage.setItem('dziennik_stats_zakres', z); } catch (e) { /* prywatne okno */ }
+  renderStats();
+}
+function drukujStatystyki() {
+  document.body.classList.add('stats-print');
+  const off = () => document.body.classList.remove('stats-print');
+  window.addEventListener('afterprint', off, { once: true });
+  window.print();
+  setTimeout(off, 2000);
+}
 function renderStats() {
   const tbody = document.getElementById('statsBody');
   tbody.innerHTML = '';
-
-  let totalLessons = Object.keys(state.attendance).length;
+  if (state.statsZakres === undefined) { try { state.statsZakres = localStorage.getItem('dziennik_stats_zakres') || 'rok'; } catch (e) { state.statsZakres = 'rok'; } }
+  const Z = statsZakresAkt();
+  document.querySelectorAll('#statsZakres button').forEach(b => { b.classList.toggle('on', b.dataset.z === Z.z); b.disabled = !Z.brk && b.dataset.z !== 'rok'; });
+  const opisEl = document.getElementById('statsZakresOpis');
+  if (opisEl) opisEl.textContent = !Z.brk ? 'Bez granicy półrocza (ustaw w Regułach) — cała historia.' :
+    Z.z === 'I' ? 'I półrocze: do ' + kartaData(Z.brk).slice(0, 10) : Z.z === 'II' ? 'II półrocze: od ' + kartaData(Z.brk).slice(0, 10) : 'Cały rok (granica ' + kartaData(Z.brk).slice(0, 10) + ')';
+  const wZakresie = k => { const d = kluczData(k); return !(Z.from && d < Z.from) && !(Z.to && d >= Z.to); };
+  let totalLessons = Object.keys(state.attendance).filter(wZakresie).length;
 
   state.students.forEach((s, i) => {
     if (s.longTermReleased) return; // pomijamy w statystykach
-    const stats = getStudentStats(s.id);
+    const stats = getStudentStats(s.id, Z.from, Z.to);
     const cls = stats.percent === null ? '' : pctKlasa(stats.percent);
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -3797,16 +3865,18 @@ function renderStats() {
   const active = state.students.filter(s => !s.longTermReleased);
   let totalC = 0, totalBaza = 0;
   active.forEach(s => {
-    const st = getStudentStats(s.id);
+    const st = getStudentStats(s.id, Z.from, Z.to);
     totalC += st.C; totalBaza += st.baza;
   });
+  const nEl = document.getElementById('statsLekcjeN');
+  if (nEl) nEl.textContent = '(' + dates.length + ')';
   const avgPercent = totalBaza > 0 ? (totalC / totalBaza * 100).toFixed(0) + '%' : '—';
 
   const grid = document.getElementById('summaryGrid');
   grid.innerHTML = `
     <div class="summary-card"><div class="summary-label">Liczba uczniów aktywnych</div><div class="summary-value">${active.length}</div></div>
     <div class="summary-card"><div class="summary-label">Zwolnionych długoterminowo</div><div class="summary-value">${state.students.length - active.length}</div></div>
-    <div class="summary-card"><div class="summary-label">Zapisanych lekcji</div><div class="summary-value">${totalLessons}</div></div>
+    <div class="summary-card"><div class="summary-label">Zapisanych lekcji${Z.z === 'rok' ? '' : ' · ' + Z.z + ' półr.'}</div><div class="summary-value">${totalLessons}</div></div>
     <div class="summary-card"><div class="summary-label">Średni % ćwiczył (klasa)</div><div class="summary-value">${avgPercent}</div></div>
   `;
 }
