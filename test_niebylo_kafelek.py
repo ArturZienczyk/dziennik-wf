@@ -58,7 +58,7 @@ with sync_playwright() as pw:
     # 1. Plan: bez kolumny „nie było”, plan ręczny → bez „klasa w planie”, plik w sekcji zwijanej
     page.click("button.tab:has-text('Plan')")
     page.wait_for_timeout(300)
-    naglowki = page.inner_text("#planUstawienia table tr:first-child")
+    naglowki = page.inner_text("#planUstawienia table tr:first-child").lower()
     check("Plan: bez kolumny „nie było”", "nie było" not in naglowki, naglowki)
     check(
         "Plan ręczny: bez kolumny „klasa w planie”",
@@ -75,7 +75,7 @@ with sync_playwright() as pw:
     )
     check(
         "Plan z pliku: kolumna „klasa w planie” wraca",
-        "klasa w planie" in page.inner_text("#planUstawienia table tr:first-child"),
+        "klasa w planie" in page.inner_text("#planUstawienia table tr:first-child").lower(),
     )
     page.evaluate(
         "() => { delete planAktywny(false).wygenerowano; renderPlanUstawienia(); }"
@@ -130,6 +130,23 @@ with sync_playwright() as pw:
         page.evaluate("() => JSON.stringify(state.classes[1].odwolane)") == "{}"
         and page.evaluate("() => getCurrentClass().name") == "7b",
     )
+
+    # 5. Plan jako karty + pusty stan (19.09): 0 klas → karta „trzy kroki”, klasa bez uczniów → krok 1 ✓,
+    #    z uczniami → trzy karty (Siatka / Inne zajęcia / Dni wolne) i chipy numerów
+    page.click("button.tab:has-text('Plan')")
+    page.wait_for_timeout(200)
+    check("Plan z klasami: trzy karty", page.locator("#planUstawienia .plan-karta").count() == 3)
+    check("numer lekcji jako chip", page.locator("#planUstawienia .siatka-kom .chip").count() >= 4)
+    check("„Zaawansowane” w stopce karty siatki", page.locator("#planUstawienia .plan-karta .stopka details.plan-zaaw").count() == 1)
+    page.evaluate("() => { state.classes = [makeClass('ZSS', '1x', [])]; renderPlanUstawienia(); }")
+    check("klasa bez uczniów: karta kroków, krok 1 odhaczony",
+          page.locator("#planUstawienia .plan-pusty li.ok").count() == 1
+          and page.inner_text("#planUstawienia .plan-pusty-akcja") == "Dodaj uczniów")
+    page.evaluate("() => { state.classes = []; renderPlanUstawienia(); }")
+    check("0 klas: karta kroków, przycisk + Dodaj klasę",
+          page.locator("#planUstawienia .plan-pusty li.ok").count() == 0
+          and page.inner_text("#planUstawienia .plan-pusty-akcja") == "+ Dodaj klasę"
+          and page.locator("#planUstawienia table").count() == 0)
 
     check("brak błędów JS", not errors, errors)
     browser.close()
