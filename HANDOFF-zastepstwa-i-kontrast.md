@@ -4,6 +4,14 @@
 Dla: czysta sesja w `D:\Projects\nauczyciel\wf\dziennik-wf` (osobne repo, `git push origin main`, **`sw.js` CACHE_VERSION v21 — podbij**).
 Poprzedni handoff `HANDOFF-plan-produkt.md`: punkty 1–3 zrobione, **punkt 4 (PZO do danych, stopka z wersją, `start.html`) nadal otwarty**.
 
+## STAN 19.09 po południu (commit `3187fa4`, sw v24) — p.1–3 WDROŻONE
+- p.1 kafelek: mockup A/A2/B (`_zrzuty/mockup-niebylo-v2/porownanie.html`), klik usera = **A** (kreskowanie na białym, ramka #9A9184). Otwarte z p.1: klik w „nie było: inne" = zmiana powodu bez „jednak była" — NIE zrobione.
+- p.2 „klasa w planie" → lista dopasowania w `details.plan-zaaw` (`.plan-dopasowanie`), details `open` przy dublu. Testy przepisane.
+- p.3 poziom 1 wdrożony: `cls.zastepstwa[klucz]` (liść `z|klucz`) + `state.zastepstwaOkienka` (snapshot/load/scal). Wejścia: panel Zaległe (przycisk „zastępstwo"), kafelek „+ zastępstwo" na pasku dnia (modal: moja lekcja bez wpisu / okienko + nr), klik w kafelek zastępstwa = zmień/zdejmij. `test_zastepstwa.py` 30/30.
+  **Poziom 2 (klasa doraźna z listą) — nadal tylko propozycja; zwiad EduPage zastępstwa nieruszony (hipoteza).**
+- Pułapki z tej sesji: modal otwierany z listy Zaległych (też modal) potrzebuje `z-index` wyżej (`#zastModal{z-index:110}`); test scalania „kopia przywraca" musi symulować świeże urządzenie (`delete c._t[p]; stemplujBaza()`), bo lokalne skasowanie = nagrobek nowszy od kopii i kopia słusznie przegrywa; 5. karta w `#summaryGrid` łamie druk 1 str. A4 → `.summary-zast` schowana w `body.stats-print`.
+- Następne: p.4 (audyt heurystyczny, 4 findingi) + `HANDOFF-plan-produkt.md` p.4 (PZO do danych, stopka z wersją, start.html).
+
 ## Słowa usera (19.09, po obejrzeniu wdrożenia na prawdziwych danych)
 
 > czy tutaj jest to kreskowane mimo że nie było, ma kolor kremowy, nie wiem czy nie jest zbyt mało wyróżniające,
