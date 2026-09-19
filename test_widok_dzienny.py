@@ -255,6 +255,22 @@ with sync_playwright() as pw:
     page.evaluate("(d) => wybierzLekcje(state.classes[1].id, d, 5)", DZIS)
     page.wait_for_timeout(300)
 
+    # sobota: bez guzika i tabeli, komunikat + „otwórz lekcję mimo to"
+    page.evaluate("() => { state.currentDate = '2026-09-19'; state.currentNr = null; renderAttendance(); }")
+    page.screenshot(path=str(SHOTS / "cv2_sobota_1400.png"))
+    page.wait_for_timeout(200)
+    check(
+        "sobota: tabela schowana, komunikat weekend, bez guzika otwartej",
+        not page.evaluate(VIS, "#kolOtwarta")
+        and page.locator("#kolPrzed .kol.wolny").count() == 1
+        and page.locator("#kolPrzed .kol.guzik-otw").count() == 0,
+    )
+    page.click("#kolPrzed .kol.wolny button")
+    page.wait_for_timeout(200)
+    check("sobota: „otwórz lekcję mimo to” pokazuje tabelę i guzik", page.evaluate(VIS, "#kolOtwarta") and page.locator("#kolPrzed .kol.guzik-otw").count() == 1)
+    page.evaluate("(d) => wybierzLekcje(state.classes[1].id, d, 5)", DZIS)
+    page.wait_for_timeout(300)
+
     # klawiatura działa w otwartej kolumnie
     page.click("h1")
     page.keyboard.press("n")
