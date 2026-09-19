@@ -201,6 +201,11 @@
   .kol.brak .kol-head { background: #FFF0F0; }
   .kol.jest .kol-head { background: #EEF7EE; }
   .kol.niebylo .kol-head { opacity: .6; text-decoration: line-through; }
+  .kol.niebylo .kol-head .sum, .kol.niebylo .kol-head .niebylo-info { text-decoration: none; opacity: 1; }
+  .kol.niebylo .kol-head .sum { white-space: normal; overflow: visible; }   /* przycisk „jednak była” musi być klikalny, nie obcięty */
+  .niebylo-cofnij { font-family: inherit; font-size: 11px; padding: 1px 7px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); cursor: pointer; margin-left: 4px; }
+  .niebylo-cofnij:hover { border-color: var(--ink); }
+  .niebylo-info { display: block; font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
   .kol-head { display: grid; grid-template-columns: auto auto; column-gap: 8px; row-gap: 2px; align-items: baseline; padding: 8px 14px 9px; border-radius: 9px; background: var(--line-soft); }
   .kol.podglad .kol-head { cursor: pointer; }
   .kol.podglad .kol-head:hover { filter: brightness(.97); }
@@ -1450,15 +1455,18 @@
   <!-- =================================================== -->
   <div id="tab-plan" class="tab-content">
     <p style="font-size:13px;color:var(--ink-muted);margin:0 0 12px 0;">
-      Plan zasila pasek tygodnia w Obecności i chip „Zaległe”. <b>Klik komórki</b> (klasa × dzień) otwiera numery lekcji,
-      klik numeru wpisuje lekcję; drugi klik zdejmuje. „Inne zajęcia” pokazują się w pasku na szaro, bez frekwencji.
-      Plik z EduPage jest dodatkiem: wypełnia siatkę, ręczne wpisy zostają.
+      Siatka tygodnia: <b>klik komórki</b> (klasa × dzień) otwiera numery lekcji, klik numeru wpisuje lekcję, drugi klik zdejmuje.
+      Z tej siatki dziennik bierze pasek tygodnia w Obecności i chip „Zaległe”. „Inne zajęcia” są w pasku na szaro, bez frekwencji.
+      Lekcja, której nie było (wycieczka, zawody), ma powód i „jednak była” na swoim kafelku w Obecności.
     </p>
     <div id="planUstawienia"></div>
-    <div style="margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;">
-      <label style="padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--paper);cursor:pointer;">📂 Wczytaj plan (plan-wf.json)<input type="file" id="zaleglePlik" accept=".json,application/json" style="display:none" onchange="zalegleWczytajPlik(event)"></label>
-      <span style="color:var(--ink-muted)">Plik o tej samej dacie „od” dokłada do siatki (klasy z pliku nadpisują swoje wiersze, ręczne zostają, dni wolne się sumują). Robi go <code>py -3.14 zbuduj_plan_wf.py</code> w folderze planu (plan-roczny/plan-lekcji-RRRR-MM).</span>
-    </div>
+    <details class="plan-zaaw" style="margin-top:14px;font-size:13px;">
+      <summary style="cursor:pointer;color:var(--ink-muted);">Zaawansowane: plan z pliku</summary>
+      <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <label style="padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--paper);cursor:pointer;">📂 Wczytaj plan (plan-wf.json)<input type="file" id="zaleglePlik" accept=".json,application/json" style="display:none" onchange="zalegleWczytajPlik(event)"></label>
+        <span style="color:var(--ink-muted)">Plik JSON z siatką lekcji (np. wygenerowany z planu szkoły). Plik o tej samej dacie „od” dokłada do siatki: klasy z pliku nadpisują swoje wiersze, ręczne zostają, dni wolne się sumują. Po wczytaniu w tabeli pojawia się kolumna „klasa w planie” do dopasowania nazw.</span>
+      </div>
+    </details>
   </div>
 
   <!-- =================================================== -->
@@ -1745,7 +1753,7 @@
       Dwie godziny z rzędu = dwie pozycje. Plan nie wie o wycieczkach, zawodach i zastępstwach — jeśli lekcji nie było, kliknij <b>nie było</b> i pozycja znika na stałe.
     </p>
     <div id="zalegleLista" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px;"></div>
-    <p style="font-size:13px;color:var(--ink-muted);margin:10px 0 0 0;">Plan, dni wolne i dopasowanie klas: zakładka <b>🗓 Plan</b>. „Nie było” cofniesz tam, w kolumnie po prawej.</p>
+    <p style="font-size:13px;color:var(--ink-muted);margin:10px 0 0 0;">Plan i dni wolne: zakładka <b>🗓 Plan</b>. „Nie było” cofniesz na kafelku tej lekcji w Obecności (przycisk „jednak była”).</p>
     <div class="modal-actions" style="margin-top: 14px;">
       <button onclick="zamknijZalegle()">Zamknij</button>
     </div>
@@ -2481,6 +2489,10 @@ function renderPlanUstawienia() {
   const p = planAktywny(false);
   const klucze = zalegleKluczePlanu();
   const td = 'padding:3px 6px;vertical-align:top;';
+  // Kolumna „klasa w planie” (dopasowanie nazw z pliku EduPage do klas dziennika) ma sens tylko przy planie
+  // z pliku; przy siatce klikanej ręcznie zawsze pokazywała to samo, co nazwa klasy (19.09).
+  const zPliku = !!(p && (p.wygenerowano || (p.zrodlo && p.zrodlo !== 'ręcznie')));
+  const COLS = zPliku ? 7 : 6;
   let h = '';
   // --- plan aktywny: daty ważności + źródło
   h += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">' +
@@ -2491,7 +2503,7 @@ function renderPlanUstawienia() {
   // --- siatka: klasa × dzień → numery lekcji (klik komórki = wybór numerów)
   h += '<table style="font-size:13px;border-collapse:collapse;"><tr><th style="text-align:left;' + td + '">klasa</th>' +
     ZALEGLE_DNI.slice(0, 5).map(d => `<th style="${td}">${d}</th>`).join('') +
-    '<th style="text-align:left;' + td + '">klasa w planie</th><th style="text-align:left;' + td + '">„nie było”</th></tr>';
+    (zPliku ? '<th style="text-align:left;' + td + '">klasa w planie</th>' : '') + '</tr>';
   state.classes.forEach(cls => {
     const cur = zaleglePlanKlasa(cls);
     const auto = cls.planKlasa === undefined;
@@ -2503,14 +2515,14 @@ function renderPlanUstawienia() {
       h += `<td style="${td}text-align:center;"><button type="button" class="siatka-kom" data-cls="${cls.id}" data-dzien="${d}" onclick="siatkaOtworz('${cls.id}',${d})" title="kliknij: numery lekcji w ${ZALEGLE_DNI[d]}" style="min-width:44px;padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid ${otw ? 'var(--ink)' : 'var(--line)'};border-radius:5px;background:${nrs.length ? '#EEF3FA' : 'var(--paper)'};cursor:pointer;">${nrs.length ? nrs.map(n => n === null ? '?' : n).join(' ') : '·'}</button></td>`;
     }
     const dubel = cur ? state.classes.filter(c => c.id !== cls.id && zaleglePlanKlasa(c) === cur).map(c => c.name) : [];
-    h += `<td style="${td}"><select onchange="zaleglePlanKlasaZmien('${cls.id}', this.value)" style="padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid ${dubel.length ? '#C0392B' : 'var(--line)'};border-radius:5px;">` +
+    if (zPliku) h += `<td style="${td}"><select onchange="zaleglePlanKlasaZmien('${cls.id}', this.value)" style="padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid ${dubel.length ? '#C0392B' : 'var(--line)'};border-radius:5px;">` +
       `<option value="">— nie licz —</option>` + klucze.map(k => `<option value="${escapeHtml(k)}" ${k === cur ? 'selected' : ''}>${escapeHtml(k)}</option>`).join('') + `</select>${auto && cur ? ' <span style="color:var(--ink-muted)">(auto)</span>' : ''}` +
-      (dubel.length ? `<div class="plan-dubel" style="color:#C0392B;font-size:12px;">⚠ ta sama klasa planu co ${escapeHtml(dubel.join(', '))} — obie dostają te same lekcje</div>` : '') + `</td>` +
-      `<td style="${td}color:var(--ink-muted);">${Object.keys(cls.odwolane || {}).length ? Object.keys(cls.odwolane).sort().map(k => `${k.slice(5).replace('#', ' L')} <button onclick="zalegleCofnijNieBylo('${cls.id}','${k}')" title="${escapeHtml(cls.odwolane[k])} — cofnij" style="padding:0 5px;font-size:11px;">×</button>`).join(' ') : '—'}</td></tr>`;
+      (dubel.length ? `<div class="plan-dubel" style="color:#C0392B;font-size:12px;">⚠ ta sama klasa planu co ${escapeHtml(dubel.join(', '))} — obie dostają te same lekcje</div>` : '') + `</td>`;
+    h += `</tr>`;
     if (siatkaOtwarta && siatkaOtwarta.clsId === cls.id) {
       const d = siatkaOtwarta.dzien;
       const nrs = (s[d] || []).filter(n => n !== null);
-      h += `<tr><td colspan="8" style="${td}background:#F6F8FB;"><span style="color:var(--ink-muted);margin-right:6px;">${escapeHtml(cls.name)} · ${ZALEGLE_DNI[d]} · numery lekcji:</span>` +
+      h += `<tr><td colspan="${COLS}" style="${td}background:#F6F8FB;"><span style="color:var(--ink-muted);margin-right:6px;">${escapeHtml(cls.name)} · ${ZALEGLE_DNI[d]} · numery lekcji:</span>` +
         SIATKA_NR.map(n => `<button type="button" class="siatka-nr" data-nr="${n}" onclick="siatkaPrzelacz('${cls.id}',${d},${n})" style="width:30px;padding:3px 0;margin:1px;font-family:inherit;font-size:12.5px;border-radius:5px;cursor:pointer;border:1px solid ${nrs.includes(n) ? 'var(--ink)' : 'var(--line)'};background:${nrs.includes(n) ? 'var(--ink)' : 'var(--paper)'};color:${nrs.includes(n) ? 'var(--paper)' : 'var(--ink)'};">${n}</button>`).join('') +
         `</td></tr>`;
     }
@@ -2518,7 +2530,7 @@ function renderPlanUstawienia() {
   // --- inne zajęcia: w pasku tygodnia na szaro, bez frekwencji i bez Zaległych
   const inne = (p && p.inne) || {};
   const nazwyInne = Object.keys(inne).sort();
-  h += `<tr><td colspan="8" style="${td}padding-top:12px;"><b>Inne zajęcia</b> <span style="color:var(--ink-muted)">(w pasku tygodnia na szaro, bez frekwencji: edukacja zdrowotna, wychowawcza, dyżur…)</span></td></tr>`;
+  h += `<tr><td colspan="${COLS}" style="${td}padding-top:12px;"><b>Inne zajęcia</b> <span style="color:var(--ink-muted)">(w pasku tygodnia na szaro, bez frekwencji: edukacja zdrowotna, wychowawcza, dyżur…)</span></td></tr>`;
   nazwyInne.forEach(nazwa => {
     const id = 'inne:' + nazwa;
     const s = planSiatkaZ(inne, nazwa);
@@ -2528,16 +2540,16 @@ function renderPlanUstawienia() {
       const otw = siatkaOtwarta && siatkaOtwarta.clsId === id && siatkaOtwarta.dzien === d;
       h += `<td style="${td}text-align:center;"><button type="button" class="siatka-kom" data-cls="${escapeHtml(id)}" data-dzien="${d}" onclick="siatkaOtworz(${JSON.stringify(id).replace(/"/g, '&quot;')},${d})" title="kliknij: numery lekcji w ${ZALEGLE_DNI[d]}" style="min-width:44px;padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid ${otw ? 'var(--ink)' : 'var(--line)'};border-radius:5px;background:${nrs.length ? '#F0F0F0' : 'var(--paper)'};cursor:pointer;color:var(--ink-muted);">${nrs.length ? nrs.map(n => n === null ? '?' : n).join(' ') : '·'}</button></td>`;
     }
-    h += `<td colspan="2" style="${td}color:var(--ink-muted);">bez frekwencji</td></tr>`;
+    h += `<td colspan="${COLS - 6}" style="${td}color:var(--ink-muted);">bez frekwencji</td></tr>`;
     if (siatkaOtwarta && siatkaOtwarta.clsId === id) {
       const d = siatkaOtwarta.dzien;
       const nrs = (s[d] || []).filter(n => n !== null);
-      h += `<tr><td colspan="8" style="${td}background:#F6F8FB;"><span style="color:var(--ink-muted);margin-right:6px;">${escapeHtml(nazwa)} · ${ZALEGLE_DNI[d]} · numery lekcji:</span>` +
+      h += `<tr><td colspan="${COLS}" style="${td}background:#F6F8FB;"><span style="color:var(--ink-muted);margin-right:6px;">${escapeHtml(nazwa)} · ${ZALEGLE_DNI[d]} · numery lekcji:</span>` +
         SIATKA_NR.map(n => `<button type="button" class="siatka-nr" data-nr="${n}" onclick="siatkaPrzelacz(${JSON.stringify(id).replace(/"/g, '&quot;')},${d},${n})" style="width:30px;padding:3px 0;margin:1px;font-family:inherit;font-size:12.5px;border-radius:5px;cursor:pointer;border:1px solid ${nrs.includes(n) ? 'var(--ink)' : 'var(--line)'};background:${nrs.includes(n) ? 'var(--ink)' : 'var(--paper)'};color:${nrs.includes(n) ? 'var(--paper)' : 'var(--ink)'};">${n}</button>`).join('') +
         `</td></tr>`;
     }
   });
-  h += `<tr><td colspan="8" style="${td}"><input type="text" id="inneNazwa" placeholder="np. EZ 4a, GW 7b, dyżur" style="padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:5px;width:180px;" onkeydown="if(event.key==='Enter'){event.preventDefault();inneDodaj();}"> <button onclick="inneDodaj()" style="padding:3px 10px;font-size:12.5px;">dodaj zajęcia</button></td></tr>`;
+  h += `<tr><td colspan="${COLS}" style="${td}"><input type="text" id="inneNazwa" placeholder="np. EZ 4a, GW 7b, dyżur" style="padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:5px;width:180px;" onkeydown="if(event.key==='Enter'){event.preventDefault();inneDodaj();}"> <button onclick="inneDodaj()" style="padding:3px 10px;font-size:12.5px;">dodaj zajęcia</button></td></tr>`;
   h += '</table>';
   // --- dni wolne
   const zakresy = wolneZakresy(p ? p.wolne : []);
@@ -2566,11 +2578,18 @@ function zalegleNieBylo(clsId, klucz) {
   renderZalegleChip();
   renderAttendance();
 }
+// Wpis frekwencji przeczy „nie było” — zapis statusu / lekcji zdejmuje flagę bieżącej lekcji (19.09).
+function nieByloZdejmij() {
+  const c = getCurrentClass(); const k = attKey();
+  if (!c || !c.odwolane || !c.odwolane[k]) return false;
+  delete c.odwolane[k]; renderZalegleChip(); return true;
+}
 function zalegleCofnijNieBylo(clsId, klucz) {
   const cls = state.classes.find(c => c.id === clsId);
   if (!cls || !cls.odwolane) return;
   delete cls.odwolane[klucz];
-  save(); renderZalegle(); renderZalegleChip(); renderAttendance();
+  save(); renderZalegle(); renderZalegleChip(); renderAttendance(); renderPlanUstawienia();
+  showToast('„Nie było” zdjęte — lekcja wraca do wpisu.', 'info');
 }
 function zaleglePlanKlasaZmien(clsId, val) {
   const cls = state.classes.find(c => c.id === clsId);
@@ -2954,7 +2973,9 @@ function renderDzien() {
   if (nrOtw === null) { const z = lekcje.find(l => l.cls && l.cls.id === cur.id && kluczZ(iso, nrDlaLekcji(cur, iso, l.nr)) === kOtw); if (z) nrOtw = z.nr; }
   const wPlanie = lekcje.some(l => l.cls && l.cls.id === cur.id);
   head.innerHTML = `<span class="nr">${nrOtw !== null ? 'L' + nrOtw : (lekcje.length && !wPlanie) ? 'poza planem' : 'lekcja'}</span><span class="kl">${escapeHtml(cur.name)}${cur.plec ? ' <span class="plec">' + (cur.plec === 'dz' ? 'dz.' : 'chł.') + '</span>' : ''}</span>` +
-    `<span class="sum">${pk === null ? '' : '<b>' + pk + '%</b> · '}${wpisani}/${active.length} wpisanych</span><span class="otw">otwarta</span>`;
+    `<span class="sum">${pk === null ? '' : '<b>' + pk + '%</b> · '}${wpisani}/${active.length} wpisanych</span><span class="otw">otwarta</span>` +
+    ((cur.odwolane || {})[kOtw] ? `<span class="niebylo-info">nie było: ${escapeHtml(cur.odwolane[kOtw])} <button type="button" class="niebylo-cofnij" onclick="zalegleCofnijNieBylo('${cur.id}','${kOtw}')" title="zdejmij „nie było”">jednak była</button></span>` : '');
+  head.parentElement.classList.toggle('niebylo', !!(cur.odwolane || {})[kOtw]);
   if (tydzien) return;
   const weekend = [0, 6].includes(new Date(iso + 'T12:00:00').getDay());
   const bezLekcji = (weekend || wolny) && !lekcje.length && !cur.attendance[kOtw] && state.dzienWolnyOtw !== iso;
@@ -2988,7 +3009,7 @@ function kolumnaPodgladu(cls, iso, nr, k, dzis) {
   const active = (cls.students || []).filter(s => !s.longTermReleased);
   active.forEach(s => { const c = attRead(day[s.id]); if (c.s && counts[c.s] !== undefined) counts[c.s]++; });
   let sum;
-  if (niebylo) sum = 'nie było: ' + escapeHtml(cls.odwolane[k]);
+  if (niebylo) sum = 'nie było: ' + escapeHtml(cls.odwolane[k]) + ` <button type="button" class="niebylo-cofnij" onclick="event.stopPropagation(); zalegleCofnijNieBylo('${cls.id}','${k}')" title="zdejmij „nie było” — lekcja wraca do zaległych / do wpisu">jednak była</button>`;
   else if (jest) {
     const w = ['nć', 'bs', 'nb', 'nu', 'zw'].map((l, i) => { const key = ['NC', 'BS', 'NB', 'NU', 'ZW'][i]; return counts[key] ? counts[key] + ' ' + l : ''; }).filter(Boolean).join(' · ');
     sum = counts.C + ' ćw.' + (w ? ' · ' + w : '');
@@ -3146,6 +3167,7 @@ function finalizeLesson() {
     save();
     autoBackupDaily();
     const cc = getCurrentClass(); if (cc) _zapisanoO[_zapisanoKlucz(cc, attKey())] = terazHHMM();
+    if (nieByloZdejmij()) save();
     renderAttendance();
     showToast('✓ Zapisano lekcję. ' + (withoutStatus.length - toZW.length) + ' uczniów ma status C' + (toZW.length ? ', ' + toZW.length + ' ZW (zwolnienie OD–DO)' : '') + '.', 'success');
   });
@@ -3582,6 +3604,7 @@ function setStatus(status) {
     const lateBox = document.getElementById('pickerLate');
     const sp = lateBox ? lateBox.checked : state.pickerLate;
     state.attendance[attKey()][sid] = attWrite(status, sp);
+    nieByloZdejmij();
   }
   save();
   closePicker();
