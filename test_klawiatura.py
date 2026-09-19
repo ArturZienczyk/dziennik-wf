@@ -171,6 +171,35 @@ with sync_playwright() as pw:
         ids[2] not in cls()["attendance"][date],
     )
 
+    # Zwolniony długoterminowo (19.09): klawiatura dociera do jego wiersza — wpis (np. NB) i „0” wyczyść;
+    # Enter (zapis lekcji) nadal go pomija.
+    page.evaluate("(id) => { state.students.find(s => s.id === id).longTermReleased = true; save(); renderAttendance(); }", ids[3])
+    page.wait_for_timeout(200)
+    page.evaluate("(id) => setKbdRow(id)", ids[3])
+    page.keyboard.press("w")
+    page.wait_for_timeout(200)
+    check(
+        "zwolniony dlugoterminowo: klawisz w wpisuje NB",
+        (cls()["attendance"].get(date) or {}).get(ids[3], "").startswith("NB"),
+        cls()["attendance"].get(date),
+    )
+    page.evaluate("(id) => setKbdRow(id)", ids[3])
+    page.keyboard.press("0")
+    page.wait_for_timeout(200)
+    check(
+        "zwolniony dlugoterminowo: 0 czysci jego wpis",
+        ids[3] not in (cls()["attendance"].get(date) or {}),
+    )
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(300)
+    check(
+        "zwolniony dlugoterminowo: Enter (zapis lekcji) nie nadaje mu C",
+        ids[3] not in (cls()["attendance"].get(date) or {}),
+        cls()["attendance"].get(date),
+    )
+    page.evaluate("(id) => { state.students.find(s => s.id === id).longTermReleased = false; save(); renderAttendance(); }", ids[3])
+    page.wait_for_timeout(200)
+
     page.screenshot(path=str(SHOTS / "shot_obecnosc.png"), full_page=True)
 
     # Enter zapisuje lekcje, drugi Enter potwierdza okno

@@ -1360,7 +1360,7 @@
     <details class="pomoc" data-pomoc="uczniowie">
       <summary>❔ Zwolniony długoterminowo a zwolnienie OD–DO</summary>
       <div class="info-box">
-        <strong>Uwaga:</strong> "Zwolniony długoterminowo" oznacza ucznia ze zwolnieniem lekarskim na pół roku lub cały rok. Taki uczeń pokazuje się na liście, ale nie ma statystyk i nie można mu wpisywać obecności.
+        <strong>Uwaga:</strong> "Zwolniony długoterminowo" oznacza ucznia ze zwolnieniem lekarskim na pół roku lub cały rok. Taki uczeń pokazuje się na liście bez statystyk; „Zapisz lekcję” go pomija (w kopii do e-dziennika ma ZW), ale gdy bywa nieobecny, klik w jego wiersz albo klawiatura wpisują mu status jak każdemu, a <kbd>0</kbd> czyści.
         <br><strong>Zwolnienie OD–DO</strong> to zwolnienie na określony termin (np. 2 tygodnie po kontuzji): w tych dniach „Zapisz lekcję" nadaje uczniowi <strong>ZW</strong> zamiast C (możesz nadpisać ręcznie), a po dacie DO uczeń wraca sam. Statystyki liczą się normalnie.
       </div>
     </details>
@@ -3298,7 +3298,7 @@ function renderAttendance() {
   tbody.innerHTML = '';
 
   // Kursor klawiatury: zawsze na istniejącym, niezwolnionym uczniu
-  const kbdList = state.students.filter(x => !x.longTermReleased);
+  const kbdList = kbdActiveStudents();
   if (!kbdList.some(x => x.id === state.kbdStudentId)) {
     state.kbdStudentId = kbdList.length ? kbdList[0].id : null;
   }
@@ -3308,8 +3308,8 @@ function renderAttendance() {
     if (s.longTermReleased) tr.classList.add('long-term-released');
 
     tr.dataset.sid = s.id;
-    if (!s.longTermReleased && s.id === state.kbdStudentId) tr.classList.add('kbd-active');
-    if (!s.longTermReleased) tr.addEventListener('mousedown', () => setKbdRow(s.id));
+    if (s.id === state.kbdStudentId) tr.classList.add('kbd-active');
+    tr.addEventListener('mousedown', () => setKbdRow(s.id));
 
     const stats = getStudentStats(s.id);
     const todayCell = attRead((state.attendance[attKey()] || {})[s.id]);
@@ -3697,7 +3697,7 @@ function renderStudents() {
       <td class="left">${i + 1}</td>
       <td class="left"><input type="text" class="student-name" value="${escapeHtml(s.name)}" placeholder="Imię nazwisko" oninput="updateStudentName('${s.id}', this.value)"></td>
       <td><input type="checkbox" class="long-term-checkbox" ${s.longTermReleased ? 'checked' : ''} onchange="toggleLongTerm('${s.id}', this.checked)"></td>
-      <td class="left">${getReleases(s).map((r, k) => `<span class="rel-chip${isReleasedOn(s, today) && r.od <= today && today <= r.do ? ' active' : ''}" title="${r.od} – ${r.do}">${relData(r.od)}–${relData(r.do)}<button type="button" title="usuń okres" onclick="removeRelease('${s.id}', ${k})">×</button></span>`).join('')}<span class="rel-form">od <input type="date" id="relOd_${s.id}"> do <input type="date" id="relDo_${s.id}"> <button type="button" onclick="addRelease('${s.id}')" title="dodaj zwolnienie na termin">+</button></span></td>
+      <td class="left">${getReleases(s).map((r, k) => `<span class="rel-chip${isReleasedOn(s, today) && r.od <= today && today <= r.do ? ' active' : ''}" title="${r.od} – ${r.do}">${relData(r.od)}–${relData(r.do)}<button type="button" title="usuń okres" onclick="removeRelease('${s.id}', ${k})">×</button></span>`).join('')}<span class="rel-form">od <input type="date" id="relOd_${s.id}"> do <input type="date" id="relDo_${s.id}" onkeydown="if(event.key==='Enter'){event.preventDefault();addRelease('${s.id}');}"> <button type="button" class="rel-zapisz" onclick="addRelease('${s.id}')" title="zapisuje zakres OD–DO jako zwolnienie lekarskie">zapisz zwolnienie</button></span></td>
       <td><input type="number" value="${s.height}" min="100" max="220" style="width:70px; text-align:right;" oninput="updateStudentField('${s.id}', 'height', this.value)"></td>
       <td><input type="number" value="${s.weight}" min="20" max="120" step="0.1" style="width:70px; text-align:right;" oninput="updateStudentField('${s.id}', 'weight', this.value)"></td>
       <td><button class="delete-btn" onclick="deleteStudent('${s.id}')" title="usuń">×</button></td>
@@ -5935,7 +5935,7 @@ const KBD_STATUS = {
 };
 
 function kbdActiveStudents() {
-  return state.students.filter(s => !s.longTermReleased);
+  return state.students;   // zwolniony długoterminowo też (19.09): bywa nieobecny, wpis i „0” wyczyść muszą do niego docierać; Enter nadal go pomija (finalizeLesson)
 }
 
 function setKbdRow(sid) {
