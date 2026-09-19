@@ -18,6 +18,16 @@ Poprzedni handoff `HANDOFF-plan-produkt.md`: punkty 1–3 zrobione, **punkt 4 (P
 - 3: kolumny `col.auto` dostają klasę `kol-auto` (th + td): nagłówek „🔒 auto", tło `--bg`, kursor default, puste komórki „—" zamiast „+"; toast po kliknięciu zostaje jako siatka.
 - 4: `🗑 usuń wpisy` z etykietą, przeniesiony za `#lessonCount` (z dala od ◀ dziś ▶); na telefonie nadal ukryty (`display:none` ~1091).
 - Test: `test_audyt_ux.py` 14/14, zrzuty `_zrzuty/ux_{1_start,3_oceny,4_obecnosc}_1400.png`. Klik usera na zrzutach — nieoddany.
+- Klik usera: p.4 + chipy dni wolnych DD.MM (`a3ef733`) — pasuje.
+
+## STAN 19.09 noc (sw v28) — „nie było” z kafelka: zmiana powodu + komentarz (user: „koniecznie”)
+- Klik w „nie było: powód” na kafelku (otwarta lekcja `.niebylo-info` i podgląd `.sum`) = `.niebylo-zmien` → `nieByloOkno(clsId, klucz)`
+  (`#niebyloModal`, z-index 110 jak zastępstwa): select powodu (`ZALEGLE_POWODY`) + pole komentarza (120 zn.) + „jednak była” w oknie.
+- Zapis: `cls.odwolane[k]` ZOSTAJE stringiem: `powód` albo `powód · komentarz` (`nieByloZloz`/`nieByloRozbij`, separator „ · ”) —
+  scalanie kopii (liść `o`), statystyki, pasek tygodnia (title) i Zaległe czytają go bez zmian. Model danych nietknięty świadomie.
+- Lista Zaległych bez zmian (select powodu + „nie było” — szybka ścieżka bez komentarza); komentarz dopisuje się z kafelka.
+- Test `test_niebylo_komentarz.py` 19/19; zrzuty `_zrzuty/niebylo_komentarz_modal.png`, `niebylo_komentarz_1400.png`.
+- Otwarte z obu handoffów: tylko follow-upy poza zakresem (`test_zalegle.py` 2 FAIL dryf daty; karta ucznia ×undefined/NaN; `test_uklad.py` 1).
 
 ## Słowa usera (19.09, po obejrzeniu wdrożenia na prawdziwych danych)
 
