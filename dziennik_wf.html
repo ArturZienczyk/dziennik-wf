@@ -197,7 +197,7 @@
      pasek guzików L-nr + klasa + suma, klik = tabela tej klasy na całą szerokość pod paskiem.
      Kolumny podglądu obok siebie miały cztery różne rytmy (wiersz 56 vs 27 px); pełna szerokość
      oddaje tabeli liczniki, które w wąskiej kolumnie były schowane. */
-  .kol { flex: 0 0 auto; min-width: 150px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
+  .kol { flex: 1 1 120px; min-width: 0; max-width: 260px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
   .kol.brak .kol-head { background: #FFF0F0; }
   .kol.jest .kol-head { background: #EEF7EE; }
   .kol.niebylo .kol-head { opacity: .6; text-decoration: line-through; }
@@ -208,14 +208,14 @@
   .kol-head .otw { grid-column: 2; grid-row: 1; justify-self: end; font-size: 10px; color: var(--ink-muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; background: var(--paper); white-space: nowrap; }
   .kol-head .kl { grid-column: 1 / 3; grid-row: 2; white-space: nowrap; font-family: 'Source Serif 4', Georgia, serif; font-size: 18px; font-weight: 500; }
   .kol-head .plec { font-size: 11px; color: var(--ink-muted); font-weight: 400; }
-  .kol-head .sum { grid-column: 1 / 3; grid-row: 3; font-size: 12px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; line-height: 1.2; }
+  .kol-head .sum { grid-column: 1 / 3; grid-row: 3; min-width: 0; font-size: 12px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
   .kol.guzik-otw { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }  /* 2 px obrysu bez zmiany wysokości guzika */
   .kol.guzik-otw .kol-head { background: var(--paper); }
   .kol.guzik-otw .otw { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-  .kol.inne { border-style: dashed; background: transparent; }
+  .kol.inne { flex-grow: 0; border-style: dashed; background: transparent; }
   .kol.inne .kol-head { background: transparent; }
   .kol.inne .kl { color: var(--ink-muted); }
-  .kol.otwarta { flex: 1 0 100%; min-width: 0; border: 2px solid var(--ink); border-radius: 8px; }
+  .kol.otwarta { flex: 1 0 100%; min-width: 0; max-width: none; border: 2px solid var(--ink); border-radius: 8px; }
   .kol.otwarta > .kol-head { display: none; }
   .kol.otwarta .table-wrap { margin: 0; border: none; border-radius: 0; }
   .dzien-kolumny.tydzien { display: block; }
@@ -2905,7 +2905,8 @@ function renderDzien() {
   // Numer w nagłówku: z klucza, a gdy klucz bez nr (pierwsza lekcja dnia) — z planu
   let nrOtw = state.currentNr;
   if (nrOtw === null) { const z = lekcje.find(l => l.cls && l.cls.id === cur.id && kluczZ(iso, nrDlaLekcji(cur, iso, l.nr)) === kOtw); if (z) nrOtw = z.nr; }
-  head.innerHTML = `<span class="nr">${nrOtw === null ? 'lekcja' : 'L' + nrOtw}</span><span class="kl">${escapeHtml(cur.name)}${cur.plec ? ' <span class="plec">' + (cur.plec === 'dz' ? 'dz.' : 'chł.') + '</span>' : ''}</span>` +
+  const wPlanie = lekcje.some(l => l.cls && l.cls.id === cur.id);
+  head.innerHTML = `<span class="nr">${nrOtw !== null ? 'L' + nrOtw : (lekcje.length && !wPlanie) ? 'poza planem' : 'lekcja'}</span><span class="kl">${escapeHtml(cur.name)}${cur.plec ? ' <span class="plec">' + (cur.plec === 'dz' ? 'dz.' : 'chł.') + '</span>' : ''}</span>` +
     `<span class="sum">${pk === null ? '' : '<b>' + pk + '%</b> · '}${wpisani}/${active.length} wpisanych</span><span class="otw">otwarta</span>`;
   if (tydzien) return;
   let cel = przed, otwartaZPlanu = false;
@@ -2986,10 +2987,22 @@ function renderPlanTydzien() {
   }
   el.innerHTML = h;
 }
+// Po zmianie dnia (◀ ▶ dziś, pole daty): otwarta klasa zostawała z poprzedniego dnia i pojawiała się
+// jako guzik „poza planem" (user 2026-09-19: „nie wiem skąd ta lekcja się wzięła"). Gdy dzień ma plan,
+// a bieżąca klasa w nim nie występuje — otwórz pierwszą lekcję dnia. Zwraca true, gdy przełączyło.
+function dopasujLekcjeDoDnia() {
+  const cur = getCurrentClass();
+  if (!cur) return false;
+  const { lekcje } = lekcjeDniaWszystkie(state.currentDate);
+  const zKlasa = lekcje.filter(l => l.cls);
+  if (!zKlasa.length || zKlasa.some(l => l.cls.id === cur.id)) return false;
+  wybierzLekcje(zKlasa[0].cls.id, state.currentDate, zKlasa[0].nr);
+  return true;
+}
 function changeDate() {
   state.currentDate = document.getElementById('lessonDate').value;
   state.currentNr = null;
-  renderAttendance();
+  if (!dopasujLekcjeDoDnia()) renderAttendance();
 }
 function dateOffset(days) {
   const d = new Date(state.currentDate);
@@ -2997,13 +3010,13 @@ function dateOffset(days) {
   state.currentDate = d.toISOString().slice(0, 10);
   state.currentNr = null;
   document.getElementById('lessonDate').value = state.currentDate;
-  renderAttendance();
+  if (!dopasujLekcjeDoDnia()) renderAttendance();
 }
 function setToday() {
   state.currentDate = new Date().toISOString().slice(0, 10);
   state.currentNr = null;
   document.getElementById('lessonDate').value = state.currentDate;
-  renderAttendance();
+  if (!dopasujLekcjeDoDnia()) renderAttendance();
 }
 function deleteLesson() {
   if (!state.attendance[attKey()]) return;
