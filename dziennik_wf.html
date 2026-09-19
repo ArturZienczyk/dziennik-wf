@@ -162,9 +162,59 @@
   .plan-lekcja .st { margin-left: auto; font-size: 12px; }
   .plan-lekcja.jest { background: #EEF7EE; border-color: #A9D3A9; }
   .plan-lekcja.brak { background: #FFF0F0; border-color: #E0A0A0; }
-  .plan-lekcja.niebylo { opacity: .5; text-decoration: line-through; }
+  .plan-lekcja.niebylo { border-style: dashed; color: var(--ink-muted); background: var(--line-soft); }
   .plan-lekcja.aktywna { border: 2px solid var(--ink); font-weight: 600; }
   .plan-lekcja.inne { background: transparent; border-style: dashed; color: var(--ink-muted); cursor: default; }
+  /* Zakładka Plan w języku pozostałych zakładek (19.09): trzy karty w kolejności czytania — Siatka tygodnia →
+     Inne zajęcia → Dni wolne; numery lekcji jako chipy (jak .rel-chip), pusta komórka jako blade pole. */
+  .plan-karty { display: grid; gap: 14px; }
+  .plan-karta { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; font-size: 13px; }
+  .plan-karta h3 { margin: 0 0 2px 0; font-size: 16px; }
+  .plan-karta h3 .licz { color: var(--ink-muted); font-weight: 400; font-size: 13px; }
+  .plan-karta .opis { margin: 0 0 10px 0; color: var(--ink-muted); font-size: 12.5px; }
+  .plan-karta table { border-collapse: collapse; }
+  .plan-karta th, .plan-karta td { min-width: 64px; }
+  .plan-karta td:first-child { min-width: 140px; padding-right: 18px; }
+  .plan-karta th { font-size: 11px; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 500; padding: 4px 6px; text-align: center; border-bottom: 1px solid var(--line); }
+  .plan-karta th:first-child, .plan-karta td:first-child { text-align: left; }
+  .plan-karta td { padding: 5px 6px; text-align: center; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+  .plan-karta td.kl { font-family: 'Source Serif 4', Georgia, serif; font-size: 15px; }
+  .plan-karta td.kl small { display: block; font-family: inherit; font-size: 11px; color: var(--ink-muted); }
+  .plan-karta td.kl .usun { border: 0; background: none; cursor: pointer; padding: 0 4px; font-size: 11px; color: var(--ink-muted); }
+  .siatka-kom { display: inline-flex; gap: 3px; min-width: 44px; min-height: 26px; justify-content: center; align-items: center; padding: 2px 6px; border: 1px solid var(--line-soft); border-radius: 6px; background: var(--paper); cursor: pointer; font: inherit; }
+  .siatka-kom:hover { border-color: var(--line); background: var(--bg); }
+  .siatka-kom.otw { border-color: var(--ink); }
+  .siatka-kom .chip { display: inline-block; min-width: 22px; padding: 1px 6px; border-radius: 999px; background: #B5D4F4; color: #042C53; border: 1px solid #4A8BC7; font-size: 12px; }
+  .siatka-kom.inne .chip { background: var(--line-soft); color: var(--ink-soft); border-color: #C9C2B4; }
+  .siatka-kom .kropka { color: #C9C2B4; font-size: 16px; line-height: 1; }
+  .plan-karta .s-nr { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; padding: 8px 6px; background: var(--bg); border-radius: 6px; }
+  .plan-karta .s-nr span { color: var(--ink-muted); margin-right: 6px; font-size: 12.5px; }
+  .siatka-nr { width: 30px; padding: 3px 0; font: inherit; font-size: 12.5px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer; }
+  .siatka-nr.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .plan-karta .stopka { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; color: var(--ink-muted); font-size: 12.5px; }
+  .plan-karta .stopka details.plan-zaaw { margin-left: auto; }
+  .plan-karta .stopka details.plan-zaaw > summary { cursor: pointer; }
+  .plan-karta .stopka details.plan-zaaw > div { flex-basis: 100%; margin-top: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .plan-karta .stopka details.plan-zaaw[open] { flex-basis: 100%; margin-left: 0; }
+  .plan-karta input[type=date], .plan-karta input[type=text], .plan-karta textarea, .plan-karta select { padding: 3px 6px; font-family: inherit; font-size: 12.5px; border: 1px solid var(--line); border-radius: 5px; }
+  .plan-karta .dodaj { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+  .plan-karta .dodaj button, .plan-karta .plik { padding: 4px 12px; font: inherit; font-size: 12.5px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); cursor: pointer; }
+  .plan-karta .wolny-chip { display: inline-block; margin: 2px 4px 2px 0; padding: 1px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); }
+  .plan-karta .wolny-chip button { border: 0; background: none; cursor: pointer; padding: 0 0 0 4px; font-size: 11px; }
+  .plan-dubel { color: #C0392B; font-size: 12px; text-align: left; }
+  /* Plan bez klas: karta „trzy kroki” prowadzi do Uczniowie (siatka buduje się z klas dziennika). */
+  .plan-pusty { border-left: 3px solid var(--accent); background: var(--paper); border-radius: 0 4px 4px 0; padding: 18px 24px; }
+  .plan-pusty h2 { margin: 0 0 6px 0; font-size: 20px; }
+  .plan-pusty p { margin: 0 0 12px 0; color: var(--ink-soft); font-size: 14px; }
+  .plan-pusty ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+  .plan-pusty li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; font-size: 13.5px; }
+  .plan-pusty li .n { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; font-size: 12px; color: var(--ink-muted); }
+  .plan-pusty li.ok .n { background: #EEF7EE; border-color: #A9D3A9; color: #2F6B2F; }
+  .plan-pusty li.ok { color: var(--ink-muted); }
+  .plan-pusty li b { font-weight: 600; }
+  .plan-pusty li small { display: block; color: var(--ink-muted); }
+  .plan-pusty .akcja { margin-top: 14px; }
+  .plan-pusty .akcja button { padding: 5px 14px; font: inherit; font-size: 13px; border: 1px solid var(--ink); border-radius: 6px; background: var(--paper); cursor: pointer; }
   @media (max-width: 900px) { .plan-tydzien { grid-template-columns: repeat(2, 1fr); } }
   .date-row {
     display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
@@ -200,8 +250,18 @@
   .kol { flex: 1 1 120px; min-width: 0; max-width: 260px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
   .kol.brak .kol-head { background: #FFF0F0; }
   .kol.jest .kol-head { background: #EEF7EE; }
-  .kol.niebylo .kol-head { opacity: .6; text-decoration: line-through; }
-  .kol.niebylo .kol-head .sum, .kol.niebylo .kol-head .niebylo-info { text-decoration: none; opacity: 1; }
+  /* „nie było” = fakt, nie błąd: szare kreskowane jak „inne zajęcia”, bez przekreślenia (przekreślenie czyta się
+     jak „skasowane”). Cztery stany paska dnia różnią się jednym ruchem oka: czerwony brak / zielony jest /
+     szary kreskowany nie było / szary bez ramki inne (mockup 19.09). */
+  .kol.niebylo { border: 1px dashed #B9B1A2; background: var(--line-soft); }
+  .kol.niebylo .kol-head { background: transparent; }
+  .kol.niebylo .kol-head .kl { color: var(--ink-muted); }
+  .kol.niebylo .kol-head .sum { color: var(--ink-soft); }
+  .kol.niebylo .kol-head .sum::before { content: '— '; color: var(--ink-muted); }
+  .kol.niebylo.guzik-otw { border: 1px dashed var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+  .kol.niebylo.guzik-otw .kol-head { background: transparent; }
+  .kol.otwarta.niebylo { border: 2px dashed #9A9184; background: var(--paper); }
+  .kol.otwarta.niebylo .niebylo-info { display: inline-block; margin: 8px 12px 0; padding: 3px 10px; border: 1px dashed #B9B1A2; border-radius: 999px; background: var(--line-soft); font-size: 12.5px; color: var(--ink-soft); }
   .kol.niebylo .kol-head .sum { white-space: normal; overflow: visible; }   /* przycisk „jednak była” musi być klikalny, nie obcięty */
   .niebylo-cofnij { font-family: inherit; font-size: 11px; padding: 1px 7px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); cursor: pointer; margin-left: 4px; }
   .niebylo-cofnij:hover { border-color: var(--ink); }
@@ -1454,19 +1514,7 @@
   <!-- ZAKŁADKA: PLAN (siatka lekcji, dni wolne, dopasowanie klas) -->
   <!-- =================================================== -->
   <div id="tab-plan" class="tab-content">
-    <p style="font-size:13px;color:var(--ink-muted);margin:0 0 12px 0;">
-      Siatka tygodnia: <b>klik komórki</b> (klasa × dzień) otwiera numery lekcji, klik numeru wpisuje lekcję, drugi klik zdejmuje.
-      Z tej siatki dziennik bierze pasek tygodnia w Obecności i chip „Zaległe”. „Inne zajęcia” są w pasku na szaro, bez frekwencji.
-      Lekcja, której nie było (wycieczka, zawody), ma powód i „jednak była” na swoim kafelku w Obecności.
-    </p>
     <div id="planUstawienia"></div>
-    <details class="plan-zaaw" style="margin-top:14px;font-size:13px;">
-      <summary style="cursor:pointer;color:var(--ink-muted);">Zaawansowane: plan z pliku</summary>
-      <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        <label style="padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--paper);cursor:pointer;">📂 Wczytaj plan (plan-wf.json)<input type="file" id="zaleglePlik" accept=".json,application/json" style="display:none" onchange="zalegleWczytajPlik(event)"></label>
-        <span style="color:var(--ink-muted)">Plik JSON z siatką lekcji (np. wygenerowany z planu szkoły). Plik o tej samej dacie „od” dokłada do siatki: klasy z pliku nadpisują swoje wiersze, ręczne zostają, dni wolne się sumują. Po wczytaniu w tabeli pojawia się kolumna „klasa w planie” do dopasowania nazw.</span>
-      </div>
-    </details>
   </div>
 
   <!-- =================================================== -->
@@ -2488,77 +2536,96 @@ function renderPlanUstawienia() {
   const plany = zaleglePlany();
   const p = planAktywny(false);
   const klucze = zalegleKluczePlanu();
-  const td = 'padding:3px 6px;vertical-align:top;';
+  const DNI = ZALEGLE_DNI.slice(0, 5);
+  // Plan bez klas (albo klasy bez wpisanych uczniów): siatka buduje się z klas dziennika, więc zamiast pustej
+  // tabeli karta z krokami prowadząca do Uczniowie (zamówienie 19.09). Krok zrobiony = odhaczony.
+  const maUczniow = c => (c.students || []).some(u => (u.name || '').trim());
+  const krok1 = state.classes.length > 0;
+  const krok2 = state.classes.some(maUczniow);
+  if (!krok2) {
+    ust.innerHTML = `<div class="plan-pusty">
+      <h2>Plan tygodnia — trzy kroki</h2>
+      <p>Siatka planu buduje się z klas dziennika. Na razie ${krok1 ? 'jest klasa, ale bez uczniów' : 'nie ma żadnej klasy'}.</p>
+      <ol>
+        <li class="${krok1 ? 'ok' : ''}"><span class="n">${krok1 ? '✓' : '1'}</span><div><b>Szkoła i klasa</b><small>zakładka Uczniowie → „+ klasa”: szkoła, nazwa, e-dziennik</small></div></li>
+        <li><span class="n">2</span><div><b>Lista uczniów</b><small>wklej listę w Uczniowie — jeden uczeń w linii</small></div></li>
+        <li><span class="n">3</span><div><b>Wróć tu</b><small>klasa pojawi się w siatce; klik komórki wpisuje numery lekcji</small></div></li>
+      </ol>
+      <div class="akcja"><button type="button" class="plan-pusty-akcja" onclick="${krok1 ? "switchTab('uczniowie')" : 'uiAddClass()'}">${krok1 ? 'Dodaj uczniów' : '+ Dodaj klasę'}</button></div>
+    </div>`;
+    return;
+  }
   // Kolumna „klasa w planie” (dopasowanie nazw z pliku EduPage do klas dziennika) ma sens tylko przy planie
   // z pliku; przy siatce klikanej ręcznie zawsze pokazywała to samo, co nazwa klasy (19.09).
   const zPliku = !!(p && (p.wygenerowano || (p.zrodlo && p.zrodlo !== 'ręcznie')));
   const COLS = zPliku ? 7 : 6;
-  let h = '';
-  // --- plan aktywny: daty ważności + źródło
-  h += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">' +
-    `<b>Plan</b> od <input type="date" value="${p ? p.od : ''}" onchange="planDatyZmien('od', this.value)" style="padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:5px;">` +
-    ` do <input type="date" value="${p ? p.do || '' : ''}" onchange="planDatyZmien('do', this.value)" style="padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:5px;">` +
-    `<span style="color:var(--ink-muted)">${p ? (p.zrodlo || (p.wygenerowano ? 'plik z ' + p.wygenerowano : 'ręcznie')) : 'jeszcze nie ma — klik w siatce go założy (od 1 września)'}</span>` +
-    (plany.length > 1 ? `<span style="color:var(--ink-muted)">· wszystkie plany: ${plany.map(x => `${x.od} – ${x.do || '…'}`).join(', ')}</span>` : '') + '</div>';
-  // --- siatka: klasa × dzień → numery lekcji (klik komórki = wybór numerów)
-  h += '<table style="font-size:13px;border-collapse:collapse;"><tr><th style="text-align:left;' + td + '">klasa</th>' +
-    ZALEGLE_DNI.slice(0, 5).map(d => `<th style="${td}">${d}</th>`).join('') +
-    (zPliku ? '<th style="text-align:left;' + td + '">klasa w planie</th>' : '') + '</tr>';
+  const kom = (id, s, d, inne) => {
+    const nrs = s[d] || [];
+    const otw = siatkaOtwarta && siatkaOtwarta.clsId === id && siatkaOtwarta.dzien === d;
+    return `<button type="button" class="siatka-kom${otw ? ' otw' : ''}${inne ? ' inne' : ''}" data-cls="${escapeHtml(id)}" data-dzien="${d}" onclick="siatkaOtworz(${JSON.stringify(id).replace(/"/g, '&quot;')},${d})" title="kliknij: numery lekcji w ${DNI[d]}">` +
+      (nrs.length ? nrs.map(n => `<span class="chip">${n === null ? '?' : n}</span>`).join('') : '<span class="kropka">·</span>') + '</button>';
+  };
+  const nrWiersz = (id, nazwa, s) => {
+    const d = siatkaOtwarta.dzien;
+    const nrs = (s[d] || []).filter(n => n !== null);
+    return `<tr><td colspan="${COLS}"><div class="s-nr"><span>${escapeHtml(nazwa)} · ${DNI[d]} · numery lekcji:</span>` +
+      SIATKA_NR.map(n => `<button type="button" class="siatka-nr${nrs.includes(n) ? ' on' : ''}" data-nr="${n}" onclick="siatkaPrzelacz(${JSON.stringify(id).replace(/"/g, '&quot;')},${d},${n})">${n}</button>`).join('') +
+      `</div></td></tr>`;
+  };
+  const naglowek = (pierwsza, ostatnia) => `<tr><th>${pierwsza}</th>${DNI.map(d => `<th>${d}</th>`).join('')}${ostatnia}</tr>`;
+  // --- karta 1: siatka klasa × dzień → numery lekcji (klik komórki = wybór numerów)
+  let h = '<div class="plan-karty"><div class="plan-karta"><h3>Siatka tygodnia</h3>' +
+    '<p class="opis">Klik komórki (klasa × dzień) otwiera numery lekcji, klik numeru wpisuje lekcję, drugi klik zdejmuje. Stąd bierze się pasek tygodnia w Obecności i chip „Zaległe”.</p>' +
+    '<table>' + naglowek('klasa', zPliku ? '<th>klasa w planie</th>' : '');
   state.classes.forEach(cls => {
     const cur = zaleglePlanKlasa(cls);
     const auto = cls.planKlasa === undefined;
     const s = p ? planSiatka(p, cur) : {};
-    h += `<tr><td style="${td}">${escapeHtml((cls.school ? cls.school + ' / ' : '') + cls.name)}</td>`;
-    for (let d = 0; d < 5; d++) {
-      const nrs = s[d] || [];
-      const otw = siatkaOtwarta && siatkaOtwarta.clsId === cls.id && siatkaOtwarta.dzien === d;
-      h += `<td style="${td}text-align:center;"><button type="button" class="siatka-kom" data-cls="${cls.id}" data-dzien="${d}" onclick="siatkaOtworz('${cls.id}',${d})" title="kliknij: numery lekcji w ${ZALEGLE_DNI[d]}" style="min-width:44px;padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid ${otw ? 'var(--ink)' : 'var(--line)'};border-radius:5px;background:${nrs.length ? '#EEF3FA' : 'var(--paper)'};cursor:pointer;">${nrs.length ? nrs.map(n => n === null ? '?' : n).join(' ') : '·'}</button></td>`;
-    }
+    h += `<tr><td class="kl">${escapeHtml(cls.name)}${cls.school ? `<small>${escapeHtml(cls.school)}</small>` : ''}</td>`;
+    for (let d = 0; d < 5; d++) h += `<td>${kom(cls.id, s, d, false)}</td>`;
     const dubel = cur ? state.classes.filter(c => c.id !== cls.id && zaleglePlanKlasa(c) === cur).map(c => c.name) : [];
-    if (zPliku) h += `<td style="${td}"><select onchange="zaleglePlanKlasaZmien('${cls.id}', this.value)" style="padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid ${dubel.length ? '#C0392B' : 'var(--line)'};border-radius:5px;">` +
+    if (zPliku) h += `<td><select onchange="zaleglePlanKlasaZmien('${cls.id}', this.value)" style="border-color:${dubel.length ? '#C0392B' : 'var(--line)'};">` +
       `<option value="">— nie licz —</option>` + klucze.map(k => `<option value="${escapeHtml(k)}" ${k === cur ? 'selected' : ''}>${escapeHtml(k)}</option>`).join('') + `</select>${auto && cur ? ' <span style="color:var(--ink-muted)">(auto)</span>' : ''}` +
-      (dubel.length ? `<div class="plan-dubel" style="color:#C0392B;font-size:12px;">⚠ ta sama klasa planu co ${escapeHtml(dubel.join(', '))} — obie dostają te same lekcje</div>` : '') + `</td>`;
+      (dubel.length ? `<div class="plan-dubel">⚠ ta sama klasa planu co ${escapeHtml(dubel.join(', '))} — obie dostają te same lekcje</div>` : '') + `</td>`;
     h += `</tr>`;
-    if (siatkaOtwarta && siatkaOtwarta.clsId === cls.id) {
-      const d = siatkaOtwarta.dzien;
-      const nrs = (s[d] || []).filter(n => n !== null);
-      h += `<tr><td colspan="${COLS}" style="${td}background:#F6F8FB;"><span style="color:var(--ink-muted);margin-right:6px;">${escapeHtml(cls.name)} · ${ZALEGLE_DNI[d]} · numery lekcji:</span>` +
-        SIATKA_NR.map(n => `<button type="button" class="siatka-nr" data-nr="${n}" onclick="siatkaPrzelacz('${cls.id}',${d},${n})" style="width:30px;padding:3px 0;margin:1px;font-family:inherit;font-size:12.5px;border-radius:5px;cursor:pointer;border:1px solid ${nrs.includes(n) ? 'var(--ink)' : 'var(--line)'};background:${nrs.includes(n) ? 'var(--ink)' : 'var(--paper)'};color:${nrs.includes(n) ? 'var(--paper)' : 'var(--ink)'};">${n}</button>`).join('') +
-        `</td></tr>`;
-    }
+    if (siatkaOtwarta && siatkaOtwarta.clsId === cls.id) h += nrWiersz(cls.id, cls.name, s);
   });
-  // --- inne zajęcia: w pasku tygodnia na szaro, bez frekwencji i bez Zaległych
+  h += '</table><div class="stopka">Plan od ' +
+    `<input type="date" value="${p ? p.od : ''}" onchange="planDatyZmien('od', this.value)"> do ` +
+    `<input type="date" value="${p ? p.do || '' : ''}" onchange="planDatyZmien('do', this.value)">` +
+    `<span>· ${p ? (p.zrodlo || (p.wygenerowano ? 'plik z ' + p.wygenerowano : 'ręcznie')) : 'jeszcze nie ma — klik w siatce go założy (od 1 września)'}</span>` +
+    (plany.length > 1 ? `<span>· wszystkie plany: ${plany.map(x => `${x.od} – ${x.do || '…'}`).join(', ')}</span>` : '') +
+    '<details class="plan-zaaw"><summary>Zaawansowane: plan z pliku</summary><div>' +
+    '<label class="plik">📂 Wczytaj plan (plan-wf.json)<input type="file" id="zaleglePlik" accept=".json,application/json" style="display:none" onchange="zalegleWczytajPlik(event)"></label>' +
+    '<span>Plik JSON z siatką lekcji (np. wygenerowany z planu szkoły). Plik o tej samej dacie „od” dokłada do siatki: klasy z pliku nadpisują swoje wiersze, ręczne zostają, dni wolne się sumują. Po wczytaniu w tabeli pojawia się kolumna „klasa w planie” do dopasowania nazw.</span>' +
+    '</div></details></div></div>';
+  // --- karta 2: inne zajęcia — w pasku tygodnia na szaro, bez frekwencji i bez Zaległych
   const inne = (p && p.inne) || {};
   const nazwyInne = Object.keys(inne).sort();
-  h += `<tr><td colspan="${COLS}" style="${td}padding-top:12px;"><b>Inne zajęcia</b> <span style="color:var(--ink-muted)">(w pasku tygodnia na szaro, bez frekwencji: edukacja zdrowotna, wychowawcza, dyżur…)</span></td></tr>`;
-  nazwyInne.forEach(nazwa => {
-    const id = 'inne:' + nazwa;
-    const s = planSiatkaZ(inne, nazwa);
-    h += `<tr class="plan-inne"><td style="${td}">${escapeHtml(nazwa)} <button onclick="inneUsun('${escapeHtml(nazwa).replace(/'/g, "\\'")}')" title="usuń z planu" style="padding:0 5px;font-size:11px;">×</button></td>`;
-    for (let d = 0; d < 5; d++) {
-      const nrs = s[d] || [];
-      const otw = siatkaOtwarta && siatkaOtwarta.clsId === id && siatkaOtwarta.dzien === d;
-      h += `<td style="${td}text-align:center;"><button type="button" class="siatka-kom" data-cls="${escapeHtml(id)}" data-dzien="${d}" onclick="siatkaOtworz(${JSON.stringify(id).replace(/"/g, '&quot;')},${d})" title="kliknij: numery lekcji w ${ZALEGLE_DNI[d]}" style="min-width:44px;padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid ${otw ? 'var(--ink)' : 'var(--line)'};border-radius:5px;background:${nrs.length ? '#F0F0F0' : 'var(--paper)'};cursor:pointer;color:var(--ink-muted);">${nrs.length ? nrs.map(n => n === null ? '?' : n).join(' ') : '·'}</button></td>`;
-    }
-    h += `<td colspan="${COLS - 6}" style="${td}color:var(--ink-muted);">bez frekwencji</td></tr>`;
-    if (siatkaOtwarta && siatkaOtwarta.clsId === id) {
-      const d = siatkaOtwarta.dzien;
-      const nrs = (s[d] || []).filter(n => n !== null);
-      h += `<tr><td colspan="${COLS}" style="${td}background:#F6F8FB;"><span style="color:var(--ink-muted);margin-right:6px;">${escapeHtml(nazwa)} · ${ZALEGLE_DNI[d]} · numery lekcji:</span>` +
-        SIATKA_NR.map(n => `<button type="button" class="siatka-nr" data-nr="${n}" onclick="siatkaPrzelacz(${JSON.stringify(id).replace(/"/g, '&quot;')},${d},${n})" style="width:30px;padding:3px 0;margin:1px;font-family:inherit;font-size:12.5px;border-radius:5px;cursor:pointer;border:1px solid ${nrs.includes(n) ? 'var(--ink)' : 'var(--line)'};background:${nrs.includes(n) ? 'var(--ink)' : 'var(--paper)'};color:${nrs.includes(n) ? 'var(--paper)' : 'var(--ink)'};">${n}</button>`).join('') +
-        `</td></tr>`;
-    }
-  });
-  h += `<tr><td colspan="${COLS}" style="${td}"><input type="text" id="inneNazwa" placeholder="np. EZ 4a, GW 7b, dyżur" style="padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:5px;width:180px;" onkeydown="if(event.key==='Enter'){event.preventDefault();inneDodaj();}"> <button onclick="inneDodaj()" style="padding:3px 10px;font-size:12.5px;">dodaj zajęcia</button></td></tr>`;
-  h += '</table>';
-  // --- dni wolne
+  h += '<div class="plan-karta"><h3>Inne zajęcia</h3>' +
+    '<p class="opis">W pasku tygodnia na szaro, bez frekwencji: edukacja zdrowotna, godzina wychowawcza, dyżur.</p>';
+  if (nazwyInne.length) {
+    h += '<table>' + naglowek('zajęcia', '');
+    nazwyInne.forEach(nazwa => {
+      const id = 'inne:' + nazwa;
+      const s = planSiatkaZ(inne, nazwa);
+      h += `<tr class="plan-inne"><td class="kl">${escapeHtml(nazwa)} <button type="button" class="usun" onclick="inneUsun('${escapeHtml(nazwa).replace(/'/g, "\\'")}')" title="usuń z planu">×</button></td>`;
+      for (let d = 0; d < 5; d++) h += `<td>${kom(id, s, d, true)}</td>`;
+      h += `</tr>`;
+      if (siatkaOtwarta && siatkaOtwarta.clsId === id) h += nrWiersz(id, nazwa, s);
+    });
+    h += '</table>';
+  }
+  h += `<div class="dodaj"><input type="text" id="inneNazwa" placeholder="np. EZ 4a, GW 7b, dyżur" style="width:180px;" onkeydown="if(event.key==='Enter'){event.preventDefault();inneDodaj();}"> <button type="button" onclick="inneDodaj()">dodaj zajęcia</button></div></div>`;
+  // --- karta 3: dni wolne
   const zakresy = wolneZakresy(p ? p.wolne : []);
-  h += '<div style="margin-top:10px;"><b>Dni wolne</b> <span style="color:var(--ink-muted)">(' + (p ? (p.wolne || []).length : 0) + ')</span>: ' +
-    (zakresy.length ? zakresy.map(z => `<span style="display:inline-block;margin:1px 2px;padding:1px 6px;border:1px solid var(--line);border-radius:999px;background:var(--paper);">${z.od === z.do ? z.od.slice(5) : z.od.slice(5) + ' – ' + z.do.slice(5)} <button onclick="wolneUsun('${z.od}','${z.do}')" title="usuń" style="padding:0 4px;font-size:11px;">×</button></span>`).join('') : '<span style="color:var(--ink-muted)">—</span>') + '</div>';
-  h += '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px;">od <input type="date" id="wolneOd" style="padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:5px;"> do <input type="date" id="wolneDo" style="padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:5px;"> ' +
-    '<button onclick="wolneDodaj(document.getElementById(\'wolneOd\').value, document.getElementById(\'wolneDo\').value)" style="padding:3px 10px;font-size:12.5px;">dodaj</button>' +
-    '<textarea id="wolneTekst" rows="1" placeholder="albo wklej daty z kalendarium (RRRR-MM-DD lub DD.MM.RRRR, „od – do” w linii)" style="flex:1;min-width:220px;padding:3px 6px;font-family:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:5px;"></textarea>' +
-    '<button onclick="wolneWklej()" style="padding:3px 10px;font-size:12.5px;">wklej</button></div>';
+  h += `<div class="plan-karta"><h3>Dni wolne <span class="licz">(${p ? (p.wolne || []).length : 0})</span></h3>` +
+    '<p class="opis">W pasku tygodnia dzień wyszarzony, lekcje nie liczą się do zaległych.</p><div>' +
+    (zakresy.length ? zakresy.map(z => `<span class="wolny-chip">${z.od === z.do ? z.od.slice(5) : z.od.slice(5) + ' – ' + z.do.slice(5)}<button type="button" onclick="wolneUsun('${z.od}','${z.do}')" title="usuń">×</button></span>`).join('') : '<span style="color:var(--ink-muted)">—</span>') + '</div>' +
+    '<div class="dodaj">od <input type="date" id="wolneOd"> do <input type="date" id="wolneDo"> ' +
+    '<button type="button" onclick="wolneDodaj(document.getElementById(\'wolneOd\').value, document.getElementById(\'wolneDo\').value)">dodaj</button>' +
+    '<textarea id="wolneTekst" rows="1" placeholder="albo wklej daty z kalendarium (RRRR-MM-DD lub DD.MM.RRRR, „od – do” w linii)" style="flex:1;min-width:220px;"></textarea>' +
+    '<button type="button" onclick="wolneWklej()">wklej</button></div></div></div>';
   ust.innerHTML = h;
 }
 function zalegleWpisz(clsId, klucz) {
