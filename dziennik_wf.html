@@ -224,6 +224,13 @@
   .dzien-kolumny.tydzien .save-bar { margin-top: 12px; border: 1px solid #97C459; border-radius: 8px; }
   /* Widok dnia: % jedną liczbą (ułamek pod spodem rozciągał wiersz) */
   .dzien-kolumny:not(.tydzien) table.attendance .stat-detail, .dzien-kolumny:not(.tydzien) table.attendance td br { display: none; }
+  /* Telefon w poprzek (~800 px, user 2026-09-19): dostaje reguły laptopa (opakowanie bez przewijania, żeby
+     nagłówek się kleił), a tabela z licznikami jest szersza niż ekran i wylewała się poza ramkę kolumny.
+     Do 1100 px tabela przewija się w swoim opakowaniu; nagłówek przestaje się kleić — świadomy koszt. */
+  @media (max-width: 1100px) {
+    .container .dzien-kolumny .kol.otwarta .table-wrap { overflow-x: auto; }
+    .dzien-kolumny .kol.otwarta table.attendance thead th { position: static; box-shadow: none; }
+  }
   .save-bar-kopiuj { background: var(--paper); color: var(--ink); border: 1px solid var(--ink); border-radius: 6px; padding: 5px 9px; font-family: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; }
   .save-bar-kopiuj { padding: 9px 14px; font-size: 13px; }
   .tytul-klasy { display: inline-flex; align-items: baseline; gap: 8px; margin: 0 0 12px 0; }
