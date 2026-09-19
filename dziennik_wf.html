@@ -3166,8 +3166,9 @@ function renderAttendance() {
     const rel = s.longTermReleased ? null : releaseOn(s, state.currentDate);
     if (rel) tr.classList.add('released-period');
     let statusHtml = '';
-    if (s.longTermReleased) {
-      statusHtml = `<span class="status-btn status-blocked">— zwolniony —</span>`;
+    if (s.longTermReleased && !todayStatus) {
+      // Zwolniony długoterminowo, ale bywa nieobecny (user 2026-09-19): klik = picker, wpis nadpisuje ZW
+      statusHtml = `<button class="status-btn status-blocked" onclick="openPicker('${s.id}')" title="zwolniony długoterminowo — klik, żeby zapisać np. nieobecność">— zwolniony —</button>`;
     } else if (!todayStatus && rel) {
       statusHtml = `<button class="status-btn status-empty status-suggest" onclick="openPicker('${s.id}')" title="zwolnienie lekarskie ${relData(rel.od)}–${relData(rel.do)}: Zapisz lekcję nada ZW; klik = wybierz inny status">ZW?</button>`;
     } else if (todayStatus) {
@@ -4313,7 +4314,7 @@ function importEncrypted(event) {
 
 // Kopiuj dla VULCAN — JEDEN dzień (bieżący), surowe kody apki (C+sp, BS, NĆ…),
 // projekcję na symbole VULCANa robi skrypt vulcan-frekwencja.user.js (jedno miejsce mapy).
-// Pomija czyste „C” (VULCAN sam wstawia obecność po Zapisz), zwolnieni długoterminowo → ZW.
+// Pomija czyste „C” (VULCAN sam wstawia obecność po Zapisz), zwolnieni długoterminowo → ZW, chyba że mają wpis dnia (np. NB).
 // Bez argumentów: bieżąca lekcja (jak dotąd). Z (clsId, klucz): lekcja innej klasy z podglądu w widoku dnia —
 // tekst „Nazwisko Imię<TAB>status" jest taki sam dla VULCANa i Librusa, różni się tylko etykieta przycisku.
 function copyForVulcan(clsId, klucz) {
@@ -4327,7 +4328,7 @@ function copyForVulcan(clsId, klucz) {
   students.forEach(s => {
     if (!s.name || !s.name.trim()) return;
     let token;
-    if (s.longTermReleased) token = 'ZW';
+    if (s.longTermReleased && !attRead(day[s.id]).s) token = 'ZW';
     else {
       const c = attRead(day[s.id]);
       if (!c.s && isReleasedOn(s, date)) token = 'ZW';
