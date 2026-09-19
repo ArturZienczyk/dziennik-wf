@@ -1945,19 +1945,11 @@ function ustawieniaScal(u) {
   Object.keys(u.szkoly || {}).forEach(s => { if (!U.szkoly[s]) U.szkoly[s] = u.szkoly[s]; });
   if (!Object.keys(U.reguly).length && u.reguly) U.reguly = Object.assign({}, u.reguly);
 }
-// Wspólne dla obu importów (szyfrowany / stary jawny). zastapWszystko = dawny tryb podmiany.
-function importZastosuj(data, zastapWszystko) {
+// Wspólne dla obu importów (szyfrowany / stary jawny). Zawsze scalanie — dawny checkbox
+// „Zastąp wszystko" usunięty 2026-09-19: na nowym (pustym) urządzeniu scalanie daje komplet
+// (klasy, plan, ustawienia — zmierzone), a na używanym kasował wpisy, których nie było w pliku.
+function importZastosuj(data) {
   if (Array.isArray(data.classes) && data.classes.length) {
-    if (zastapWszystko) {
-      state.classes = data.classes;
-      state.currentClassId = data.currentClassId || data.classes[0].id;
-      if (data.planWf) state.planWf = data.planWf;
-      if (data.ustawienia) state.ustawienia = data.ustawienia;
-      stemplujBaza();
-      activateClass(state.currentClassId); uiSelectedSchool = null; save(); refreshAll();
-      showToast('Wczytano — dane zastąpione w całości.', 'success');
-      return;
-    }
     const w = scalKopie(data);
     activateClass(state.currentClassId); uiSelectedSchool = null; save(); refreshAll();
     const lista = w.nadpisane.slice(0, 40).map(n => '• ' + n.klasa + ': ' + n.co + ' — było ' + n.bylo + ', jest ' + n.jest).join('\n');
@@ -1975,7 +1967,6 @@ function importZastosuj(data, zastapWszystko) {
   }
 }
 const IMPORT_TEKST = 'Kopia zostanie SCALONA z tym, co tu jest: brakujące wpisy dojdą, a gdy ten sam wpis się różni — wygrywa nowszy. Nic nie ginie; kopia obecnych danych zapisze się przed operacją.';
-const IMPORT_OPCJA = 'Zastąp wszystko (przenosiny na czysto — dane tutaj znikają, zostaje tylko plik)';
 
 // =====================================================
 // PERSISTENCJA
@@ -4179,10 +4170,10 @@ function importJSON(event) {
   reader.onload = (e) => {
     try {
       const data = JSON.parse(e.target.result);
-      showConfirm('Wczytaj dane', IMPORT_TEKST, async (zastap) => {
+      showConfirm('Wczytaj dane', IMPORT_TEKST, async () => {
         if (!await backupBeforeDestruction('IMPORT')) { showToast('Przerwano — kopia bezpieczeństwa nie powstała, dane nietknięte.', 'warn'); return; }
-        importZastosuj(data, zastap);
-      }, IMPORT_OPCJA);
+        importZastosuj(data);
+      });
     } catch (err) {
       showToast('Błąd wczytywania: ' + err.message, 'error');
     }
@@ -4333,10 +4324,10 @@ function importEncrypted(event) {
           return;
         }
         showConfirm('Wczytaj dane', 'Hasło OK. ' + IMPORT_TEKST,
-          async (zastap) => {
+          async () => {
             if (!await backupBeforeDestruction('IMPORT-ENC')) { showToast('Przerwano — kopia bezpieczeństwa nie powstała, dane nietknięte.', 'warn'); return; }
-            importZastosuj(data, zastap);
-          }, IMPORT_OPCJA);
+            importZastosuj(data);
+          });
       });
   };
   reader.readAsText(file);
