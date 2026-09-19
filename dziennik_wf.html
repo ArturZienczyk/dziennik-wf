@@ -265,6 +265,10 @@
   .kol.niebylo .kol-head .sum { white-space: normal; overflow: visible; }   /* przycisk „jednak była” musi być klikalny, nie obcięty */
   .niebylo-cofnij { font-family: inherit; font-size: 11px; padding: 1px 7px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); cursor: pointer; margin-left: 4px; }
   .niebylo-cofnij:hover { border-color: var(--ink); }
+  /* „nie było: powód · komentarz” na kafelku = przycisk: klik zmienia powód/komentarz bez „jednak była” (user 19.09) */
+  .niebylo-zmien { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+  .niebylo-zmien:hover { color: var(--ink); }
+  .kol.otwarta.niebylo .niebylo-info { text-align: left; }
   .niebylo-info { display: block; font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
   /* Zastępstwo (19.09): lekcja odbyta z inną klasą, bez frekwencji tu — ciepły kafelek, planowa klasa przekreślona */
   .kol.zastepstwo { border: 1px solid #C9B98A; background: #FBF6E6; }
@@ -628,7 +632,7 @@
     display: none; align-items: center; justify-content: center; padding: 20px;
   }
   .modal-bg.active { display: flex; }
-  #zastModal { z-index: 110; }   /* otwierany z listy Zaległych (też modal) — musi leżeć nad nią, lista zostaje pod spodem */
+  #zastModal, #niebyloModal { z-index: 110; }   /* otwierany z listy Zaległych (też modal) — musi leżeć nad nią, lista zostaje pod spodem */
   .modal {
     background: var(--paper); border-radius: 12px; padding: 24px; max-width: 500px;
     width: 100%; max-height: 90vh; overflow-y: auto;
@@ -1703,6 +1707,19 @@
 </div>
 
 <!-- Modal: zastępstwo (poziom 1, 19.09) — klasa + za kogo; przy wyborze z paska: która lekcja / okienko -->
+<div class="modal-bg" id="niebyloModal" onclick="if(event.target===this) nieByloAnuluj()">
+  <div class="modal" style="max-width: 440px;">
+    <h3 id="niebyloTytul" style="margin-bottom: 8px;">Nie było lekcji</h3>
+    <p id="niebyloOpis" style="font-size: 13px; color: var(--ink-muted); margin: 0 0 14px; line-height: 1.5;"></p>
+    <label style="display:block; font-size:13px; margin-bottom:10px;">Powód <select id="niebyloPowod" style="margin-left:6px; font-family: inherit;"></select></label>
+    <label style="display:block; font-size:13px; margin-bottom:18px;">Komentarz <span style="color:var(--ink-muted)">(opcjonalnie, np. „Kraków, 3 dni” albo „ja na szkoleniu”)</span><br><input type="text" id="niebyloKomentarz" maxlength="120" style="width:100%; box-sizing:border-box; margin-top:4px;" onkeydown="if(event.key==='Enter'){event.preventDefault();nieByloOk();}"></label>
+    <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
+      <button id="niebyloJednak" onclick="nieByloJednakByla()" style="margin-right:auto; padding: 10px 14px; background: var(--paper); border: 1px solid #E5C5C0; color: var(--accent-warm); border-radius: 6px; font-family: inherit; font-size: 13px; cursor: pointer;">jednak była</button>
+      <button onclick="nieByloAnuluj()" style="padding: 10px 20px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; font-family: inherit; font-size: 14px; cursor: pointer;">Anuluj</button>
+      <button onclick="nieByloOk()" style="padding: 10px 20px; background: #1D9E75; color: white; border: 1px solid #1D9E75; border-radius: 6px; font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer;">Zapisz</button>
+    </div>
+  </div>
+</div>
 <div class="modal-bg" id="zastModal" onclick="if(event.target===this) zastepstwoAnuluj()">
   <div class="modal" style="max-width: 440px;">
     <h3 id="zastTytul" style="margin-bottom: 8px;">Zastępstwo</h3>
@@ -2734,6 +2751,40 @@ function zalegleCofnijNieBylo(clsId, klucz) {
   save(); renderZalegle(); renderZalegleChip(); renderAttendance(); renderPlanUstawienia();
   showToast('„Nie było” zdjęte — lekcja wraca do wpisu.', 'info');
 }
+// „Nie było” z kafelka (19.09): powód + własny komentarz, zapis jako jeden string „powód · komentarz”
+// (cls.odwolane[klucz] zostaje stringiem — scalanie kopii, statystyki i pasek tygodnia czytają go bez zmian).
+let _niebyloCtx = null;
+function nieByloRozbij(v) { const i = (v || '').indexOf(' · '); return i < 0 ? { powod: v || 'inne', komentarz: '' } : { powod: v.slice(0, i), komentarz: v.slice(i + 3) }; }
+function nieByloZloz(powod, komentarz) { const k = (komentarz || '').trim().replace(/\s+/g, ' '); return k ? powod + ' · ' + k : powod; }
+function nieByloOkno(clsId, klucz) {
+  const cls = state.classes.find(c => c.id === clsId);
+  if (!cls) return;
+  const stare = (cls.odwolane || {})[klucz];
+  const r = nieByloRozbij(stare);
+  _niebyloCtx = { clsId, klucz };
+  const nr = kluczNr(klucz);
+  document.getElementById('niebyloTytul').textContent = stare ? 'Nie było — zmień powód' : 'Nie było lekcji';
+  document.getElementById('niebyloOpis').textContent = `${cls.name} · ${zalegleData(kluczData(klucz))}${nr === null ? '' : ' · L' + nr}. Lekcja nie liczy się do zaległych; „jednak była” przywraca ją do wpisu.`;
+  const sel = document.getElementById('niebyloPowod');
+  const powody = ZALEGLE_POWODY.includes(r.powod) ? ZALEGLE_POWODY : ZALEGLE_POWODY.concat([r.powod]);
+  sel.innerHTML = powody.map(x => `<option ${x === r.powod ? 'selected' : ''}>${escapeHtml(x)}</option>`).join('');
+  document.getElementById('niebyloKomentarz').value = r.komentarz;
+  document.getElementById('niebyloJednak').style.display = stare ? '' : 'none';
+  document.getElementById('niebyloModal').classList.add('active');
+  setTimeout(() => document.getElementById('niebyloKomentarz').focus(), 50);
+}
+function nieByloOk() {
+  if (!_niebyloCtx) return;
+  const { clsId, klucz } = _niebyloCtx;
+  const cls = state.classes.find(c => c.id === clsId);
+  if (!cls) { nieByloAnuluj(); return; }
+  cls.odwolane = cls.odwolane || {};
+  cls.odwolane[klucz] = nieByloZloz(document.getElementById('niebyloPowod').value, document.getElementById('niebyloKomentarz').value);
+  nieByloAnuluj();
+  save(); renderZalegle(); renderZalegleChip(); renderAttendance(); renderPlanUstawienia();
+}
+function nieByloJednakByla() { if (!_niebyloCtx) return; const { clsId, klucz } = _niebyloCtx; nieByloAnuluj(); zalegleCofnijNieBylo(clsId, klucz); }
+function nieByloAnuluj() { _niebyloCtx = null; document.getElementById('niebyloModal').classList.remove('active'); }
 // Zastępstwo, poziom 1 (19.09): lekcja odbyta z INNĄ klasą — bez frekwencji w tym dzienniku (ta idzie
 // w e-dzienniku zastępowanej klasy). (a) na mojej lekcji: cls.zastepstwa[klucz] = {klasa, zaKogo} —
 // planowa klasa nie jest zaległa i nie ma wpisu; (b) na okienku: state.zastepstwaOkienka['data#nr'].
@@ -3207,7 +3258,7 @@ function renderDzien() {
   const wPlanie = lekcje.some(l => l.cls && l.cls.id === cur.id);
   head.innerHTML = `<span class="nr">${nrOtw !== null ? 'L' + nrOtw : (lekcje.length && !wPlanie) ? 'poza planem' : 'lekcja'}</span><span class="kl">${escapeHtml(cur.name)}${cur.plec ? ' <span class="plec">' + (cur.plec === 'dz' ? 'dz.' : 'chł.') + '</span>' : ''}</span>` +
     `<span class="sum">${pk === null ? '' : '<b>' + pk + '%</b> · '}${wpisani}/${active.length} wpisanych${cur.students.length > active.length ? ` · +${cur.students.length - active.length} zwol.` : ''}</span><span class="otw">otwarta</span>` +
-    ((cur.odwolane || {})[kOtw] ? `<span class="niebylo-info">nie było: ${escapeHtml(cur.odwolane[kOtw])} <button type="button" class="niebylo-cofnij" onclick="zalegleCofnijNieBylo('${cur.id}','${kOtw}')" title="zdejmij „nie było”">jednak była</button></span>` : '');
+    ((cur.odwolane || {})[kOtw] ? `<span class="niebylo-info"><button type="button" class="niebylo-zmien" onclick="nieByloOkno('${cur.id}','${kOtw}')" title="zmień powód albo dopisz komentarz">nie było: ${escapeHtml(cur.odwolane[kOtw])}</button> <button type="button" class="niebylo-cofnij" onclick="zalegleCofnijNieBylo('${cur.id}','${kOtw}')" title="zdejmij „nie było”">jednak była</button></span>` : '');
   const zastOtw = zastepstwoDane(cur.id, kOtw);
   if (zastOtw) head.insertAdjacentHTML('beforeend', `<span class="niebylo-info"><span class="zast-tag">zastępstwo</span>${escapeHtml(zastOtw.klasa)}${zastOtw.zaKogo ? ' za ' + escapeHtml(zastOtw.zaKogo) : ''} · bez frekwencji tu <button type="button" class="niebylo-cofnij" onclick="zastepstwoOkno('${cur.id}','${kOtw}')" title="zmień albo zdejmij zastępstwo">zmień</button></span>`);
   head.parentElement.classList.toggle('niebylo', !zastOtw && !!(cur.odwolane || {})[kOtw]);
@@ -3253,7 +3304,7 @@ function kolumnaPodgladu(cls, iso, nr, k, dzis) {
   active.forEach(s => { const c = attRead(day[s.id]); if (c.s && counts[c.s] !== undefined) counts[c.s]++; });
   let sum;
   if (zast) sum = `<span class="zast-tag">zastępstwo</span>${zast.zaKogo ? 'za ' + escapeHtml(zast.zaKogo) : 'bez frekwencji tu'}`;
-  else if (niebylo) sum = 'nie było: ' + escapeHtml(cls.odwolane[k]) + ` <button type="button" class="niebylo-cofnij" onclick="event.stopPropagation(); zalegleCofnijNieBylo('${cls.id}','${k}')" title="zdejmij „nie było” — lekcja wraca do zaległych / do wpisu">jednak była</button>`;
+  else if (niebylo) sum = `<button type="button" class="niebylo-zmien" onclick="event.stopPropagation(); nieByloOkno('${cls.id}','${k}')" title="zmień powód albo dopisz komentarz">nie było: ${escapeHtml(cls.odwolane[k])}</button> <button type="button" class="niebylo-cofnij" onclick="event.stopPropagation(); zalegleCofnijNieBylo('${cls.id}','${k}')" title="zdejmij „nie było” — lekcja wraca do zaległych / do wpisu">jednak była</button>`;
   else if (jest) {
     const w = ['nć', 'bs', 'nb', 'nu', 'zw'].map((l, i) => { const key = ['NC', 'BS', 'NB', 'NU', 'ZW'][i]; return counts[key] ? counts[key] + ' ' + l : ''; }).filter(Boolean).join(' · ');
     sum = counts.C + ' ćw.' + (w ? ' · ' + w : '');
