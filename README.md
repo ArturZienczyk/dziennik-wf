@@ -452,6 +452,18 @@ Test: `test_widok_dzienny.py` (kolumny, klik nagłówka, przełącznik, inne, st
 `test_pamiec` (pasek klasy w Uczniowie), `test_vulcan_kopiuj` / `test_zwolnienie_od_do` (`#saveBarKopiuj`).
 Otwarte: SLO punkty (max 20/okno) vs procent — decyzja usera; bookmarklet Librus — osobny szczebel.
 
+**Kafelek „nie było” przy 9 lekcjach (2026-09-19, sw v30).** Przy pełnym dniu kafelek ma ~124 px; „nie było:
+wycieczka · Kraków, 3 dni” + „jednak była” łamały się na 3–4 linie (145 px obok 83 px sąsiadów — zestaw
+tracił rytm). Teraz kafelek zamknięty pokazuje **sam powód** (segment przed ` · `) w jednej linii z
+wielokropkiem i kreską w przycisku, „jednak była” zawsze w drugiej — wysokość stała (104 px), niezależna
+od komentarza; pełna treść w dymku i w kafelku otwartym. Test: `test_niebylo_9lekcji.py`
+(wsad 9 lekcji, 5 × „nie było”, wszystkie kafelki równe i ≤ 110 px; zrzut `_zrzuty/niebylo_9lekcji_po.png`).
+
+**Dryf daty w testach (2026-09-19).** `test_zalegle.py` (lista modalu liczy „dziś” z `new Date()`) i
+`test_uklad.py` (widok Dzień w weekend bez lekcji chowa tabelę → `rect 0`) padały zależnie od dnia
+uruchomienia. Fix: `page.clock.set_fixed_time('2026-09-18T10:00:00')` przed `goto` — nowy test z datą
+w fixture ma mrozić zegar tak samo.
+
 ## Uwaga operacyjna: jedno miejsce uruchamiania
 
 Dane siedzą w `localStorage`, który jest **osobny dla pliku na dysku i dla adresu
