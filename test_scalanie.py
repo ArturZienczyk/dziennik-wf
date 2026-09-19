@@ -1,6 +1,6 @@
 # Test end-to-end „Scalanie kopii” (laptop ↔ telefon, 2026-09-18): znaczniki czasu z diffu w save(),
 # scalKopie (nowszy wygrywa, remis 0/0 = lokalne, nagrobek), plan przez upsert, klasa nieznana dochodzi,
-# „zastąp wszystko” działa jak dawniej, okno importu ma checkbox, znaczniki przeżywają magazyn.
+# checkbox „zastąp wszystko” usunięty (19.09) — klasa z pliku DOCHODZI, okno importu bez checkboxa, znaczniki przeżywają magazyn.
 import sys
 import json
 import threading
@@ -247,9 +247,9 @@ with sync_playwright() as pw:
         page.evaluate("() => state.classes[0]._t['a|2026-09-14#2|u2']") == tB,
     )
 
-    # 6. importZastosuj z checkboxem „zastąp wszystko” = dawna podmiana
+    # 6. importZastosuj z klasą nieznaną lokalnie = klasa dochodzi (dawniej checkbox „zastąp wszystko” — usunięty)
     page.evaluate(
-        "(d) => importZastosuj(d, true)",
+        "(d) => importZastosuj(d)",
         {
             "classes": [
                 {
@@ -268,22 +268,22 @@ with sync_playwright() as pw:
     )
     page.wait_for_timeout(200)
     check(
-        "zastąp wszystko: została tylko klasa z pliku",
-        page.evaluate("() => state.classes.map(c => c.name)") == ["1a"],
+        "klasa z pliku dochodzi, lokalna 7b zostaje (bez trybu podmiany)",
+        sorted(page.evaluate("() => state.classes.map(c => c.name)")) == ["1a", "7b", "8c"],
     )
 
-    # 7. Okno importu: tekst o scalaniu + checkbox widoczny; po scaleniu okno informacyjne
+    # 7. Okno importu: tekst o scalaniu, BEZ checkboxa; po scaleniu okno informacyjne
     page.evaluate(
-        "() => showConfirm('Wczytaj dane', IMPORT_TEKST, () => {}, IMPORT_OPCJA)"
+        "() => showConfirm('Wczytaj dane', IMPORT_TEKST, () => {})"
     )
     check(
-        "checkbox w oknie importu widoczny",
-        page.locator("#confirmOpcja").is_visible()
+        "okno importu bez checkboxa „zastąp wszystko”",
+        not page.locator("#confirmOpcja").is_visible()
         and "SCALONA" in page.inner_text("#confirmMessage"),
     )
     page.screenshot(path=str(SHOTS / "scalanie_1_okno_importu.png"))
     page.evaluate("() => confirmCancel()")
-    page.evaluate("(d) => importZastosuj(d, false)", tel)
+    page.evaluate("(d) => importZastosuj(d)", tel)
     page.wait_for_timeout(300)
     check(
         "po scaleniu okno informacyjne z listą",
@@ -297,7 +297,7 @@ with sync_playwright() as pw:
     page.screenshot(path=str(SHOTS / "scalanie_2_wynik.png"))
     page.evaluate("() => confirmOk()")
     check(
-        "po zastąp+scal: klasy 1a, 7b, 8c",
+        "po dwóch scaleniach: klasy 1a, 7b, 8c",
         sorted(page.evaluate("() => state.classes.map(c => c.name)"))
         == ["1a", "7b", "8c"],
     )
