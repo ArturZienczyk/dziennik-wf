@@ -253,7 +253,7 @@
   /* „nie było” = fakt, nie błąd: szare kreskowane jak „inne zajęcia”, bez przekreślenia (przekreślenie czyta się
      jak „skasowane”). Cztery stany paska dnia różnią się jednym ruchem oka: czerwony brak / zielony jest /
      szary kreskowany nie było / szary bez ramki inne (mockup 19.09). */
-  .kol.niebylo { border: 1px dashed #B9B1A2; background: var(--line-soft); }
+  .kol.niebylo { border: 1px dashed #9A9184; background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(0,0,0,.055) 6px 7px), var(--paper); }  /* wariant A z mockupu 19.09: kreska = „nie odbyło się”, białe tło odcina od kremowej strony */
   .kol.niebylo .kol-head { background: transparent; }
   .kol.niebylo .kol-head .kl { color: var(--ink-muted); }
   .kol.niebylo .kol-head .sum { color: var(--ink-soft); }
@@ -266,6 +266,24 @@
   .niebylo-cofnij { font-family: inherit; font-size: 11px; padding: 1px 7px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); cursor: pointer; margin-left: 4px; }
   .niebylo-cofnij:hover { border-color: var(--ink); }
   .niebylo-info { display: block; font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
+  /* Zastępstwo (19.09): lekcja odbyta z inną klasą, bez frekwencji tu — ciepły kafelek, planowa klasa przekreślona */
+  .kol.zastepstwo { border: 1px solid #C9B98A; background: #FBF6E6; }
+  .kol.zastepstwo .kol-head { background: transparent; }
+  .kol.zastepstwo .kol-head { cursor: pointer; }
+  .kol.zastepstwo .kol-head .otw { border-color: #C9B98A; }
+  .zast-tag { display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #7A6320; border: 1px solid #C9B98A; border-radius: 4px; padding: 0 5px; margin-right: 5px; background: var(--paper); vertical-align: 1px; }
+  .kol-head .kl .plan-klasa { font-size: 12px; color: var(--ink-muted); font-weight: 400; text-decoration: line-through; margin-left: 6px; }
+  .kol.okienko-zast { border: 1px dashed var(--line); background: transparent; flex-grow: 0; }
+  .kol.okienko-zast .kol-head { background: transparent; }
+  .kol.okienko-zast .kol-head .kl { font-size: 14px; color: var(--ink-muted); }
+  .kol.okienko-zast button { font: inherit; font-size: 12px; padding: 3px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); cursor: pointer; }
+  .kol.okienko-zast button:hover { border-color: var(--ink); }
+  .plan-lekcja.zastepstwo { border-color: #C9B98A; background: #FBF6E6; }
+  .plan-dopasowanie { flex-basis: 100%; margin-top: 6px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); font-size: 13px; }
+  .plan-dopasowanie b { display: block; margin-bottom: 6px; font-weight: 500; }
+  .plan-dopasowanie .poz { display: inline-block; margin: 2px 14px 4px 0; }
+  .plan-dopasowanie .poz select { margin-left: 4px; }
+  .plan-dopasowanie small { display: block; color: var(--ink-muted); margin-top: 6px; }
   .kol-head { display: grid; grid-template-columns: auto auto; column-gap: 8px; row-gap: 2px; align-items: baseline; padding: 8px 14px 9px; border-radius: 9px; background: var(--line-soft); }
   .kol.podglad .kol-head { cursor: pointer; }
   .kol.podglad .kol-head:hover { filter: brightness(.97); }
@@ -608,6 +626,7 @@
     display: none; align-items: center; justify-content: center; padding: 20px;
   }
   .modal-bg.active { display: flex; }
+  #zastModal { z-index: 110; }   /* otwierany z listy Zaległych (też modal) — musi leżeć nad nią, lista zostaje pod spodem */
   .modal {
     background: var(--paper); border-radius: 12px; padding: 24px; max-width: 500px;
     width: 100%; max-height: 90vh; overflow-y: auto;
@@ -687,6 +706,7 @@
     body.stats-print .stats-toolbar > :not(.stats-zakres-opis), body.stats-print details.stats-lekcje, body.stats-print .stats-hint { display: none !important; }
     body.stats-print .stats-zakres-opis { font-size: 13px; color: var(--ink); }
     body.stats-print .summary-grid { grid-template-columns: repeat(4, 1fr); }
+    body.stats-print .summary-zast { display: none; }   /* druk = jedna klasa; licznik zastępstw jest nauczyciela, a 5. karta łamała 1 stronę A4 */
     body.stats-print .table-wrap { overflow: visible; border: none; }
     body.stats-print .stats-name-btn { text-decoration: none; color: inherit; }
   }
@@ -1675,6 +1695,23 @@
   </div>
 </div>
 
+<!-- Modal: zastępstwo (poziom 1, 19.09) — klasa + za kogo; przy wyborze z paska: która lekcja / okienko -->
+<div class="modal-bg" id="zastModal" onclick="if(event.target===this) zastepstwoAnuluj()">
+  <div class="modal" style="max-width: 440px;">
+    <h3 id="zastTytul" style="margin-bottom: 8px;">Zastępstwo</h3>
+    <p id="zastOpis" style="font-size: 13px; color: var(--ink-muted); margin: 0 0 14px; line-height: 1.5;"></p>
+    <label style="display:block; font-size:13px; margin-bottom:10px;">Która lekcja <select id="zastLekcja" onchange="zastepstwoNrWidok()" style="margin-left:6px; max-width: 100%; font-family: inherit;"></select></label>
+    <label style="display:block; font-size:13px; margin-bottom:10px;">Numer lekcji <input type="number" id="zastNr" min="0" max="11" style="width:70px; margin-left:6px;"></label>
+    <label style="display:block; font-size:13px; margin-bottom:10px;">Jaka klasa <input type="text" id="zastKlasa" placeholder="np. 6a" style="width:120px; margin-left:6px;" onkeydown="if(event.key==='Enter'){event.preventDefault();zastepstwoOk();}"></label>
+    <label style="display:block; font-size:13px; margin-bottom:18px;">Za kogo <span style="color:var(--ink-muted)">(opcjonalnie)</span> <input type="text" id="zastZaKogo" placeholder="np. A.K." style="width:160px; margin-left:6px;" onkeydown="if(event.key==='Enter'){event.preventDefault();zastepstwoOk();}"></label>
+    <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
+      <button id="zastUsun" onclick="zastepstwoUsun()" style="margin-right:auto; padding: 10px 14px; background: var(--paper); border: 1px solid #E5C5C0; color: var(--accent-warm); border-radius: 6px; font-family: inherit; font-size: 13px; cursor: pointer;">zdejmij zastępstwo</button>
+      <button onclick="zastepstwoAnuluj()" style="padding: 10px 20px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; font-family: inherit; font-size: 14px; cursor: pointer;">Anuluj</button>
+      <button onclick="zastepstwoOk()" style="padding: 10px 20px; background: #1D9E75; color: white; border: 1px solid #1D9E75; border-radius: 6px; font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer;">Zapisz</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: szkoła + nazwa klasy (zamiast natywnego prompt, blokowanego w sandboxie) -->
 <div class="modal-bg" id="classPromptModal" onclick="if(event.target===this) classPromptCancel()">
   <div class="modal" style="max-width: 420px;">
@@ -1798,7 +1835,7 @@
     <h3 style="margin-bottom: 6px;">Zaległe lekcje — brak wpisu frekwencji</h3>
     <p style="font-size: 13px; color: var(--ink-muted); margin: 0 0 12px 0;">
       Lekcja z planu (dzień i numer), dzień nie jest wolny, a w dzienniku nie ma wpisu pod tą lekcją.
-      Dwie godziny z rzędu = dwie pozycje. Plan nie wie o wycieczkach, zawodach i zastępstwach — jeśli lekcji nie było, kliknij <b>nie było</b> i pozycja znika na stałe.
+      Dwie godziny z rzędu = dwie pozycje. Plan nie wie o wycieczkach, zawodach i zastępstwach — jeśli lekcji nie było, kliknij <b>nie było</b>; jeśli odbyła się z inną klasą, kliknij <b>zastępstwo</b> (frekwencję tej klasy wpisujesz w e-dzienniku). Pozycja znika na stałe.
     </p>
     <div id="zalegleLista" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px;"></div>
     <p style="font-size:13px;color:var(--ink-muted);margin:10px 0 0 0;">Plan i dni wolne: zakładka <b>🗓 Plan</b>. „Nie było” cofniesz na kafelku tej lekcji w Obecności (przycisk „jednak była”).</p>
@@ -1857,6 +1894,8 @@ let state = {
   // inne = zajęcia widoczne w pasku tygodnia bez frekwencji (EZ, GW, dyżur)
   // — siatka z Ustawień (klik) i/lub plik z zbuduj_plan_wf.py; v1 (nazwa: [dni]) czyta się dalej
   planWf: null,
+  // zastepstwaOkienka (19.09): { 'YYYY-MM-DD#nr': {klasa, zaKogo} } — zastępstwo na okienku, nie należy do żadnej klasy
+  zastepstwaOkienka: {},
   // ustawienia (2026-09-18): { szkoly: {nazwa: {edziennik:'vulcan'|'librus'}}, reguly: {bsBaza, ncBaza, spPol, nuBaza, progZielony, progCzerwony} }
   // Wspólne dla klas; w kopii obok planWf. Brak = domyślne (dotychczasowe liczenie, e-dziennik po nazwie szkoły).
   ustawienia: null,
@@ -1950,7 +1989,7 @@ function activateClass(id) {
 // ma znacznik `cls._t[ścieżka] = ms`. Znaczniki liczy save() przez diff z poprzednim zapisem —
 // jedno miejsce zamiast 40 miejsc zapisu; format komórek nietknięty (znaczniki leżą OBOK danych).
 // Skasowany liść też dostaje znacznik (nagrobek) — stara kopia go nie wskrzesi.
-// Ścieżki: a|klucz|sid frekwencja · o|klucz nie było · g|kol|sid ocena · gc|kol kolumna ·
+// Ścieżki: a|klucz|sid frekwencja · o|klucz nie było · z|klucz zastępstwo · g|kol|sid ocena · gc|kol kolumna ·
 // m|sid pomiary · s|sid uczeń · k meta klasy (szkoła, nazwa, półrocze, klasa w planie).
 function listkiKlasy(cls) {
   const L = {};
@@ -1959,6 +1998,7 @@ function listkiKlasy(cls) {
     if (cls.attendance[k][sid] != null) L['a|' + k + '|' + sid] = J(cls.attendance[k][sid]);
   }));
   Object.keys(cls.odwolane || {}).forEach(k => { L['o|' + k] = J(cls.odwolane[k]); });
+  Object.keys(cls.zastepstwa || {}).forEach(k => { L['z|' + k] = J(cls.zastepstwa[k]); });
   Object.keys(cls.grades || {}).forEach(col => Object.keys(cls.grades[col] || {}).forEach(sid => {
     if (cls.grades[col][sid] != null && cls.grades[col][sid] !== '') L['g|' + col + '|' + sid] = J(cls.grades[col][sid]);
   }));
@@ -1991,6 +2031,7 @@ function _sciezkaZastosuj(lk, Z, p) {
   const val = jest ? JSON.parse(Z[p]) : undefined;
   if (typ === 'a') { lk.attendance = lk.attendance || {}; lk.attendance[a] = lk.attendance[a] || {}; if (jest) lk.attendance[a][b] = val; else delete lk.attendance[a][b]; }
   else if (typ === 'o') { lk.odwolane = lk.odwolane || {}; if (jest) lk.odwolane[a] = val; else delete lk.odwolane[a]; }
+  else if (typ === 'z') { lk.zastepstwa = lk.zastepstwa || {}; if (jest) lk.zastepstwa[a] = val; else delete lk.zastepstwa[a]; }
   else if (typ === 'g') { lk.grades = lk.grades || {}; lk.grades[a] = lk.grades[a] || {}; if (jest) lk.grades[a][b] = val; else delete lk.grades[a][b]; }
   else if (typ === 'gc') { lk.gradeColumns = lk.gradeColumns || []; const i = lk.gradeColumns.findIndex(c => c.id === a); if (jest) { if (i >= 0) lk.gradeColumns[i] = val; else { lk.gradeColumns.push(val); lk.grades = lk.grades || {}; lk.grades[a] = lk.grades[a] || {}; } } else if (i >= 0) lk.gradeColumns.splice(i, 1); }
   else if (typ === 'm') { lk.measurements = lk.measurements || {}; if (jest) lk.measurements[a] = val; else delete lk.measurements[a]; }
@@ -2001,7 +2042,7 @@ function _sciezkaOpis(lk, p, bylo, jest) {
   const [typ, a, b] = p.split('|');
   const ucz = sid => { const s = (lk.students || []).find(x => x.id === sid); return s && s.name ? s.name : sid; };
   const v = x => x === undefined ? '—' : (typeof x === 'string' ? x : JSON.stringify(x));
-  const co = typ === 'a' ? 'frekwencja ' + a.replace('#', ' L') + ' · ' + ucz(b) : typ === 'o' ? 'nie było ' + a.replace('#', ' L') :
+  const co = typ === 'a' ? 'frekwencja ' + a.replace('#', ' L') + ' · ' + ucz(b) : typ === 'o' ? 'nie było ' + a.replace('#', ' L') : typ === 'z' ? 'zastępstwo ' + a.replace('#', ' L') :
     typ === 'g' ? 'ocena ' + a + ' · ' + ucz(b) : typ === 'gc' ? 'kolumna ocen ' + a : typ === 'm' ? 'pomiary · ' + ucz(a) :
     typ === 's' ? 'uczeń ' + ucz(a) : 'dane klasy';
   return { klasa: lk.name, co, bylo: v(bylo), jest: v(jest) };
@@ -2030,6 +2071,9 @@ function scalKopie(data) {
   });
   if (data.planWf && Array.isArray(data.planWf.plany)) data.planWf.plany.forEach(pl => { try { zaleglePlanZastosuj(pl); } catch (e) { /* stary plan bez od/klasy */ } });
   ustawieniaScal(data.ustawienia);
+  // zastępstwa na okienkach: bez znaczników per liść — z kopii dochodzą te, których lokalnie nie ma
+  state.zastepstwaOkienka = state.zastepstwaOkienka || {};
+  Object.keys(data.zastepstwaOkienka || {}).forEach(k => { if (!state.zastepstwaOkienka[k]) { state.zastepstwaOkienka[k] = data.zastepstwaOkienka[k]; w.dodane++; } });
   if (!state.currentClassId || !state.classes.find(c => c.id === state.currentClassId)) state.currentClassId = data.currentClassId || state.classes[0].id;
   stemplujBaza();
   return w;
@@ -2237,6 +2281,7 @@ function save(natychmiast) {
     currentClassId: state.currentClassId,
     planWf: state.planWf,
     ustawienia: state.ustawienia,
+    zastepstwaOkienka: state.zastepstwaOkienka,
     pin: zamek.pin,
     savedAt: Date.now()          // rozstrzyga, który magazyn ma nowszą wersję
   };
@@ -2333,9 +2378,9 @@ function zalegleLekcjeDnia(cls, iso) {
   });
   return out;
 }
-// Które z planowanych lekcji dnia (nrs) nie mają wpisu ani „nie było”.
+// Które z planowanych lekcji dnia (nrs) nie mają wpisu, „nie było” ani zastępstwa.
 function zalegleBrakujace(cls, iso, nrs) {
-  const klucze = Object.keys(cls.attendance || {}).concat(Object.keys(cls.odwolane || {})).filter(k => kluczData(k) === iso);
+  const klucze = Object.keys(cls.attendance || {}).concat(Object.keys(cls.odwolane || {}), Object.keys(cls.zastepstwa || {})).filter(k => kluczData(k) === iso);
   const zNr = new Set(klucze.map(kluczNr).filter(n => n !== null));
   let plain = klucze.some(k => kluczNr(k) === null);
   const brak = [];
@@ -2525,7 +2570,8 @@ function renderZalegle() {
       `<span style="min-width:110px;font-weight:600;">${zalegleData(x.date)}${x.nr === null ? '' : ' <span style="font-weight:400;color:var(--ink-muted)">L' + x.nr + '</span>'}</span><span style="min-width:90px;">${escapeHtml(x.clsName)}</span>` +
       `<button onclick="zalegleWpisz('${x.clsId}','${x.wpis}')" class="primary" style="padding:4px 10px;font-size:12.5px;">wpisz</button>` +
       `<select id="zaleglePowod_${x.clsId}_${zalegleIdKlucza(x.wpis)}" style="padding:4px 6px;font-size:12.5px;font-family:inherit;border:1px solid var(--line);border-radius:5px;">${ZALEGLE_POWODY.map(p => `<option>${p}</option>`).join('')}</select>` +
-      `<button onclick="zalegleNieBylo('${x.clsId}','${x.wpis}')" style="padding:4px 10px;font-size:12.5px;">nie było</button></div>`).join('')
+      `<button onclick="zalegleNieBylo('${x.clsId}','${x.wpis}')" style="padding:4px 10px;font-size:12.5px;">nie było</button>` +
+      `<button onclick="zastepstwoOkno('${x.clsId}','${x.wpis}')" style="padding:4px 10px;font-size:12.5px;" title="lekcja odbyła się z inną klasą (zastępstwo) — bez frekwencji w tym dzienniku">zastępstwo</button></div>`).join('')
       : '<div style="padding:14px;color:#2E7D32;font-size:13px;">Wszystkie lekcje z planu mają wpis. ✓</div>';
   }
   renderPlanUstawienia();
@@ -2558,7 +2604,7 @@ function renderPlanUstawienia() {
   // Kolumna „klasa w planie” (dopasowanie nazw z pliku EduPage do klas dziennika) ma sens tylko przy planie
   // z pliku; przy siatce klikanej ręcznie zawsze pokazywała to samo, co nazwa klasy (19.09).
   const zPliku = !!(p && (p.wygenerowano || (p.zrodlo && p.zrodlo !== 'ręcznie')));
-  const COLS = zPliku ? 7 : 6;
+  const COLS = 6;
   const kom = (id, s, d, inne) => {
     const nrs = s[d] || [];
     const otw = siatkaOtwarta && siatkaOtwarta.clsId === id && siatkaOtwarta.dzien === d;
@@ -2576,7 +2622,8 @@ function renderPlanUstawienia() {
   // --- karta 1: siatka klasa × dzień → numery lekcji (klik komórki = wybór numerów)
   let h = '<div class="plan-karty"><div class="plan-karta"><h3>Siatka tygodnia</h3>' +
     '<p class="opis">Klik komórki (klasa × dzień) otwiera numery lekcji, klik numeru wpisuje lekcję, drugi klik zdejmuje. Stąd bierze się pasek tygodnia w Obecności i chip „Zaległe”.</p>' +
-    '<table>' + naglowek('klasa', zPliku ? '<th>klasa w planie</th>' : '');
+    '<table>' + naglowek('klasa', '');
+  const dopasowanie = [];   // wiersze „klasa dziennika → klasa w pliku” (tylko plan z pliku), do sekcji Zaawansowane
   state.classes.forEach(cls => {
     const cur = zaleglePlanKlasa(cls);
     const auto = cls.planKlasa === undefined;
@@ -2584,9 +2631,9 @@ function renderPlanUstawienia() {
     h += `<tr><td class="kl">${escapeHtml(cls.name)}${cls.school ? `<small>${escapeHtml(cls.school)}</small>` : ''}</td>`;
     for (let d = 0; d < 5; d++) h += `<td>${kom(cls.id, s, d, false)}</td>`;
     const dubel = cur ? state.classes.filter(c => c.id !== cls.id && zaleglePlanKlasa(c) === cur).map(c => c.name) : [];
-    if (zPliku) h += `<td><select onchange="zaleglePlanKlasaZmien('${cls.id}', this.value)" style="border-color:${dubel.length ? '#C0392B' : 'var(--line)'};">` +
-      `<option value="">— nie licz —</option>` + klucze.map(k => `<option value="${escapeHtml(k)}" ${k === cur ? 'selected' : ''}>${escapeHtml(k)}</option>`).join('') + `</select>${auto && cur ? ' <span style="color:var(--ink-muted)">(auto)</span>' : ''}` +
-      (dubel.length ? `<div class="plan-dubel">⚠ ta sama klasa planu co ${escapeHtml(dubel.join(', '))} — obie dostają te same lekcje</div>` : '') + `</td>`;
+    if (zPliku) dopasowanie.push(`<span class="poz">${escapeHtml(cls.name)} → <select onchange="zaleglePlanKlasaZmien('${cls.id}', this.value)" style="border-color:${dubel.length ? '#C0392B' : 'var(--line)'};">` +
+      `<option value="">— nie licz —</option>` + klucze.map(k => `<option value="${escapeHtml(k)}" ${k === cur ? 'selected' : ''}>${escapeHtml(k)}</option>`).join('') + `</select>${auto && cur ? ' <span style="color:var(--ink-muted)">(auto)</span>' : ''}</span>` +
+      (dubel.length ? `<div class="plan-dubel">⚠ ${escapeHtml(cls.name)}: ta sama klasa planu co ${escapeHtml(dubel.join(', '))} — obie dostają te same lekcje</div>` : ''));
     h += `</tr>`;
     if (siatkaOtwarta && siatkaOtwarta.clsId === cls.id) h += nrWiersz(cls.id, cls.name, s);
   });
@@ -2595,9 +2642,11 @@ function renderPlanUstawienia() {
     `<input type="date" value="${p ? p.do || '' : ''}" onchange="planDatyZmien('do', this.value)">` +
     `<span>· ${p ? (p.zrodlo || (p.wygenerowano ? 'plik z ' + p.wygenerowano : 'ręcznie')) : 'jeszcze nie ma — klik w siatce go założy (od 1 września)'}</span>` +
     (plany.length > 1 ? `<span>· wszystkie plany: ${plany.map(x => `${x.od} – ${x.do || '…'}`).join(', ')}</span>` : '') +
-    '<details class="plan-zaaw"><summary>Zaawansowane: plan z pliku</summary><div>' +
+    '<details class="plan-zaaw"' + (dopasowanie.some(x => x.includes('plan-dubel')) ? ' open' : '') + '><summary>Zaawansowane: plan z pliku</summary><div>' +
     '<label class="plik">📂 Wczytaj plan (plan-wf.json)<input type="file" id="zaleglePlik" accept=".json,application/json" style="display:none" onchange="zalegleWczytajPlik(event)"></label>' +
-    '<span>Plik JSON z siatką lekcji (np. wygenerowany z planu szkoły). Plik o tej samej dacie „od” dokłada do siatki: klasy z pliku nadpisują swoje wiersze, ręczne zostają, dni wolne się sumują. Po wczytaniu w tabeli pojawia się kolumna „klasa w planie” do dopasowania nazw.</span>' +
+    '<span>Plik JSON z siatką lekcji (np. wygenerowany z planu szkoły). Plik o tej samej dacie „od” dokłada do siatki: klasy z pliku nadpisują swoje wiersze, ręczne zostają, dni wolne się sumują. Po wczytaniu poniżej pojawia się dopasowanie nazw klas.</span>' +
+    (zPliku ? '<div class="plan-dopasowanie"><b>Dopasowanie nazw: klasa dziennika → klasa w pliku planu</b>' + dopasowanie.join('') +
+      '<small>Ustawienie jednorazowe — potrzebne tylko, gdy nazwy w pliku różnią się od nazw klas w dzienniku.</small></div>' : '') +
     '</div></details></div></div>';
   // --- karta 2: inne zajęcia — w pasku tygodnia na szaro, bez frekwencji i bez Zaległych
   const inne = (p && p.inne) || {};
@@ -2648,6 +2697,7 @@ function zalegleNieBylo(clsId, klucz) {
 // Wpis frekwencji przeczy „nie było” — zapis statusu / lekcji zdejmuje flagę bieżącej lekcji (19.09).
 function nieByloZdejmij() {
   const c = getCurrentClass(); const k = attKey();
+  if (c && c.zastepstwa && c.zastepstwa[k]) delete c.zastepstwa[k];   // wpis frekwencji przeczy też zastępstwu
   if (!c || !c.odwolane || !c.odwolane[k]) return false;
   delete c.odwolane[k]; renderZalegleChip(); return true;
 }
@@ -2658,6 +2708,96 @@ function zalegleCofnijNieBylo(clsId, klucz) {
   save(); renderZalegle(); renderZalegleChip(); renderAttendance(); renderPlanUstawienia();
   showToast('„Nie było” zdjęte — lekcja wraca do wpisu.', 'info');
 }
+// Zastępstwo, poziom 1 (19.09): lekcja odbyta z INNĄ klasą — bez frekwencji w tym dzienniku (ta idzie
+// w e-dzienniku zastępowanej klasy). (a) na mojej lekcji: cls.zastepstwa[klucz] = {klasa, zaKogo} —
+// planowa klasa nie jest zaległa i nie ma wpisu; (b) na okienku: state.zastepstwaOkienka['data#nr'].
+// Poziom 2 (klasa doraźna z wklejoną listą uczniów) — propozycja, nie zbudowane.
+function zastepstwoDane(clsId, klucz) {
+  if (clsId) { const c = state.classes.find(x => x.id === clsId); return (c && c.zastepstwa && c.zastepstwa[klucz]) || null; }
+  return (state.zastepstwaOkienka || {})[klucz] || null;
+}
+function zastepstwoZapisz(clsId, klucz, klasa, zaKogo) {
+  klasa = String(klasa || '').trim(); zaKogo = String(zaKogo || '').trim();
+  if (clsId) {
+    const c = state.classes.find(x => x.id === clsId); if (!c) return;
+    c.zastepstwa = c.zastepstwa || {};
+    if (klasa) { c.zastepstwa[klucz] = { klasa, zaKogo }; if (c.odwolane) delete c.odwolane[klucz]; } else delete c.zastepstwa[klucz];
+  } else {
+    state.zastepstwaOkienka = state.zastepstwaOkienka || {};
+    if (klasa) state.zastepstwaOkienka[klucz] = { klasa, zaKogo }; else delete state.zastepstwaOkienka[klucz];
+  }
+  save(); renderZalegle(); renderZalegleChip(); renderAttendance();
+  showToast(klasa ? 'Zastępstwo: ' + klasa + (zaKogo ? ' za ' + zaKogo : '') + ' — bez frekwencji w tym dzienniku.' : 'Zastępstwo zdjęte.', klasa ? 'success' : 'info');
+}
+function zastepstwaLicz() {
+  let n = 0;
+  state.classes.forEach(c => { n += Object.keys(c.zastepstwa || {}).length; });
+  return n + Object.keys(state.zastepstwaOkienka || {}).length;
+}
+let _zastCtx = null;
+// Okno zastępstwa. clsId + klucz = konkretna lekcja klasy (a). clsId=null, klucz=data = wybór:
+// moja lekcja bez wpisu z tego dnia (zamiast tej klasy) albo okienko z numerem (b).
+function zastepstwoOkno(clsId, klucz) {
+  const z = zastepstwoDane(clsId, klucz) || {};
+  const iso = kluczData(klucz);
+  const edycjaOkienka = !clsId && kluczNr(klucz) !== null;
+  const wybor = !clsId && !edycjaOkienka;
+  _zastCtx = { clsId, klucz };
+  const cls = clsId ? state.classes.find(x => x.id === clsId) : null;
+  document.getElementById('zastTytul').textContent = cls ? 'Zastępstwo zamiast lekcji ' + cls.name : edycjaOkienka ? 'Zastępstwo na okienku L' + kluczNr(klucz) : 'Zastępstwo ' + zalegleData(iso);
+  document.getElementById('zastOpis').textContent = 'Lekcja odbyła się z inną klasą. Frekwencję tej klasy wpisujesz w e-dzienniku — tu liczy się tylko, że lekcja była' + (cls ? ', a ' + cls.name + ' nie jest zaległa.' : '.');
+  const sel = document.getElementById('zastLekcja');
+  sel.parentElement.style.display = wybor ? '' : 'none';
+  if (wybor) {
+    const dzis = new Date().toISOString().slice(0, 10);
+    void dzis;
+    const opcje = [];
+    lekcjeDniaWszystkie(iso).lekcje.forEach(({ cls: c, nr }) => {
+      if (!c) return;
+      const k = kluczZ(iso, nrDlaLekcji(c, iso, nr));
+      if ((c.attendance || {})[k] || zastepstwoDane(c.id, k)) return;
+      opcje.push(`<option value="${c.id}|${k}">${nr === null ? '' : 'L' + nr + ' · '}${escapeHtml(c.name)} — zamiast tej klasy</option>`);
+    });
+    opcje.push('<option value="okienko">okienko — lekcja poza moim planem</option>');
+    sel.innerHTML = opcje.join('');
+    sel.value = opcje.length > 1 ? sel.options[0].value : 'okienko';
+  }
+  const nrEl = document.getElementById('zastNr');
+  nrEl.value = edycjaOkienka ? kluczNr(klucz) : '';
+  nrEl.disabled = edycjaOkienka;
+  zastepstwoNrWidok();
+  document.getElementById('zastKlasa').value = z.klasa || '';
+  document.getElementById('zastZaKogo').value = z.zaKogo || '';
+  document.getElementById('zastUsun').style.display = z.klasa ? '' : 'none';
+  document.getElementById('zastModal').classList.add('active');
+  setTimeout(() => document.getElementById(wybor ? 'zastLekcja' : 'zastKlasa').focus(), 50);
+}
+function zastepstwoNrWidok() {
+  const sel = document.getElementById('zastLekcja');
+  const okienko = !_zastCtx || (!_zastCtx.clsId && (sel.parentElement.style.display === 'none' || sel.value === 'okienko'));
+  document.getElementById('zastNr').parentElement.style.display = okienko ? '' : 'none';
+}
+function zastepstwoOk() {
+  if (!_zastCtx) return;
+  let { clsId, klucz } = _zastCtx;
+  const klasa = document.getElementById('zastKlasa').value.trim();
+  const zaKogo = document.getElementById('zastZaKogo').value;
+  if (!klasa) { showToast('Wpisz klasę (np. 6a).', 'warn'); document.getElementById('zastKlasa').focus(); return; }
+  if (!clsId) {
+    const sel = document.getElementById('zastLekcja');
+    const v = sel.parentElement.style.display === 'none' ? 'okienko' : sel.value;
+    if (v !== 'okienko') { const i = v.indexOf('|'); clsId = v.slice(0, i); klucz = v.slice(i + 1); }
+    else {
+      const nr = parseInt(document.getElementById('zastNr').value, 10);
+      if (isNaN(nr) || nr < 0 || nr > 11) { showToast('Podaj numer lekcji (0–11).', 'warn'); document.getElementById('zastNr').focus(); return; }
+      klucz = kluczZ(kluczData(klucz), nr);
+    }
+  }
+  zastepstwoAnuluj();
+  zastepstwoZapisz(clsId, klucz, klasa, zaKogo);
+}
+function zastepstwoUsun() { if (!_zastCtx) return; const c = _zastCtx; zastepstwoAnuluj(); zastepstwoZapisz(c.clsId, c.klucz, '', ''); }
+function zastepstwoAnuluj() { _zastCtx = null; document.getElementById('zastModal').classList.remove('active'); }
 function zaleglePlanKlasaZmien(clsId, val) {
   const cls = state.classes.find(c => c.id === clsId);
   if (!cls) return;
@@ -2939,8 +3079,8 @@ function renderLessonNr() {
 // wybiera — klika kafelek w pasku tygodnia.
 function nrDlaLekcji(cls, iso, nr) {
   if (nr === null || nr === undefined) return null;
-  const att = cls.attendance || {}, odw = cls.odwolane || {};
-  if (att[kluczZ(iso, nr)] || odw[kluczZ(iso, nr)]) return nr;
+  const att = cls.attendance || {}, odw = cls.odwolane || {}, zas = cls.zastepstwa || {};
+  if (att[kluczZ(iso, nr)] || odw[kluczZ(iso, nr)] || zas[kluczZ(iso, nr)]) return nr;
   const plan = zalegleLekcjeDnia(cls, iso).filter(n => n !== null);
   const pierwsza = plan.length ? Math.min.apply(null, plan) : nr;
   if (nr !== pierwsza) return nr;
@@ -3042,7 +3182,10 @@ function renderDzien() {
   head.innerHTML = `<span class="nr">${nrOtw !== null ? 'L' + nrOtw : (lekcje.length && !wPlanie) ? 'poza planem' : 'lekcja'}</span><span class="kl">${escapeHtml(cur.name)}${cur.plec ? ' <span class="plec">' + (cur.plec === 'dz' ? 'dz.' : 'chł.') + '</span>' : ''}</span>` +
     `<span class="sum">${pk === null ? '' : '<b>' + pk + '%</b> · '}${wpisani}/${active.length} wpisanych${cur.students.length > active.length ? ` · +${cur.students.length - active.length} zwol.` : ''}</span><span class="otw">otwarta</span>` +
     ((cur.odwolane || {})[kOtw] ? `<span class="niebylo-info">nie było: ${escapeHtml(cur.odwolane[kOtw])} <button type="button" class="niebylo-cofnij" onclick="zalegleCofnijNieBylo('${cur.id}','${kOtw}')" title="zdejmij „nie było”">jednak była</button></span>` : '');
-  head.parentElement.classList.toggle('niebylo', !!(cur.odwolane || {})[kOtw]);
+  const zastOtw = zastepstwoDane(cur.id, kOtw);
+  if (zastOtw) head.insertAdjacentHTML('beforeend', `<span class="niebylo-info"><span class="zast-tag">zastępstwo</span>${escapeHtml(zastOtw.klasa)}${zastOtw.zaKogo ? ' za ' + escapeHtml(zastOtw.zaKogo) : ''} · bez frekwencji tu <button type="button" class="niebylo-cofnij" onclick="zastepstwoOkno('${cur.id}','${kOtw}')" title="zmień albo zdejmij zastępstwo">zmień</button></span>`);
+  head.parentElement.classList.toggle('niebylo', !zastOtw && !!(cur.odwolane || {})[kOtw]);
+  head.parentElement.classList.toggle('zastepstwo', !!zastOtw);
   if (tydzien) return;
   const weekend = [0, 6].includes(new Date(iso + 'T12:00:00').getDay());
   const bezLekcji = (weekend || wolny) && !lekcje.length && !cur.attendance[kOtw] && state.dzienWolnyOtw !== iso;
@@ -3057,6 +3200,12 @@ function renderDzien() {
     if (cls.id === cur.id && k === kOtw) { otwartaZPlanu = true; cel.insertAdjacentHTML('beforeend', guzikOtwartej(cur, kOtw, head)); return; }
     cel.insertAdjacentHTML('beforeend', kolumnaPodgladu(cls, iso, nr, k, dzis));
   });
+  // Zastępstwa na okienkach tego dnia + kafelek „+ zastępstwo” (dni z planem, nie wolne)
+  Object.keys(state.zastepstwaOkienka || {}).filter(k => kluczData(k) === iso).sort((a, b) => (kluczNr(a) || 0) - (kluczNr(b) || 0)).forEach(k => {
+    const z = state.zastepstwaOkienka[k];
+    przed.insertAdjacentHTML('beforeend', `<div class="kol zastepstwo okienko" data-klucz="${k}" title="zastępstwo na okienku — bez frekwencji w tym dzienniku; kliknij, żeby zmienić lub zdjąć"><div class="kol-head" style="cursor:pointer" onclick="zastepstwoOkno(null,'${k}')"><span class="nr">${kluczNr(k) === null ? '' : 'L' + kluczNr(k)}</span><span class="kl">${escapeHtml(z.klasa)}</span><span class="sum"><span class="zast-tag">zastępstwo</span>${z.zaKogo ? 'za ' + escapeHtml(z.zaKogo) : 'okienko'}</span></div></div>`);
+  });
+  if (zaleglePlany().length && !weekend && !wolny) przed.insertAdjacentHTML('beforeend', `<div class="kol okienko-zast" title="lekcja z inną klasą: zamiast mojej lekcji albo na okienku"><div class="kol-head"><span class="nr">&nbsp;</span><span class="kl">zastępstwo</span><span class="sum"><button type="button" onclick="zastepstwoOkno(null,'${iso}')">+ zastępstwo</button></span></div></div>`);
   if ((wolny || weekend) && !lekcje.length) przed.insertAdjacentHTML('beforeend', `<div class="kol inne wolny"><div class="kol-head"><span class="kl">${weekend ? 'weekend' : 'dzień wolny'}</span><span class="sum">${wolny ? 'z kalendarium — ' : ''}brak lekcji</span>${bezLekcji ? `<button type="button" onclick="state.dzienWolnyOtw='${iso}'; renderAttendance()">otwórz lekcję mimo to</button>` : ''}</div></div>`);
   // Otwarta lekcja spoza planu (albo bez planu): jej guzik na końcu paska
   if (!otwartaZPlanu && !bezLekcji) przed.insertAdjacentHTML('beforeend', guzikOtwartej(cur, kOtw, head));
@@ -3069,14 +3218,16 @@ function guzikOtwartej(cur, k, head) {
 }
 function kolumnaPodgladu(cls, iso, nr, k, dzis) {
   const jest = !!(cls.attendance || {})[k];
-  const niebylo = !!(cls.odwolane || {})[k];
-  const brak = !jest && !niebylo && iso < dzis;
+  const zast = zastepstwoDane(cls.id, k);
+  const niebylo = !zast && !!(cls.odwolane || {})[k];
+  const brak = !jest && !niebylo && !zast && iso < dzis;
   const day = (cls.attendance || {})[k] || {};
   const counts = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0 };
   const active = (cls.students || []).filter(s => !s.longTermReleased);
   active.forEach(s => { const c = attRead(day[s.id]); if (c.s && counts[c.s] !== undefined) counts[c.s]++; });
   let sum;
-  if (niebylo) sum = 'nie było: ' + escapeHtml(cls.odwolane[k]) + ` <button type="button" class="niebylo-cofnij" onclick="event.stopPropagation(); zalegleCofnijNieBylo('${cls.id}','${k}')" title="zdejmij „nie było” — lekcja wraca do zaległych / do wpisu">jednak była</button>`;
+  if (zast) sum = `<span class="zast-tag">zastępstwo</span>${zast.zaKogo ? 'za ' + escapeHtml(zast.zaKogo) : 'bez frekwencji tu'}`;
+  else if (niebylo) sum = 'nie było: ' + escapeHtml(cls.odwolane[k]) + ` <button type="button" class="niebylo-cofnij" onclick="event.stopPropagation(); zalegleCofnijNieBylo('${cls.id}','${k}')" title="zdejmij „nie było” — lekcja wraca do zaległych / do wpisu">jednak była</button>`;
   else if (jest) {
     const w = ['nć', 'bs', 'nb', 'nu', 'zw'].map((l, i) => { const key = ['NC', 'BS', 'NB', 'NU', 'ZW'][i]; return counts[key] ? counts[key] + ' ' + l : ''; }).filter(Boolean).join(' · ');
     sum = counts.C + ' ćw.' + (w ? ' · ' + w : '');
@@ -3085,9 +3236,9 @@ function kolumnaPodgladu(cls, iso, nr, k, dzis) {
   else sum = 'do wpisu';
   const zap = _zapisanoO[_zapisanoKlucz(cls, k)];
   if (jest && zap) sum += ' · zapisano ' + zap;
-  const klasa = 'kol podglad' + (jest ? ' jest' : '') + (brak ? ' brak' : '') + (niebylo ? ' niebylo' : '');
-  return `<div class="${klasa}" data-cls="${cls.id}" data-klucz="${k}"><div class="kol-head" onclick="wybierzLekcje('${cls.id}','${iso}',${nr === null ? 'null' : nr})" title="otwórz tę lekcję do wpisu">` +
-    `<span class="nr">${nr === null ? '' : 'L' + nr}</span><span class="kl">${escapeHtml(cls.name)}${cls.plec ? ' <span class="plec">' + (cls.plec === 'dz' ? 'dz.' : 'chł.') + '</span>' : ''}</span><span class="sum">${sum}</span><span class="otw">otwórz</span></div></div>`;
+  const klasa = 'kol podglad' + (jest ? ' jest' : '') + (brak ? ' brak' : '') + (niebylo ? ' niebylo' : '') + (zast ? ' zastepstwo' : '');
+  return `<div class="${klasa}" data-cls="${cls.id}" data-klucz="${k}"><div class="kol-head" onclick="${zast ? `zastepstwoOkno('${cls.id}','${k}')` : `wybierzLekcje('${cls.id}','${iso}',${nr === null ? 'null' : nr})`}" title="${zast ? 'zastępstwo: ' + escapeHtml(zast.klasa) + ' zamiast ' + escapeHtml(cls.name) + ' — kliknij, żeby zmienić lub zdjąć' : 'otwórz tę lekcję do wpisu'}">` +
+    `<span class="nr">${nr === null ? '' : 'L' + nr}</span><span class="kl">${zast ? escapeHtml(zast.klasa) + ' <span class="plan-klasa">' + escapeHtml(cls.name) + '</span>' : escapeHtml(cls.name)}${cls.plec ? ' <span class="plec">' + (cls.plec === 'dz' ? 'dz.' : 'chł.') + '</span>' : ''}</span><span class="sum">${sum}</span><span class="otw">otwórz</span></div></div>`;
 }
 function renderPlanTydzien() {
   const el = document.getElementById('planTydzien');
@@ -3113,13 +3264,14 @@ function renderPlanTydzien() {
       }
       const k = kluczZ(iso, nrDlaLekcji(cls, iso, nr));
       const jest = !!(cls.attendance || {})[k];
-      const niebylo = !!(cls.odwolane || {})[k];
-      const brak = !jest && !niebylo && iso < dzis;
+      const zast = zastepstwoDane(cls.id, k);
+      const niebylo = !zast && !!(cls.odwolane || {})[k];
+      const brak = !jest && !niebylo && !zast && iso < dzis;
       const aktywna = cur && cls.id === cur.id && iso === state.currentDate && kluczZ(iso, state.currentNr) === k;
-      const klasa = 'plan-lekcja' + (jest ? ' jest' : '') + (brak ? ' brak' : '') + (niebylo ? ' niebylo' : '') + (aktywna ? ' aktywna' : '');
-      const tytul = jest ? 'wpis jest — kliknij, żeby poprawić' : niebylo ? 'nie było: ' + cls.odwolane[k] : brak ? 'brak wpisu — kliknij i wpisz' : 'kliknij, żeby wpisać';
+      const klasa = 'plan-lekcja' + (jest ? ' jest' : '') + (brak ? ' brak' : '') + (niebylo ? ' niebylo' : '') + (zast ? ' zastepstwo' : '') + (aktywna ? ' aktywna' : '');
+      const tytul = jest ? 'wpis jest — kliknij, żeby poprawić' : zast ? 'zastępstwo: ' + zast.klasa + ' zamiast ' + cls.name : niebylo ? 'nie było: ' + cls.odwolane[k] : brak ? 'brak wpisu — kliknij i wpisz' : 'kliknij, żeby wpisać';
       h += `<button type="button" class="${klasa}" data-cls="${cls.id}" data-iso="${iso}" data-nr="${nr === null ? '' : nr}" title="${escapeHtml(tytul)}" onclick="wybierzLekcje('${cls.id}','${iso}',${nr === null ? 'null' : nr})">` +
-        `<span class="nr">${nr === null ? '' : 'L' + nr}</span><span>${escapeHtml(cls.name)}</span><span class="st">${jest ? '✓' : niebylo ? '–' : brak ? '!' : ''}</span></button>`;
+        `<span class="nr">${nr === null ? '' : 'L' + nr}</span><span>${escapeHtml(cls.name)}</span><span class="st">${jest ? '✓' : zast ? 'z' : niebylo ? '–' : brak ? '!' : ''}</span></button>`;
     });
     h += '</div>';
   }
@@ -3968,6 +4120,7 @@ function renderStats() {
     <div class="summary-card"><div class="summary-label">Zwolnionych długoterminowo</div><div class="summary-value">${state.students.length - active.length}</div></div>
     <div class="summary-card"><div class="summary-label">Zapisanych lekcji${Z.z === 'rok' ? '' : ' · ' + Z.z + ' półr.'}</div><div class="summary-value">${totalLessons}</div></div>
     <div class="summary-card"><div class="summary-label">Średni % ćwiczył (klasa)</div><div class="summary-value">${avgPercent}</div></div>
+    <div class="summary-card summary-zast" title="lekcje odbyte z inną klasą (moje lekcje i okienka), wszystkie klasy"><div class="summary-label">Zastępstw (wszystkie klasy)</div><div class="summary-value">${zastepstwaLicz()}</div></div>
   `;
 }
 
@@ -4168,6 +4321,7 @@ function snapshotData() {
     currentClassId: state.currentClassId,
     planWf: state.planWf,        // plan (siatka, dni wolne, inne zajęcia) — bez tego telefon nie ma planu (empiria 18.09)
     ustawienia: state.ustawienia, // reguły liczenia + e-dziennik per szkoła
+    zastepstwaOkienka: state.zastepstwaOkienka, // zastępstwa na okienkach (poza klasami)
     exported: new Date().toISOString()
   };
 }
@@ -5589,6 +5743,7 @@ function zamekZastosujDane(data) {
     state.currentClassId = data.currentClassId || data.classes[0].id;
     if (data.planWf) state.planWf = data.planWf;
     if (data.ustawienia) state.ustawienia = data.ustawienia;
+    if (data.zastepstwaOkienka && typeof data.zastepstwaOkienka === 'object') state.zastepstwaOkienka = data.zastepstwaOkienka;
   } else if (data && data.students) {
     migrateFlat(data);            // nic nie ginie — stare dane → klasa "Bez przypisania"
   } else {
