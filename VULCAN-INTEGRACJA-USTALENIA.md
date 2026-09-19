@@ -93,7 +93,7 @@ obecność automatycznie**. → skrypt musi wpisywać tylko WYJĄTKI (mało uczn
 | BS (brak stroju) | `nc` | (brak osobnego symbolu — „brak stroju" znika) |
 | NB (nieob. nieuspr.) | `—` | nieobecność |
 | NU (nieob. uspr.) | `u` | nieob. uspraw. |
-| ZW (zwolnienie jednorazowe) | `nc` | nie ćwiczy na zajęciach WF (decyzja 09-17: `z` „zwolniony" w VULCAN = nieobecny bo zwolniony z lekcji, u nas zapis martwy; ZW appki = na sali z papierem) |
+| ZW (jednorazowe, OD–DO i długoterminowe) | `nc` | nie ćwiczy na zajęciach WF (decyzja 09-17, potwierdzona 09-19: `nc` dla rodzica = obecny na lekcji, uwaga tylko dla nauczyciela; `z` „zwolniony" w VULCAN = nieobecny — NIE używać dla zwolnień lekarskich, uczeń jest na sali z papierem) |
 | +sp (spóźnienie) | `s` | spóźnienie |
 | — | `ns` | nieob. uspr. szkolne |
 | — | `#` | obecność zdalna |
