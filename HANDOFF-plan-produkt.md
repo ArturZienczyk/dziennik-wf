@@ -80,6 +80,19 @@ nie dublować. Test: świeża apka (0 klas) → Plan → karta z krokami; po `+ 
 - **Follow-upy poza zakresem** (nie ruszać bez pytania): `test_zalegle.py` 2 FAIL (data); karta ucznia pokazuje
   „×undefined” / „Średnia ważona: NaN” przy kolumnie ocen bez wagi (wyszło na sztucznym wsadzie).
 
+## STAN 19.09 wieczór (sw v27) — p.4 WDROŻONE (p.1–3 wdrożone wcześniej, commit `3187fa4`)
+- **PZO → dane per szkoła:** `ustawienia().szkoly[s].pzo` (textarea `.reg-pzo` w karcie „Szkoły i e-dziennik”,
+  `pzoUstaw`/`pzoSzkoly`); karta „Jak liczona jest frekwencja” pokazuje cytat szkoły aktywnej klasy (`#regPzo`)
+  albo wskazówkę, gdzie wpisać. `pzoSeedZSS()` zasiewa cytat ZSS raz (klucz `pzo` obecny = nie nadpisuj).
+  Notatki robocze z UI wycięte (docx, „decyzja…”, „rozjazd”). Snapshot/kopia niosą `ustawienia` → pzo jedzie.
+- **Błąd produktu złapany po drodze:** nazwa szkoły ze spacją („SP 99”) rozrywała atrybut `onchange`
+  (`JSON.stringify(s)` = cudzysłowy w cudzysłowie) — select e-dziennika też nie działał. Fix: `&quot;`.
+- **Stopka:** „Dziennik WF · wersja N · Artur Zienczyk · Start w 5 minut”; N z `fetch('sw.js')` (jedna stała
+  CACHE_VERSION; z file:// zostaje „wersja lokalna”). `start.html` w SHELL sw.js.
+- **`start.html`:** 6 kroków (hasło+PIN → +klasa → lista → Plan → pierwsza lekcja → kopia) + Reguły + telefon.
+- Test: `test_produkt_p4.py` 17/17, zrzuty `_zrzuty/p4_reguly_1400.png`, `p4_start_1400.png`.
+- Zostaje z tej listy: nic. Follow-upy bez zmian (test_zalegle 2 FAIL, karta ucznia ×undefined/NaN).
+
 ## Zasady sesji
 - Klik = user. Każdy obiekt wizualny: headless render **zestawu**, obejrzeć samemu, dopiero pokazać.
 - Edycja punktowa (plik ma ~5900 linii; `Edit`/patch, nie `Write`). Heredoc w Bash blokuje hook — skrypt z pliku.

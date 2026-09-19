@@ -343,6 +343,8 @@
   .reg-row { display: flex; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line-soft); cursor: default; }
   .reg-row small { color: var(--ink-muted); }
   .reg-row input[type="checkbox"] { width: 18px; height: 18px; flex: 0 0 18px; }
+  .reg-pzo-row { border-bottom: 1px solid var(--line); padding-bottom: 10px; margin-bottom: 4px; }
+  .reg-pzo { width: 100%; font-family: inherit; font-size: 12.5px; line-height: 1.4; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; background: var(--paper); resize: vertical; }
   .reg-row input[type="number"], .reg-row input[type="date"], .reg-row select { flex: 0 0 auto; border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; background: var(--bg); font-family: inherit; font-size: 13px; }
   .reg-row input[type="number"] { width: 64px; text-align: center; }
   .reg-row .fill { flex: 1; }
@@ -1551,13 +1553,10 @@
     <div class="reg-grid">
       <div class="reg-box">
         <h3>Jak liczona jest frekwencja</h3>
-        <p class="zrodlo">Źródło: <b>Przedmiotowe Zasady Oceniania z WF</b> (ZSS), obszar „Systematyczność” — <code>wf/pzo/PZO-wf-SSP.docx</code>, <code>PZO-wf-SLO.docx</code></p>
-        <blockquote>Nieobecności nieusprawiedliwione wliczane są do puli wszystkich zajęć. Nieobecności usprawiedliwione (zaświadczenie lekarskie lub rodzica) oraz związane z działalnością na rzecz szkoły nie są wliczane do ogólnej liczby zajęć.</blockquote>
+        <div id="regPzo"></div>
         <div class="wzor"><span>ćwiczył</span><span class="kreska"></span><span id="regWzorMianownik">ćwiczył + nie ćwiczył + brak stroju + nieobecny nieuspr.</span></div>
-        <p>Usprawiedliwiony (NU) i zwolniony (ZW) wypadają z bazy. Spóźnienie nie zmienia procentu (PZO milczy). Klasyfikacja: udział w co najmniej <b>50%</b> zajęć w semestrze.</p>
+        <p>Domyślnie usprawiedliwiony (NU) i zwolniony (ZW) wypadają z bazy, a spóźnienie nie zmienia procentu — manipulatory obok pozwalają to zmienić pod PZO Twojej szkoły.</p>
         <p class="przyklad">Przykład: 20 lekcji, 16 ćwiczył, 1 nć, 1 bs, 1 nu, 1 zw → 16 / 18 = <b>89%</b> → ocena <b>dobra</b> (75–89).</p>
-        <p>Widełki %→ocena (SSP): 96–100 cel · 90–95 bdb · 75–89 db · 53–74 dst · 41–52 dop · 20–40 ndst.</p>
-        <p class="uwaga">Rozjazd z PZO: dokument mówi o ocenie co <b>2 miesiące</b> — stąd 4 okna Systematyczności (obok); SLO daje <b>punkty</b> (max 20/okno), apka pokazuje procent — decyzja jeszcze nie zapadła.</p>
       </div>
       <div class="reg-box">
         <h3>Manipulatory</h3>
@@ -1569,7 +1568,7 @@
         <div class="reg-row"><input type="number" id="regProgZielony" min="1" max="100" onchange="regulaUstaw('progZielony', this.value)"><span class="fill"><b>Próg zielony</b> <small>· poniżej: bursztyn</small></span></div>
         <div class="reg-row"><input type="number" id="regProgCzerwony" min="1" max="100" onchange="regulaUstaw('progCzerwony', this.value)"><span class="fill"><b>Próg czerwony</b> <small>· poniżej: czerwień</small></span></div>
         <h3 style="margin-top:16px;">Okna Systematyczności — <span id="regOknaKlasa"></span></h3>
-        <p class="uwaga">Dwie oceny na półrocze (decyzja 18.09.2026): I.1, I.2, II.1, II.2. Środek półrocza liczy się sam z granicy; wpisz datę, żeby go przesunąć.</p>
+        <p class="uwaga">Dwie oceny na półrocze: I.1, I.2, II.1, II.2. Środek półrocza liczy się sam z granicy; wpisz datę, żeby go przesunąć.</p>
         <div class="reg-row"><input type="date" id="regBrk" onchange="oknoUstaw('semesterBreak', this.value)"><span class="fill"><b>Granica półrocza</b> <small>· 1. dzień II półrocza; puste = jedno okno (cała historia)</small></span></div>
         <div class="reg-row"><input type="date" id="regPolI" onchange="oknoUstaw('polI', this.value)"><span class="fill"><b>Środek I półrocza</b> <small id="regPolIAuto"></small></span></div>
         <div class="reg-row"><input type="date" id="regPolII" onchange="oknoUstaw('polII', this.value)"><span class="fill"><b>Środek II półrocza</b> <small id="regPolIIAuto"></small></span></div>
@@ -1578,10 +1577,11 @@
       <div class="reg-box">
         <h3>Szkoły i e-dziennik</h3>
         <div id="regSzkoly"></div>
-        <p class="uwaga">Stąd etykieta przycisku w kolumnie dnia („do VULCANa” / „do Librusa”). Przy „+ klasa” to samo pytanie pada od razu. Skrypt wklejania istnieje dziś tylko dla VULCANa; schowek działa dla obu.</p>
+        <p class="uwaga">Stąd etykieta przycisku w kolumnie dnia („do VULCANa” / „do Librusa”). Przy „+ klasa” to samo pytanie pada od razu. Automatyczne wklejanie frekwencji działa w VULCANie; w Librusie kopiujesz ze schowka.</p>
+        <p class="uwaga">„Zasady frekwencji (PZO)” — wklej cytat z Przedmiotowych Zasad Oceniania swojej szkoły (co wlicza się do puli zajęć, próg klasyfikacji, widełki %→ocena). Pokaże się w karcie „Jak liczona jest frekwencja” dla klas tej szkoły.</p>
         <h3 style="margin-top:16px;">Forma: ćwiczył / ćwiczyła</h3>
         <div id="regPlec"></div>
-        <p class="uwaga">Klasy ZSS są jednorodne płciowo — ustawienie per klasa (w Uczniowie), nie per uczeń. Zmienia tylko etykiety (stopka, legenda), nie liczenie.</p>
+        <p class="uwaga">Dla klas jednorodnych płciowo (np. dziewczęta) — ustawienie per klasa (w Uczniowie), nie per uczeń. Zmienia tylko etykiety (stopka, legenda), nie liczenie.</p>
       </div>
     </div>
   </div>
@@ -1646,7 +1646,7 @@
 
   <footer>
     Dane zapisywane lokalnie w przeglądarce, zaszyfrowane hasłem dziennika (pamięć przeglądarki trzyma tylko szyfrogram). Nie są wysyłane na żaden serwer. Kopie zapasowe szyfruje to samo hasło — raz dziennie same, ręcznie przyciskiem „Zapisz kopię”. Po 10 min bez ruchu dziennik się zasłania (PIN albo hasło).<br>
-    Wygenerowane w rozmowie z Claude · maj 2026
+    <span id="stopkaProdukt">Dziennik WF · <span id="stopkaWersja">wersja lokalna</span> · Artur Zienczyk · <a href="start.html">Start w 5 minut</a></span>
   </footer>
 
 </div>
@@ -1970,6 +1970,25 @@ function edziennikSzkoly(school) {
 }
 function edziennikUstaw(school, v) { const S = ustawienia().szkoly; S[school || ''] = Object.assign({}, S[school || ''], { edziennik: v }); }
 function edziennikEtykieta(school) { return edziennikSzkoly(school) === 'librus' ? 'do Librusa' : 'do VULCANa'; }
+// Wersja w stopce = CACHE_VERSION z sw.js (jedna stała; z file:// fetch nie działa → zostaje „wersja lokalna”)
+(function stopkaWersja() {
+  try {
+    fetch('sw.js', { cache: 'no-store' }).then(r => r.text()).then(t => {
+      const m = t.match(/CACHE_VERSION\s*=\s*'dziennik-wf-(v\d+)'/);
+      const el = document.getElementById('stopkaWersja');
+      if (m && el) el.textContent = 'wersja ' + m[1].slice(1);
+    }).catch(() => {});
+  } catch (e) {}
+})();
+// Zasady frekwencji (PZO) per szkoła — tekst z kodu przeszedł do danych (produkt dla kolegów i innych szkół, 19.09).
+function pzoSzkoly(school) { const s = ustawienia().szkoly[school || '']; return (s && s.pzo) || ''; }
+function pzoUstaw(school, v) { const S = ustawienia().szkoly; S[school || ''] = Object.assign({}, S[school || ''], { pzo: (v || '').trim() }); save(); renderReguly(); showToast('Zasady PZO zapisane.', 'success'); }
+// Jednorazowe zasianie cytatu ZSS (szkoła Artura; do 19.09 tekst był w kodzie). Klucz 'pzo' obecny = już rozstrzygnięte, nie nadpisuj.
+const PZO_ZSS = 'Nieobecności nieusprawiedliwione wliczane są do puli wszystkich zajęć. Nieobecności usprawiedliwione (zaświadczenie lekarskie lub rodzica) oraz związane z działalnością na rzecz szkoły nie są wliczane do ogólnej liczby zajęć.\nKlasyfikacja: udział w co najmniej 50% zajęć w semestrze. Ocena co 2 miesiące (4 okna Systematyczności).\nWidełki %→ocena (SSP): 96–100 cel · 90–95 bdb · 75–89 db · 53–74 dst · 41–52 dop · 20–40 ndst. SLO: punkty (max 20/okno).';
+function pzoSeedZSS() {
+  const S = ustawienia().szkoly;
+  if (state.classes.some(x => x.school === 'ZSS') && !(S.ZSS && ('pzo' in S.ZSS))) S.ZSS = Object.assign({}, S.ZSS, { pzo: PZO_ZSS });
+}
 // Forma czasownika per klasa (dziewczęta → ćwiczyła)
 function cwLabel(cls) { cls = cls || getCurrentClass(); return cls && cls.plec === 'dz' ? 'ćwiczyła' : 'ćwiczył'; }
 function ustawPlec(v) { const c = getCurrentClass(); if (!c) return; c.plec = v || ''; save(); refreshAll(); }
@@ -5185,7 +5204,17 @@ function renderReguly() {
   set('regPolIIAuto', 'textContent', g ? '· puste = ' + g.polIIAuto : '· najpierw granica półrocza');
   set('regOknaOpis', 'textContent', g ? `Okna: I.1 do ${g.polI} · I.2 ${g.polI}–${g.brk} · II.1 ${g.brk}–${g.polII} · II.2 od ${g.polII}. Kolumny Syst. w Ocenach liczą się z tych okien.` : 'Bez granicy półrocza: jedna kolumna Syst. z całej historii.');
   const sz = document.getElementById('regSzkoly');
-  if (sz) sz.innerHTML = distinctSchools().map(s => `<div class="reg-row"><span class="fill"><b>${s ? escapeHtml(s) : '— bez szkoły —'}</b> <small>${state.classes.filter(x => x.school === s).map(x => escapeHtml(x.name)).join(', ')}</small></span><select onchange="edziennikUstaw(${JSON.stringify(s)}, this.value); save(); refreshAll();"><option value="vulcan" ${edziennikSzkoly(s) === 'vulcan' ? 'selected' : ''}>VULCAN</option><option value="librus" ${edziennikSzkoly(s) === 'librus' ? 'selected' : ''}>Librus</option></select></div>`).join('');
+  pzoSeedZSS();
+  if (sz) sz.innerHTML = distinctSchools().map(s => `<div class="reg-row"><span class="fill"><b>${s ? escapeHtml(s) : '— bez szkoły —'}</b> <small>${state.classes.filter(x => x.school === s).map(x => escapeHtml(x.name)).join(', ')}</small></span><select onchange="edziennikUstaw(${JSON.stringify(s).replace(/"/g, "&quot;")}, this.value); save(); refreshAll();"><option value="vulcan" ${edziennikSzkoly(s) === 'vulcan' ? 'selected' : ''}>VULCAN</option><option value="librus" ${edziennikSzkoly(s) === 'librus' ? 'selected' : ''}>Librus</option></select></div>`
+    + `<div class="reg-row reg-pzo-row"><textarea class="reg-pzo" rows="3" placeholder="Zasady frekwencji (PZO) — ${s ? escapeHtml(s) : 'bez szkoły'}: cytat z PZO, próg klasyfikacji, widełki %→ocena" onchange="pzoUstaw(${JSON.stringify(s).replace(/"/g, "&quot;")}, this.value)">${escapeHtml(pzoSzkoly(s))}</textarea></div>`).join('');
+  const pz = document.getElementById('regPzo');
+  if (pz) {
+    const sName = c ? (c.school || '') : '';
+    const txt = pzoSzkoly(sName);
+    pz.innerHTML = txt
+      ? `<p class="zrodlo">Źródło: <b>Przedmiotowe Zasady Oceniania z WF</b> · ${sName ? escapeHtml(sName) : 'bez szkoły'} <small>(karta „Szkoły i e-dziennik”)</small></p><blockquote>${escapeHtml(txt).replace(/\n/g, '<br>')}</blockquote>`
+      : `<p class="uwaga">Cytat z PZO ${sName ? 'szkoły ' + escapeHtml(sName) : 'Twojej szkoły'} wpisz w karcie „Szkoły i e-dziennik” (pole „Zasady frekwencji”) — pokaże się tutaj. Poniżej: jak apka liczy procent.</p>`;
+  }
   const pl = document.getElementById('regPlec');
   if (pl) pl.innerHTML = state.classes.map(x => `<div class="reg-row"><span class="fill"><b>${escapeHtml(x.name)}</b> <small>${escapeHtml(x.school || '')}</small></span><span>${x.plec === 'dz' ? 'ćwiczyła (dz.)' : x.plec === 'chl' ? 'ćwiczył (chł.)' : 'ćwiczył'}</span></div>`).join('');
 }
