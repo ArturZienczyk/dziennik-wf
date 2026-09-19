@@ -53,3 +53,20 @@ Mockup obu poziomów na jednym pasku dnia (klik = user), zanim kod.
 - Zamek w testach: `zamekPierwszeHaslo('test-haslo-123')`.
 - `git push origin main > push.log 2>&1; echo EXIT=$?` + `git ls-remote origin main` = HEAD (hook blokuje push z pipe).
 - Stare FAIL-e nie z tej pracy: `test_zalegle.py` 2 (dryf daty), `test_uklad.py` 1 (nagłówek przyklejony po przewinięciu).
+
+## 4. Audyt heurystyczny frontendu (user 19.09, cztery findingi; każdy = mały osobny ruch, po p.1–3)
+Zweryfikowane w kodzie 19.09 (linie orientacyjne):
+1. **Pierwsze uruchomienie — czasownik walczy z intencją** (`~5756` `<h2>Zamknij dziennik hasłem</h2>`, `~5763` guzik
+   „Zamknij dziennik tym hasłem”, nad tym czerwone „dane nie do odzyskania”). Nowy user przyszedł ZACZĄĆ. Gulf of
+   execution + Nielsen #2. Fix: h2 „Ustaw hasło, żeby zacząć”, guzik „Ustaw hasło i otwórz dziennik”; ostrzeżenie
+   o nieodzyskiwalności jako druga linia (zostaje, nie dominuje). Testy zamka: `test_zamek.py` (grep tekstów guzika).
+2. **Oceny — dwa selektory klasy obok siebie** („ZSS · 7b ▾” i „ZSS · klasa ▾”). Nielsen #4. Sprawdzić, co robi
+   drugi (grep w `#tab-oceny` / `renderOceny*`); jeśli to filtr szkoły — etykieta „Szkoła ▾” / „Klasa ▾”, nie dwa razy
+   „ZSS · …”; jeśli duplikat — jeden selektor.
+3. **Oceny — kolumna „Syst.” wygląda jak edytowalna, a jest liczona** (klik → toast „kolumna liczona automatycznie”,
+   `~5234/5332/6100`). Norman: signifier PRZED akcją. Fix: nagłówek z 🔒 / „auto” + komórki bez ramki/hover pola
+   (klasa `.kol-auto`), toast zostaje jako siatka.
+4. **Obecność — ikonowy guzik bez etykiety przy „◀ dziś ▶”** = `🗑` `.dzien-usun` `deleteLesson()` (`~1221`,
+   title „usuń wpisy tej lekcji”). Nielsen #6. Fix: tekst „usuń wpisy” obok ikony (albo ikona + etykieta na hover
+   widoczna bez najechania na telefonie); rozważyć przesunięcie na koniec paska, z dala od nawigacji dnia.
+Zasada: mockup nakładką tylko dla p.1 (ekran startowy) — reszta to zmiany tekstu/klasy, render zestawu i patch.
