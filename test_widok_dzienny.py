@@ -215,6 +215,22 @@ with sync_playwright() as pw:
         ),
     )
 
+    # zmiana dnia: otwarta 8c nie ma lekcji w czwartek 17.09 (plan: tylko piątek) → bez planu dnia zostaje 8c;
+    # a gdy dzień ma plan bez tej klasy → pierwsza lekcja dnia
+    page.evaluate("() => { state.planWf.plany[0].klasy['4dLO']['3'] = [2]; dateOffset(-1); }")
+    page.wait_for_timeout(300)
+    check(
+        "◀ na dzień, w którym otwarta klasa nie ma lekcji → otwiera pierwszą z planu (4dLO)",
+        page.evaluate("() => getCurrentClass().name") == "4dLO" and page.evaluate("() => state.currentDate") == "2026-09-17",
+    )
+    page.evaluate("() => { delete state.planWf.plany[0].klasy['4dLO']['3']; dateOffset(1); }")
+    page.wait_for_timeout(300)
+    check("▶ z powrotem na piątek: 4dLO ma lekcję, zostaje", page.evaluate("() => getCurrentClass().name") == "4dLO")
+    ws = page.evaluate("() => [...document.querySelectorAll('#kolPrzed .kol')].map(e => Math.round(e.getBoundingClientRect().top))")
+    check("1400 px: 5 guzików w jednym wierszu", len(set(ws)) == 1, ws)
+    page.evaluate("(d) => wybierzLekcje(state.classes[1].id, d, 5)", DZIS)
+    page.wait_for_timeout(300)
+
     # klawiatura działa w otwartej kolumnie
     page.click("h1")
     page.keyboard.press("n")
