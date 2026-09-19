@@ -16,7 +16,7 @@
 // v6: uklad - pasek gorny przyklejony, sciagi zwijane, tabela wysoko.
 // v7: zarys kolumn w Obecnosci/Statystykach/Pomiarach.
 // v8: naglowek tabeli przyklejony pod paskiem gornym.
-const CACHE_VERSION = 'dziennik-wf-v24';
+const CACHE_VERSION = 'dziennik-wf-v25';
 const SHELL = [
   './dziennik_wf.html',
   './manifest.webmanifest',

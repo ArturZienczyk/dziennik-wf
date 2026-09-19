@@ -10,7 +10,14 @@ Poprzedni handoff `HANDOFF-plan-produkt.md`: punkty 1–3 zrobione, **punkt 4 (P
 - p.3 poziom 1 wdrożony: `cls.zastepstwa[klucz]` (liść `z|klucz`) + `state.zastepstwaOkienka` (snapshot/load/scal). Wejścia: panel Zaległe (przycisk „zastępstwo"), kafelek „+ zastępstwo" na pasku dnia (modal: moja lekcja bez wpisu / okienko + nr), klik w kafelek zastępstwa = zmień/zdejmij. `test_zastepstwa.py` 30/30.
   **Poziom 2 (klasa doraźna z listą) — nadal tylko propozycja; zwiad EduPage zastępstwa nieruszony (hipoteza).**
 - Pułapki z tej sesji: modal otwierany z listy Zaległych (też modal) potrzebuje `z-index` wyżej (`#zastModal{z-index:110}`); test scalania „kopia przywraca" musi symulować świeże urządzenie (`delete c._t[p]; stemplujBaza()`), bo lokalne skasowanie = nagrobek nowszy od kopii i kopia słusznie przegrywa; 5. karta w `#summaryGrid` łamie druk 1 str. A4 → `.summary-zast` schowana w `body.stats-print`.
-- Następne: p.4 (audyt heurystyczny, 4 findingi) + `HANDOFF-plan-produkt.md` p.4 (PZO do danych, stopka z wersją, start.html).
+- Następne: `HANDOFF-plan-produkt.md` p.4 (PZO do danych, stopka z wersją, start.html); otwarte z p.1: klik w „nie było: inne" = zmiana powodu.
+
+## STAN 19.09 wieczór (sw v25) — p.4 WDROŻONE (agent z sesji 14:09 nic nie oddał; zrobione w sesji)
+- 1: ekran startowy `Ustaw hasło, żeby zacząć` + guzik `Ustaw hasło i otwórz dziennik`; ostrzeżenie zostaje, 12.5px. `test_zamek.py` zaktualizowany.
+- 2: etykieta obok selecta w `.klasa-tytul` = `zmień klasę` (było „ZSS · klasa ▾" = wyglądało jak drugi selektor; select jest jeden).
+- 3: kolumny `col.auto` dostają klasę `kol-auto` (th + td): nagłówek „🔒 auto", tło `--bg`, kursor default, puste komórki „—" zamiast „+"; toast po kliknięciu zostaje jako siatka.
+- 4: `🗑 usuń wpisy` z etykietą, przeniesiony za `#lessonCount` (z dala od ◀ dziś ▶); na telefonie nadal ukryty (`display:none` ~1091).
+- Test: `test_audyt_ux.py` 14/14, zrzuty `_zrzuty/ux_{1_start,3_oceny,4_obecnosc}_1400.png`. Klik usera na zrzutach — nieoddany.
 
 ## Słowa usera (19.09, po obejrzeniu wdrożenia na prawdziwych danych)
 
