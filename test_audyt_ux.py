@@ -142,7 +142,25 @@ with sync_playwright() as pw:
     page.locator("#tab-oceny table").scroll_into_view_if_needed()
     page.screenshot(path=str(SHOTS / "ux_3_oceny_1400.png"), full_page=True)
 
-    check("bez błędów JS", not errors, errors[:3])
+    # 5. Plan — chipy dni wolnych w zapisie DD.MM, nie MM-DD (user 19.09: „zaczynają się od miesiąca")
+    page.evaluate(
+        "() => { const p = planAktywny(true); p.wolne = ['2026-11-11', '2026-12-23', '2026-12-24']; save(); renderPlanUstawienia(); }"
+    )
+    page.click('button.tab:has-text("Plan")')
+    page.wait_for_timeout(300)
+    chips = page.locator("#planUstawienia .wolny-chip").all_inner_texts()
+    check(
+        "plan: chip dnia wolnego = DD.MM",
+        bool(chips) and chips[0].startswith("11.11"),
+        str(chips),
+    )
+    check(
+        "plan: zakres = DD.MM – DD.MM",
+        len(chips) > 1 and chips[1].startswith("23.12 – 24.12"),
+        str(chips),
+    )
+
+    check("bez błędów JS", not errors, str(errors[:3]))
     browser.close()
 
 httpd.shutdown()
