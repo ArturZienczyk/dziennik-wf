@@ -219,6 +219,21 @@ with sync_playwright() as pw:
     page.click("h1")
     page.keyboard.press("n")
     page.wait_for_timeout(200)
+    # zwolniony długoterminowo bywa nieobecny: klik „— zwolniony —" → picker → NB nadpisuje ZW
+    page.evaluate("() => { state.students[4].longTermReleased = true; renderAttendance(); }")
+    page.click("#attendanceBody tr:nth-child(5) .status-blocked")
+    page.wait_for_timeout(150)
+    page.evaluate("() => setStatus('NB')")
+    page.wait_for_timeout(150)
+    check(
+        "zwolniony długoterminowo: NB nadpisuje ZW w danych",
+        page.evaluate("() => attRead((state.attendance[attKey()] || {})[state.students[4].id]).s") == "NB",
+    )
+    check(
+        "zwolniony długoterminowo z NB: w tabeli chip NB",
+        "NB" in page.text_content("#attendanceBody tr:nth-child(5) .status-btn"),
+    )
+    page.evaluate("() => { state.students[4].longTermReleased = false; delete state.attendance[attKey()][state.students[4].id]; renderAttendance(); }")
     check(
         "klawisz n nadaje NĆ w otwartej kolumnie",
         page.evaluate("(d) => attRead(state.attendance[d].v1).s", DZIS) == "NC",
