@@ -74,8 +74,12 @@ with sync_playwright() as pw:
         "() => { planAktywny(false).wygenerowano = '2026-09-04'; renderPlanUstawienia(); }"
     )
     check(
-        "Plan z pliku: kolumna „klasa w planie” wraca",
-        "klasa w planie" in page.inner_text("#planUstawienia table tr:first-child").lower(),
+        "Plan z pliku: siatka nadal bez kolumny „klasa w planie” (19.09: przeniesiona do Zaawansowane)",
+        "klasa w planie" not in page.inner_text("#planUstawienia table tr:first-child").lower(),
+    )
+    check(
+        "Plan z pliku: dopasowanie nazw w Zaawansowane, jeden select na klasę",
+        page.locator("details.plan-zaaw .plan-dopasowanie select").count() == len(page.evaluate("() => state.classes")),
     )
     page.evaluate(
         "() => { delete planAktywny(false).wygenerowano; renderPlanUstawienia(); }"
