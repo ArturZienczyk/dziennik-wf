@@ -2677,7 +2677,7 @@ function renderPlanUstawienia() {
   const zakresy = wolneZakresy(p ? p.wolne : []);
   h += `<div class="plan-karta"><h3>Dni wolne <span class="licz">(${p ? (p.wolne || []).length : 0})</span></h3>` +
     '<p class="opis">W pasku tygodnia dzień wyszarzony, lekcje nie liczą się do zaległych.</p><div>' +
-    (zakresy.length ? zakresy.map(z => `<span class="wolny-chip">${z.od === z.do ? z.od.slice(5) : z.od.slice(5) + ' – ' + z.do.slice(5)}<button type="button" onclick="wolneUsun('${z.od}','${z.do}')" title="usuń">×</button></span>`).join('') : '<span style="color:var(--ink-muted)">—</span>') + '</div>' +
+    (zakresy.length ? zakresy.map(z => `<span class="wolny-chip">${z.od === z.do ? shortDate(z.od) : shortDate(z.od) + ' – ' + shortDate(z.do)}<button type="button" onclick="wolneUsun('${z.od}','${z.do}')" title="usuń">×</button></span>`).join('') : '<span style="color:var(--ink-muted)">—</span>') + '</div>' +
     '<div class="dodaj">od <input type="date" id="wolneOd"> do <input type="date" id="wolneDo"> ' +
     '<button type="button" onclick="wolneDodaj(document.getElementById(\'wolneOd\').value, document.getElementById(\'wolneDo\').value)">dodaj</button>' +
     '<textarea id="wolneTekst" rows="1" placeholder="albo wklej daty z kalendarium (RRRR-MM-DD lub DD.MM.RRRR, „od – do” w linii)" style="flex:1;min-width:220px;"></textarea>' +
