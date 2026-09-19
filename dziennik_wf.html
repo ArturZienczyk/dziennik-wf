@@ -3040,7 +3040,7 @@ function renderDzien() {
   if (nrOtw === null) { const z = lekcje.find(l => l.cls && l.cls.id === cur.id && kluczZ(iso, nrDlaLekcji(cur, iso, l.nr)) === kOtw); if (z) nrOtw = z.nr; }
   const wPlanie = lekcje.some(l => l.cls && l.cls.id === cur.id);
   head.innerHTML = `<span class="nr">${nrOtw !== null ? 'L' + nrOtw : (lekcje.length && !wPlanie) ? 'poza planem' : 'lekcja'}</span><span class="kl">${escapeHtml(cur.name)}${cur.plec ? ' <span class="plec">' + (cur.plec === 'dz' ? 'dz.' : 'chł.') + '</span>' : ''}</span>` +
-    `<span class="sum">${pk === null ? '' : '<b>' + pk + '%</b> · '}${wpisani}/${active.length} wpisanych</span><span class="otw">otwarta</span>` +
+    `<span class="sum">${pk === null ? '' : '<b>' + pk + '%</b> · '}${wpisani}/${active.length} wpisanych${cur.students.length > active.length ? ` · +${cur.students.length - active.length} zwol.` : ''}</span><span class="otw">otwarta</span>` +
     ((cur.odwolane || {})[kOtw] ? `<span class="niebylo-info">nie było: ${escapeHtml(cur.odwolane[kOtw])} <button type="button" class="niebylo-cofnij" onclick="zalegleCofnijNieBylo('${cur.id}','${kOtw}')" title="zdejmij „nie było”">jednak była</button></span>` : '');
   head.parentElement.classList.toggle('niebylo', !!(cur.odwolane || {})[kOtw]);
   if (tydzien) return;
@@ -3382,7 +3382,7 @@ function updateSaveBar() {
   if (withoutStatus.length === 0) {
     bar.classList.add('complete');
     const zap = cur ? _zapisanoO[_zapisanoKlucz(cur, attKey())] : null;
-    msg = `<strong>✓ ${zap ? 'Zapisano ' + zap : 'Lekcja zapisana'}.</strong> ${alreadyC.length}× ${cw} · ${exceptions.length} wyjątków · razem ${activeStudents.length} uczniów`;
+    msg = `<strong>✓ ${zap ? 'Zapisano ' + zap : 'Lekcja zapisana'}.</strong> ${alreadyC.length}× ${cw} · ${exceptions.length} wyjątków · razem ${activeStudents.length} uczniów${state.students.length > activeStudents.length ? ` (+ ${state.students.length - activeStudents.length} zwolnionych długoterminowo, poza bazą)` : ''}`;
     if (btn) btn.style.display = 'none';
   } else {
     bar.classList.remove('complete');
