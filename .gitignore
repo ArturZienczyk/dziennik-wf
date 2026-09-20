@@ -13,3 +13,11 @@ _check_inline.js
 .DS_Store
 Thumbs.db
 _zrzuty/
+
+# piaskownica: artefakt generowany przez zrob_piaskownice.py
+dziennik_wf_piaskownica.html
+
+# wersja robocza + odlozone wersje kodu (artefakty przeplywu roboczy->dziennik)
+dziennik_wf_roboczy.html
+_wersje-poprzednie/
+__pycache__/
