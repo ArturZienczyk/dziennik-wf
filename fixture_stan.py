@@ -83,9 +83,10 @@ def serwer(port=8781):
         httpd.server_close()
 
 
-def otworz(pw, port, viewport=None):
+def otworz(pw, port, viewport=None, plik="dziennik_wf.html"):
     """Czysta przeglądarka + odblokowany zamek. Zwraca (browser, ctx, page, errors).
-    `errors` to żywa lista — rośnie sama przy każdym błędzie JS i console.error."""
+    `errors` to żywa lista — rośnie sama przy każdym błędzie JS i console.error.
+    `plik` pozwala obejrzeć wersję roboczą/piaskownicę tym samym fixture'm."""
     browser = pw.chromium.launch()
     ctx = browser.new_context(
         service_workers="block",
@@ -100,7 +101,7 @@ def otworz(pw, port, viewport=None):
         if m.type == "error"
         else None,
     )
-    page.goto("http://127.0.0.1:%d/dziennik_wf.html" % port)
+    page.goto("http://127.0.0.1:%d/%s" % (port, plik))
     page.wait_for_timeout(400)
     page.evaluate("() => zamekPierwszeHaslo('%s')" % HASLO)
     page.wait_for_timeout(200)

@@ -42,8 +42,10 @@ PODMIANY = [
 
 # Pasek na górze: piaskownica ma być rozpoznawalna od pierwszego spojrzenia,
 # żeby nigdy nie wpisać do niej prawdziwej lekcji (i nie szukać jej potem w dzienniku).
+# Pasek u DOŁU, nie u góry: górę zajmuje przyklejona belka apki (tytuł, zakładki,
+# belka dnia) — pasek sticky top:0 przykrywał jej pierwszy wiersz i psuł ocenę wyglądu.
 PASEK = (
-    '<div style="position:sticky;top:0;z-index:99999;background:#b91c1c;color:#fff;'
+    '<div style="position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#b91c1c;color:#fff;'
     'padding:6px 14px;font:600 13px/1.4 system-ui,sans-serif;text-align:center">'
     "PIASKOWNICA — osobny magazyn danych. Wpisy STĄD NIE trafiają do Twojego dziennika "
     "(i odwrotnie). Do prób i klikania.</div>"

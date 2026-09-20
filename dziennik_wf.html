@@ -220,6 +220,14 @@
     display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
     background: var(--bg); padding: 10px 16px; border-radius: 8px; margin-bottom: 16px;
   }
+  /* Belka dnia przyklejona pod paskiem górnym (2026-09-20): przy 23 uczniach zjeżdżała z ekranu
+     i przy wpisywaniu nie było widać, KTÓRY dzień i która lekcja jest otwarta. Dolny odstęp
+     wchodzi w padding (nie margin), żeby pod belką nie przejeżdżał przezroczysty pasek wierszy.
+     --datarow-h ustawia JS; nagłówek tabeli klei się pod sumą topbar + belka. */
+  #tab-obecnosc .date-row.dzien-row {
+    position: sticky; top: var(--topbar-h, 0px); z-index: 15;
+    margin-bottom: 0; padding-bottom: 16px; border-radius: 0 0 8px 8px;
+  }
   .date-row label { font-size: 13px; color: var(--ink-muted); }
   .date-row input[type="date"] {
     padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px;
@@ -325,9 +333,16 @@
   .dzien-kolumny.tydzien .save-bar { margin-top: 12px; border: 1px solid #97C459; border-radius: 8px; }
   /* Widok dnia: % jedną liczbą (ułamek pod spodem rozciągał wiersz) */
   .dzien-kolumny:not(.tydzien) table.attendance .stat-detail, .dzien-kolumny:not(.tydzien) table.attendance td br { display: none; }
-  /* Telefon w poprzek (~800 px, user 2026-09-19): dostaje reguły laptopa (opakowanie bez przewijania, żeby
-     nagłówek się kleił), a tabela z licznikami jest szersza niż ekran i wylewała się poza ramkę kolumny.
-     Do 1100 px tabela przewija się w swoim opakowaniu; nagłówek przestaje się kleić — świadomy koszt. */
+  /* Ekran wezszy niz tabela (telefon, telefon w poprzek, okno na pol ekranu) — 2026-09-20.
+     Poprzednia wersja (19.09) dawala tabeli wlasne okno przewijania i SWIADOMIE odklejala
+     naglowek; objaw u usera: przy wpisywaniu widac liste nazwisk bez nazw kolumn. Teraz
+     odwrotnie — w poziomie przewija sie CALA strona, a kolumna otwartej lekcji rosnie do
+     szerokosci tabeli (dlatego ramka nie peka), wiec naglowek moze sie kleic do okna
+     przegladarki tak jak na laptopie. Koszt zamieniony: w bok jedzie strona, nie pudelko. */
+  /* Telefon w poprzek (~800 px, user 2026-09-19): dostaje reguly laptopa (opakowanie bez przewijania, zeby
+     naglowek sie kleil), a tabela z licznikami jest szersza niz ekran i wylewala sie poza ramke kolumny.
+     Do 1100 px tabela przewija sie w swoim opakowaniu; naglowek przestaje sie kleic — swiadomy koszt.
+     (Prog probowano zejsc do 820 px 2026-09-20 — user nie zobaczyl roznicy, wrocilismy do 1100.) */
   @media (max-width: 1100px) {
     .container .dzien-kolumny .kol.otwarta .table-wrap { overflow-x: auto; }
     .dzien-kolumny .kol.otwarta table.attendance thead th { position: static; box-shadow: none; }
@@ -424,7 +439,7 @@
   @media (min-width: 701px) {
     .container .table-wrap, .container .oceny-wrap { overflow: visible; }
     table.attendance thead th, table.dziennik thead th {
-      position: sticky; top: var(--topbar-h, 0px); z-index: 4;
+      position: sticky; top: calc(var(--topbar-h, 0px) + var(--datarow-h, 0px)); z-index: 4;
       background: var(--line-soft); box-shadow: 0 2px 0 var(--ink);
     }
   }
@@ -1115,7 +1130,7 @@
     .dzien-kolumny .kol { min-width: 0; }
     .dzien-kolumny .kol-head { padding: 6px 10px 7px; }
     .reg-grid { grid-template-columns: 1fr; }
-    .table-wrap, .oceny-wrap { -webkit-overflow-scrolling: touch; max-height: calc(100vh - var(--topbar-h, 0px) - 16px); overflow: auto; }
+    .table-wrap, .oceny-wrap { -webkit-overflow-scrolling: touch; max-height: calc(100vh - var(--topbar-h, 0px) - var(--datarow-h, 0px) - 16px); overflow: auto; }
     table.attendance thead th, table.dziennik thead th { position: sticky; top: 0; z-index: 4; background: var(--line-soft); box-shadow: 0 2px 0 var(--ink); }
     table.attendance thead th:nth-child(1), table.attendance thead th:nth-child(2) { z-index: 5; }
 
@@ -3091,15 +3106,24 @@ function pomocStart() {
   });
 }
 document.addEventListener('DOMContentLoaded', pomocStart);
-// Wysokość przyklejonego paska → --topbar-h (nagłówki tabel kleją się tuż pod nim)
+// Wysokość przyklejonych pasków → --topbar-h i --datarow-h.
+// Nagłówek tabeli klei się pod ICH SUMĄ; obie zmienne mierzone, bo obie belki zawijają
+// się na wąskim ekranie (stała liczba rozjechałaby się przy pierwszym zawinięciu).
 function topbarMierz() {
   const t = document.querySelector('.topbar');
   if (t) document.documentElement.style.setProperty('--topbar-h', t.offsetHeight + 'px');
+  const d = document.querySelector('#tab-obecnosc .date-row.dzien-row');
+  const widoczna = d && d.offsetParent !== null;
+  document.documentElement.style.setProperty('--datarow-h', widoczna ? d.offsetHeight + 'px' : '0px');
 }
 document.addEventListener('DOMContentLoaded', () => {
   topbarMierz();
-  const t = document.querySelector('.topbar');
-  if (t && 'ResizeObserver' in window) new ResizeObserver(topbarMierz).observe(t);
+  const obserwuj = sel => {
+    const el = document.querySelector(sel);
+    if (el && 'ResizeObserver' in window) new ResizeObserver(topbarMierz).observe(el);
+  };
+  obserwuj('.topbar');
+  obserwuj('#tab-obecnosc .date-row.dzien-row');
   window.addEventListener('resize', topbarMierz);
 });
 
@@ -3117,6 +3141,9 @@ function switchTab(name) {
   if (name === 'obecnosc') renderAttendance();
   if (name === 'plan') renderPlanUstawienia();
   if (name === 'reguly') renderReguly();
+  // belka dnia istnieje tylko w Obecności — poza nią --datarow-h musi spaść do 0,
+  // inaczej nagłówki tabel w innych zakładkach kleiłyby się o jej wysokość za nisko
+  topbarMierz();
 }
 
 // =====================================================

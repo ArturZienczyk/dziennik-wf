@@ -94,11 +94,18 @@ with sync_playwright() as pw:
     h_top = page.evaluate(
         "() => Math.round(document.querySelector('.topbar').getBoundingClientRect().bottom)"
     )
+    # Od 2026-09-20 pod paskiem gornym stoi jeszcze przyklejona belka dnia (data, numer
+    # lekcji) — naglowek tabeli klei sie pod NIA, nie pod samym paskiem gornym.
+    # Pelny inwariant obu belek na trzech szerokosciach: test_belka_przyklejona.py
+    y_belka = page.evaluate(
+        "() => Math.round(document.querySelector('#tab-obecnosc .date-row.dzien-row').getBoundingClientRect().bottom)"
+    )
+    check("belka dnia przyklejona tuz pod paskiem gornym", y_belka >= h_top, (y_belka, h_top))
     y_th = page.evaluate(TOP, "#attendanceTable thead th")
     check(
-        "naglowek tabeli przyklejony tuz pod paskiem gornym po przewinieciu",
-        abs(y_th - h_top) <= 2,
-        (y_th, h_top),
+        "naglowek tabeli przyklejony tuz pod belka dnia po przewinieciu",
+        abs(y_th - y_belka) <= 2,
+        (y_th, y_belka),
     )
 
     w_toolbar = page.evaluate(
