@@ -199,7 +199,8 @@ with sync_playwright() as pw:
     }""")
     cid2 = page.evaluate("() => state.classes[state.classes.length - 1].id")
     z2 = lambda: page.evaluate(
-        "(d) => zaleglePolicz(d).filter(x => x.clsName === '2 inf').map(x => x.wpis)", DZIS
+        "(d) => zaleglePolicz(d).filter(x => x.clsName === '2 inf').map(x => x.wpis)",
+        DZIS,
     )
     check(
         "v2: 2 piątki × 2 lekcje = 4 zaległe z numerami",
@@ -219,7 +220,11 @@ with sync_playwright() as pw:
         "(id) => { const c = state.classes.find(x => x.id === id); c.attendance['2026-09-04#3'] = {u1: 'NB'}; save(); refreshAll(); }",
         cid2,
     )
-    check("wpis 'data#3' pokrywa dokładnie L3", z2() == ["2026-09-11#2", "2026-09-11#3"], z2())
+    check(
+        "wpis 'data#3' pokrywa dokładnie L3",
+        z2() == ["2026-09-11#2", "2026-09-11#3"],
+        z2(),
+    )
     check(
         "statystyki liczą obie lekcje 4.09 osobno",
         page.evaluate(
@@ -230,12 +235,17 @@ with sync_playwright() as pw:
     )
     page.click("#zalegleChipBtn")
     page.wait_for_timeout(200)
-    page.select_option("#zaleglePowod_%s_2026-09-11_L2" % cid2, "zastępstwo / zmiana planu")
+    page.select_option(
+        "#zaleglePowod_%s_2026-09-11_L2" % cid2, "zastępstwo / zmiana planu"
+    )
     page.click("#zaleglePowod_%s_2026-09-11_L2 + button" % cid2)
     page.wait_for_timeout(150)
     check(
         "'nie było' pod kluczem z numerem",
-        page.evaluate("(id) => state.classes.find(x => x.id === id).odwolane['2026-09-11#2']", cid2)
+        page.evaluate(
+            "(id) => state.classes.find(x => x.id === id).odwolane['2026-09-11#2']",
+            cid2,
+        )
         == "zastępstwo / zmiana planu",
     )
     check("zostaje 1 zaległa (11.09 L3)", z2() == ["2026-09-11#3"], z2())
@@ -250,22 +260,51 @@ with sync_playwright() as pw:
     check("selektor numeru lekcji = 3", page.input_value("#lessonNr") == "3")
     # pasek tygodnia z planu: kafelki Pi 11.09 dla „2 inf” = L2 i L3; klik = klasa+data+lekcja
     kaf = "#planTydzien .plan-lekcja[data-cls='%s'][data-iso='2026-09-11']" % cid2
-    check("pasek tygodnia: 2 kafelki 2 inf w piątek", page.locator(kaf).count() == 2, page.locator(kaf).count())
-    check("kafelek L3 aktywny", "aktywna" in page.get_attribute(kaf + "[data-nr='3']", "class"))
-    check("kafelek L2 = nie było (szary)", "niebylo" in page.get_attribute(kaf + "[data-nr='2']", "class"))
-    page.evaluate("() => { state.currentDate = '2026-09-04'; renderAttendance(); }")  # tydzień 31.08–4.09
-    page.click("#planTydzien .plan-lekcja[data-cls='%s'][data-iso='2026-09-04'][data-nr='2']" % cid2)
+    check(
+        "pasek tygodnia: 2 kafelki 2 inf w piątek",
+        page.locator(kaf).count() == 2,
+        page.locator(kaf).count(),
+    )
+    check(
+        "kafelek L3 aktywny",
+        "aktywna" in page.get_attribute(kaf + "[data-nr='3']", "class"),
+    )
+    check(
+        "kafelek L2 = nie było (szary)",
+        "niebylo" in page.get_attribute(kaf + "[data-nr='2']", "class"),
+    )
+    page.evaluate(
+        "() => { state.currentDate = '2026-09-04'; renderAttendance(); }"
+    )  # tydzień 31.08–4.09
+    page.click(
+        "#planTydzien .plan-lekcja[data-cls='%s'][data-iso='2026-09-04'][data-nr='2']"
+        % cid2
+    )
     page.wait_for_timeout(150)
     check(
         "klik pierwszej lekcji dnia → wpis pod samą datą (bez numeru)",
-        page.evaluate("() => [state.currentDate, state.currentNr]") == ["2026-09-04", None],
+        page.evaluate("() => [state.currentDate, state.currentNr]")
+        == ["2026-09-04", None],
     )
-    check("kafelek 4.09 L2 zielony (wpis jest)", "jest" in page.get_attribute("#planTydzien .plan-lekcja[data-cls='%s'][data-iso='2026-09-04'][data-nr='2']" % cid2, "class"))
+    check(
+        "kafelek 4.09 L2 zielony (wpis jest)",
+        "jest"
+        in page.get_attribute(
+            "#planTydzien .plan-lekcja[data-cls='%s'][data-iso='2026-09-04'][data-nr='2']"
+            % cid2,
+            "class",
+        ),
+    )
     page.evaluate("() => { state.currentDate = '2026-09-11'; renderAttendance(); }")
     page.click(kaf + "[data-nr='3']")
     page.wait_for_timeout(150)
-    check("klik drugiej godziny → numer 3", page.evaluate("() => attKey()") == "2026-09-11#3")
-    check("selektor numeru schowany, gdy plan jest", not page.is_visible("#lessonNrZapas"))
+    check(
+        "klik drugiej godziny → numer 3",
+        page.evaluate("() => attKey()") == "2026-09-11#3",
+    )
+    check(
+        "selektor numeru schowany, gdy plan jest", not page.is_visible("#lessonNrZapas")
+    )
     page.screenshot(path=str(SHOTS / "zalegle_6_pasek_tygodnia.png"))
     page.keyboard.press("c")  # klawiatura: status pod attKey()
     page.wait_for_timeout(150)
@@ -281,61 +320,144 @@ with sync_playwright() as pw:
     page.evaluate("() => zamknijZalegle()")
     page.click(".tab:has-text('Plan')")
     page.wait_for_timeout(200)
-    check("zakładka Plan aktywna", page.evaluate("() => document.getElementById('tab-plan').classList.contains('active')"))
+    check(
+        "zakładka Plan aktywna",
+        page.evaluate(
+            "() => document.getElementById('tab-plan').classList.contains('active')"
+        ),
+    )
     n_kom = page.locator("#planUstawienia tr:not(.plan-inne) .siatka-kom").count()
-    check("siatka: 5 komórek na klasę", n_kom == 5 * page.evaluate("() => state.classes.length"), n_kom)
+    check(
+        "siatka: 5 komórek na klasę",
+        n_kom == 5 * page.evaluate("() => state.classes.length"),
+        n_kom,
+    )
     page.click("#planUstawienia .siatka-kom[data-cls='%s'][data-dzien='0']" % cid2)
     page.wait_for_timeout(150)
-    check("klik komórki otwiera 12 numerów", page.locator("#planUstawienia .siatka-nr").count() == 12)
+    check(
+        "klik komórki otwiera 12 numerów",
+        page.locator("#planUstawienia .siatka-nr").count() == 12,
+    )
     page.click("#planUstawienia .siatka-nr[data-nr='5']")
     page.wait_for_timeout(150)
     plan2t = lambda: page.evaluate("() => planAktywny(false).klasy['2t']")
-    check("klik numeru dopisuje Pn L5 do planu", plan2t() == {"0": [5], "4": [2, 3]}, plan2t())
-    check("nowa lekcja w siatce od razu liczy się w Zaległych (Pn 7.09)", "2026-09-07#5" in z2(), z2())
+    check(
+        "klik numeru dopisuje Pn L5 do planu",
+        plan2t() == {"0": [5], "4": [2, 3]},
+        plan2t(),
+    )
+    check(
+        "nowa lekcja w siatce od razu liczy się w Zaległych (Pn 7.09)",
+        "2026-09-07#5" in z2(),
+        z2(),
+    )
     page.click("#planUstawienia .siatka-nr[data-nr='5']")
     page.wait_for_timeout(150)
     check("drugi klik zdejmuje", plan2t() == {"4": [2, 3]}, plan2t())
     page.screenshot(path=str(SHOTS / "zalegle_5_siatka.png"))
 
     # 11b. dwie klasy na tę samą klasę planu → ostrzeżenie w tabeli (empiria: 5TS przypięte do 2 technikum)
-    page.evaluate("(id) => zaleglePlanKlasaZmien(id, '2t')", page.evaluate("() => state.classes[1].id"))
-    check("dubel klasy planu: ostrzeżenie przy obu", page.locator("#planUstawienia .plan-dubel").count() == 2)
-    page.evaluate("(id) => zaleglePlanKlasaZmien(id, '4dLO')", page.evaluate("() => state.classes[1].id"))
-    check("po rozdzieleniu brak ostrzeżenia", page.locator("#planUstawienia .plan-dubel").count() == 0)
+    page.evaluate(
+        "(id) => zaleglePlanKlasaZmien(id, '2t')",
+        page.evaluate("() => state.classes[1].id"),
+    )
+    check(
+        "dubel klasy planu: ostrzeżenie przy obu",
+        page.locator("#planUstawienia .plan-dubel").count() == 2,
+    )
+    page.evaluate(
+        "(id) => zaleglePlanKlasaZmien(id, '4dLO')",
+        page.evaluate("() => state.classes[1].id"),
+    )
+    check(
+        "po rozdzieleniu brak ostrzeżenia",
+        page.locator("#planUstawienia .plan-dubel").count() == 0,
+    )
 
     # 11c. inne zajęcia: dopisane w zakładce Plan → szary kafelek w pasku, bez frekwencji i bez Zaległych
     page.fill("#inneNazwa", "EZ test")
     page.click("#planUstawienia button:has-text('dodaj zajęcia')")
     page.wait_for_timeout(150)
-    page.click("#planUstawienia tr.plan-inne:has-text('EZ test') .siatka-kom[data-dzien='4']")
+    page.click(
+        "#planUstawienia tr.plan-inne:has-text('EZ test') .siatka-kom[data-dzien='4']"
+    )
     page.wait_for_timeout(150)
     page.click("#planUstawienia .siatka-nr[data-nr='5']")
     page.wait_for_timeout(150)
-    check("inne w planie", page.evaluate("() => planAktywny(false).inne['EZ test']") == {"4": [5]})
+    check(
+        "inne w planie",
+        page.evaluate("() => planAktywny(false).inne['EZ test']") == {"4": [5]},
+    )
     page.click(".tab:has-text('Obecność')")
     page.wait_for_timeout(200)
-    kaf_inne = "#planTydzien .plan-lekcja.inne[data-inne='EZ test'][data-iso='2026-09-11']"
-    check("szary kafelek EZ 4a w piątek, L5", page.locator(kaf_inne).count() == 1 and page.get_attribute(kaf_inne, "data-nr") == "5")
+    kaf_inne = (
+        "#planTydzien .plan-lekcja.inne[data-inne='EZ test'][data-iso='2026-09-11']"
+    )
+    check(
+        "szary kafelek EZ 4a w piątek, L5",
+        page.locator(kaf_inne).count() == 1
+        and page.get_attribute(kaf_inne, "data-nr") == "5",
+    )
     check("kafelek inne nie ma kliku", page.get_attribute(kaf_inne, "onclick") is None)
-    check("inne nie liczy się w Zaległych", not any("EZ" in x for x in page.evaluate("(d) => zaleglePolicz(d).map(x => x.clsName)", DZIS)))
+    check(
+        "inne nie liczy się w Zaległych",
+        not any(
+            "EZ" in x
+            for x in page.evaluate("(d) => zaleglePolicz(d).map(x => x.clsName)", DZIS)
+        ),
+    )
     page.screenshot(path=str(SHOTS / "zalegle_7_inne.png"))
     page.click(".tab:has-text('Plan')")
     page.wait_for_timeout(200)
     page.evaluate("() => inneUsun('EZ test')")
-    check("inne usunięte", page.evaluate("() => !('EZ test' in planAktywny(false).inne)"))
+    check(
+        "inne usunięte", page.evaluate("() => !('EZ test' in planAktywny(false).inne)")
+    )
     page.screenshot(path=str(SHOTS / "zalegle_8_zakladka_plan.png"))
+
+    # 11d. przypadek wrogi (2026-09-21): nazwa zajęć z apostrofem i backslashem. escapeHtml zamienia
+    # apostrof na &#39;, ale przeglądarka dekoduje encje ZANIM atrybut onclick trafi do parsera JS —
+    # bez JSON.stringify taka nazwa wykonuje się jako kod po kliknięciu w ×. Droga wejścia to nie tylko
+    # klawiatura: sekcja `inne` przyjeżdża też z pliku plan-wf.json i ze scalonej kopii telefonu.
+    ZLE_INNE = "EZ'); window.__xssInne = 1; ('\\\\"
+    page.fill("#inneNazwa", ZLE_INNE)
+    page.click("#planUstawienia button:has-text('dodaj zajęcia')")
+    page.wait_for_timeout(200)
+    check(
+        "wroga nazwa zajęć w planie",
+        page.evaluate("(n) => n in planAktywny(false).inne", ZLE_INNE),
+    )
+    # klikamy guzik DOKLADNIE tego wiersza (po fragmencie wrogiej nazwy) — pozycja w tabeli zalezy od
+    # sortowania alfabetycznego, wiec ani .first ani .last nie jest tu pewne
+    page.locator('tr.plan-inne:has-text("window.__xssInne") button.usun').click()
+    page.wait_for_timeout(250)
+    # sprawdzane PO kliku: onclick odpala się dopiero przy kliknięciu, sam render niczego nie wykonuje
+    check(
+        "wroga nazwa zajęć nie wykonuje się jako kod (po kliku w ×)",
+        page.evaluate("() => window.__xssInne === undefined"),
+    )
+    check(
+        "usuwanie zajęć działa też dla nazwy z apostrofem i backslashem",
+        page.evaluate("(n) => !(n in (planAktywny(false).inne || {}))", ZLE_INNE),
+        page.evaluate("() => Object.keys(planAktywny(false).inne || {})"),
+    )
 
     # 12. dni wolne: od–do + wklejenie tekstu
     page.evaluate("() => wolneDodaj('2026-09-10', '2026-09-11')")
     check(
         "dni wolne od–do dodane",
-        page.evaluate("() => planAktywny(false).wolne.filter(x => x >= '2026-09-10' && x <= '2026-09-11')")
+        page.evaluate(
+            "() => planAktywny(false).wolne.filter(x => x >= '2026-09-10' && x <= '2026-09-11')"
+        )
         == ["2026-09-10", "2026-09-11"],
     )
     check("wolny piątek 11.09 nie liczy się", z2() == [], z2())
     check(
         "wklejone kalendarium: ISO, DD.MM.RRRR, zakres w linii",
-        page.evaluate("(t) => wolneZTekstu(t)", "23.12.2026 – 24.12.2026\nwolne 2027-01-06\nnic tu nie ma")
+        page.evaluate(
+            "(t) => wolneZTekstu(t)",
+            "23.12.2026 – 24.12.2026\nwolne 2027-01-06\nnic tu nie ma",
+        )
         == ["2026-12-23", "2026-12-24", "2027-01-06"],
     )
     page.evaluate("() => wolneUsun('2026-09-10', '2026-09-11')")
@@ -344,7 +466,10 @@ with sync_playwright() as pw:
     # 13. plan v1 obok v2 w tej samej strukturze: 7b (lista dni) dalej liczy per dzień
     check(
         "v1 nadal działa obok v2",
-        page.evaluate("(d) => zaleglePolicz(d).filter(x => x.clsName === '7 b').length", DZIS) > 0,
+        page.evaluate(
+            "(d) => zaleglePolicz(d).filter(x => x.clsName === '7 b').length", DZIS
+        )
+        > 0,
     )
 
     check(

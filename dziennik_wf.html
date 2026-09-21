@@ -2770,7 +2770,7 @@ function renderPlanUstawienia() {
     nazwyInne.forEach(nazwa => {
       const id = 'inne:' + nazwa;
       const s = planSiatkaZ(inne, nazwa);
-      h += `<tr class="plan-inne"><td class="kl">${escapeHtml(nazwa)} <button type="button" class="usun" onclick="inneUsun('${escapeHtml(nazwa).replace(/'/g, "\\'")}')" title="usuń z planu">×</button></td>`;
+      h += `<tr class="plan-inne"><td class="kl">${escapeHtml(nazwa)} <button type="button" class="usun" onclick="inneUsun(${escapeHtml(JSON.stringify(nazwa))})" title="usuń z planu">×</button></td>`;
       for (let d = 0; d < 5; d++) h += `<td>${kom(id, s, d, true)}</td>`;
       h += `</tr>`;
       if (siatkaOtwarta && siatkaOtwarta.clsId === id) h += nrWiersz(id, nazwa, s);
