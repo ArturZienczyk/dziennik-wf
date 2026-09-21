@@ -98,14 +98,14 @@ with sync_playwright() as pw:
         },
     )
 
-    # NS nie ma manipulatora w Regulach — to decyzja, nie ustawienie: zadna regula go nie wyrzuca z bazy
+    # pozostale reguly (BS/NC/NU) nie ruszaja NS — NS ma wlasny przelacznik
     page.evaluate(
         "() => { regulaUstaw('nuBaza', true); regulaUstaw('bsBaza', false); regulaUstaw('ncBaza', false); }"
     )
     page.wait_for_timeout(300)
     st2 = page.evaluate("() => getStudentStats('u1')")
     check(
-        "zadna regula nie wyrzuca NS z bazy",
+        "regula BS/NC/NU nie rusza NS",
         st2.get("baza") == 4 and st2.get("percent") == 100,
         st2,
     )
@@ -113,6 +113,69 @@ with sync_playwright() as pw:
         "() => { regulaUstaw('nuBaza', false); regulaUstaw('bsBaza', true); regulaUstaw('ncBaza', true); }"
     )
     page.wait_for_timeout(300)
+
+    # ---------- 1b. Przelacznik nsBaza: powrot do litery PZO ----------
+    check(
+        "domyslnie przelacznik nsBaza jest WLACZONY (decyzja Artura)",
+        page.evaluate("() => reguly().nsBaza === true"),
+    )
+    page.click("button.tab:has-text('Reguły')")
+    page.wait_for_timeout(300)
+    check(
+        "Reguly maja przelacznik NS i jest zaznaczony",
+        page.evaluate(
+            "() => { const e = document.getElementById('regNsBaza'); return !!e && e.checked; }"
+        ),
+    )
+    check(
+        "wzor w Regulach pokazuje NS w liczniku i mianowniku",
+        "zajęcia szkolne" in page.inner_text("#regWzorLicznik")
+        and "zajęcia szkolne" in page.inner_text("#regWzorMianownik"),
+        (page.inner_text("#regWzorLicznik"), page.inner_text("#regWzorMianownik")),
+    )
+    page.click("#regNsBaza")
+    page.wait_for_timeout(400)
+    check(
+        "po wylaczeniu wzor gubi NS",
+        "zajęcia szkolne" not in page.inner_text("#regWzorLicznik")
+        and "zajęcia szkolne" not in page.inner_text("#regWzorMianownik"),
+        (page.inner_text("#regWzorLicznik"), page.inner_text("#regWzorMianownik")),
+    )
+    d_off = page.evaluate("() => getStudentStats('u4')")
+    check(
+        "po wylaczeniu NS wypada z bazy: 2/3 = 67% (litera PZO)",
+        d_off.get("baza") == 3
+        and d_off.get("cwiczyl") == 2
+        and round(d_off.get("percent")) == 67,
+        {
+            "baza": d_off.get("baza"),
+            "cwiczyl": d_off.get("cwiczyl"),
+            "percent": d_off.get("percent"),
+        },
+    )
+    a_off = page.evaluate("() => getStudentStats('u1')")
+    check(
+        "wylaczony przelacznik: uczen z samym NS ma baze 3, nadal 100%",
+        a_off.get("baza") == 3 and a_off.get("percent") == 100,
+        a_off,
+    )
+    # przezywa przeladowanie (regula siedzi w state.ustawienia, nie w pamieci strony)
+    page.reload()
+    page.wait_for_timeout(600)
+    page.fill("#zamekInput", "test-haslo-123")
+    page.click('#zamek button:has-text("Otw")')
+    page.wait_for_timeout(900)
+    page.evaluate("() => zamekUI_pinPomin()")
+    check(
+        "wylaczony przelacznik przezywa przeladowanie",
+        page.evaluate("() => reguly().nsBaza === false"),
+    )
+    page.evaluate("() => regulaUstaw('nsBaza', true)")
+    page.wait_for_timeout(400)
+    check(
+        "wlaczenie z powrotem przywraca 75%",
+        page.evaluate("() => getStudentStats('u4').percent") == 75,
+    )
 
     # ---------- 2. Klawiatura: 7 oraz r nadaja NS ----------
     page.click("button.tab:has-text('Obecność')")

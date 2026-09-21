@@ -1585,8 +1585,8 @@
       <div class="reg-box">
         <h3>Jak liczona jest frekwencja</h3>
         <div id="regPzo"></div>
-        <div class="wzor"><span>ćwiczył</span><span class="kreska"></span><span id="regWzorMianownik">ćwiczył + nie ćwiczył + brak stroju + nieobecny nieuspr.</span></div>
-        <p>Domyślnie usprawiedliwiony (NU) i zwolniony (ZW) wypadają z bazy, a spóźnienie nie zmienia procentu — manipulatory obok pozwalają to zmienić pod PZO Twojej szkoły.</p>
+        <div class="wzor"><span id="regWzorLicznik">ćwiczył</span><span class="kreska"></span><span id="regWzorMianownik">ćwiczył + nie ćwiczył + brak stroju + nieobecny nieuspr.</span></div>
+        <p>Domyślnie usprawiedliwiony (NU) i zwolniony (ZW) wypadają z bazy, spóźnienie nie zmienia procentu, a zajęcia szkolne (NS) liczą się jak ćwiczył — manipulatory obok pozwalają to zmienić pod PZO Twojej szkoły.</p>
         <p class="przyklad">Przykład: 20 lekcji, 16 ćwiczył, 1 nć, 1 bs, 1 nu, 1 zw → 16 / 18 = <b>89%</b> → ocena <b>dobra</b> (75–89).</p>
       </div>
       <div class="reg-box">
@@ -1596,6 +1596,7 @@
         <label class="reg-row"><input type="checkbox" id="regNcBaza" onchange="regulaUstaw('ncBaza', this.checked)"><span class="fill"><b>Nie ćwiczył liczy się jak nieobecność</b><br><small>wyłącz → NĆ wypada z bazy</small></span></label>
         <label class="reg-row"><input type="checkbox" id="regSpPol" onchange="regulaUstaw('spPol', this.checked)"><span class="fill"><b>Spóźnienie obniża procent</b><br><small>włącz → ćwiczył ze spóźnieniem liczy się jak pół lekcji</small></span></label>
         <label class="reg-row"><input type="checkbox" id="regNuBaza" onchange="regulaUstaw('nuBaza', this.checked)"><span class="fill"><b>Nieobecność usprawiedliwiona wchodzi do bazy</b><br><small>włącz → NU obniża procent (jak frekwencja ogólna w e-dzienniku)</small></span></label>
+        <label class="reg-row"><input type="checkbox" id="regNsBaza" onchange="regulaUstaw('nsBaza', this.checked)"><span class="fill"><b>Zajęcia szkolne (NS) liczą się jak ćwiczył</b><br><small>decyzja Artura 2026-09-21, na korzyść ucznia — reprezentuje szkołę, więc formalnie jest na zajęciach. Wyłącz → NS wypada z bazy, czyli litera PZO („nie są wliczane do ogólnej liczby zajęć”). C, C, NĆ, NS: włączony 75% · wyłączony 67%</small></span></label>
         <div class="reg-row"><input type="number" id="regProgZielony" min="1" max="100" onchange="regulaUstaw('progZielony', this.value)"><span class="fill"><b>Próg zielony</b> <small>· poniżej: bursztyn</small></span></div>
         <div class="reg-row"><input type="number" id="regProgCzerwony" min="1" max="100" onchange="regulaUstaw('progCzerwony', this.value)"><span class="fill"><b>Próg czerwony</b> <small>· poniżej: czerwień</small></span></div>
         <h3 style="margin-top:16px;">Okna Systematyczności — <span id="regOknaKlasa"></span></h3>
@@ -1993,7 +1994,7 @@ function makeClass(school, name, students) {
   };
 }
 // ---- Ustawienia wspólne (reguły liczenia, e-dziennik per szkoła) ----
-const REGULY_DOMYSLNE = { bsBaza: true, ncBaza: true, spPol: false, nuBaza: false, progZielony: 90, progCzerwony: 75 };
+const REGULY_DOMYSLNE = { bsBaza: true, ncBaza: true, spPol: false, nuBaza: false, nsBaza: true, progZielony: 90, progCzerwony: 75 };
 function ustawienia() {
   if (!state.ustawienia || typeof state.ustawienia !== 'object') state.ustawienia = {};
   if (!state.ustawienia.szkoly) state.ustawienia.szkoly = {};
@@ -3559,11 +3560,12 @@ function getStudentStatsZ(attendance, studentId, fromDate, toDate) {
   // wliczane do ogólnej liczby zajęć” = wypadają z bazy), decyzja usera 2026-09-21 NA KORZYŚĆ
   // UCZNIA: uczeń reprezentujący szkołę formalnie JEST na zajęciach szkolnych, a większa baza
   // rozcieńcza cenę pojedynczego niećwiczenia (3C+1NĆ+1NS: 75% wg litery PZO, 80% tutaj).
-  // Dlatego NS nie ma manipulatora w Regułach — to decyzja, nie ustawienie. Manipulatory z zakładki Reguły
+  // Przelacznik `nsBaza` w Regułach (domyślnie WŁĄCZONY = ta decyzja) pozwala wrócić do litery
+  // PZO, gdyby ktoś tego zażądał: wyłączony — NS wypada z bazy jak NU i ZW. Manipulatory z zakładki Reguły
   // (domyślne = dokładnie to liczenie) pozwalają zrównać z e-dziennikiem.
   const R = reguly();
-  stats.baza = stats.C + stats.NS + (R.ncBaza ? stats.NC : 0) + (R.bsBaza ? stats.BS : 0) + stats.NB + (R.nuBaza ? stats.NU : 0);
-  stats.cwiczyl = (R.spPol ? stats.C - stats.Csp * 0.5 : stats.C) + stats.NS;
+  stats.baza = stats.C + (R.nsBaza ? stats.NS : 0) + (R.ncBaza ? stats.NC : 0) + (R.bsBaza ? stats.BS : 0) + stats.NB + (R.nuBaza ? stats.NU : 0);
+  stats.cwiczyl = (R.spPol ? stats.C - stats.Csp * 0.5 : stats.C) + (R.nsBaza ? stats.NS : 0);
   stats.percent = stats.baza > 0 ? (stats.cwiczyl / stats.baza * 100) : null;
   return stats;
 }
@@ -3803,8 +3805,9 @@ function kartaKafle(lekcje, tytul) {
   const st = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0, NS: 0 };
   let sp = 0;
   lekcje.forEach(l => { st[l.s]++; if (l.sp) sp++; });
-  const baza = st.C + st.NS + st.NC + st.BS + st.NB;
-  const pct = baza ? Math.round((st.C + st.NS) / baza * 100) : null;
+  const ns = reguly().nsBaza ? st.NS : 0;   // ten sam przełącznik co w Statystykach
+  const baza = st.C + ns + st.NC + st.BS + st.NB;
+  const pct = baza ? Math.round((st.C + ns) / baza * 100) : null;
   let h = '<div class="karta-okno-tytul">' + escapeHtml(tytul) + ' · lekcji: ' + lekcje.length + '</div><div class="karta-kafle">';
   h += '<div class="kafel static"><div class="n">' + (pct === null ? '—' : pct + '%') + '</div><div class="l">ćwiczył (z ' + baza + ' liczonych)</div></div>';
   Object.keys(st).forEach(k => {
@@ -3840,9 +3843,11 @@ function kartaKrzywa(lekcje) {
   const W = 900, H = 220, L = 36, R = 12, T = 14, B = 28;
   const pts = [];
   let c = 0, baza = 0;
+  const nsDoBazy = reguly().nsBaza;   // ten sam przełącznik co w Statystykach; wyłączony = NS jak NU/ZW (litera PZO)
   lekcje.forEach((l, i) => {
-    if (l.s !== 'NU' && l.s !== 'ZW') { baza++; if (l.s === 'C' || l.s === 'NS') c++; }   // NS liczy się jak ćwiczył
-    pts.push({ i, l, pct: baza ? c / baza * 100 : null });
+    const wBazie = l.s !== 'NU' && l.s !== 'ZW' && (l.s !== 'NS' || nsDoBazy);
+    if (wBazie) { baza++; if (l.s === 'C' || l.s === 'NS') c++; }   // NS liczy się jak ćwiczył
+    pts.push({ i, l, pct: baza ? c / baza * 100 : null });          // punkt zostaje zawsze — lekcja poza bazą trzyma poprzednią wysokość
   });
   const n = pts.length;
   if (n < 2) return '<div class="karta-uwaga">Za mało lekcji na krzywą (min. 2).</div>';
@@ -5302,9 +5307,11 @@ function renderReguly() {
   if (!el) return;
   const R = reguly();
   const set = (id, prop, v) => { const x = document.getElementById(id); if (x) x[prop] = v; };
-  set('regBsBaza', 'checked', R.bsBaza); set('regNcBaza', 'checked', R.ncBaza); set('regSpPol', 'checked', R.spPol); set('regNuBaza', 'checked', R.nuBaza);
+  set('regBsBaza', 'checked', R.bsBaza); set('regNcBaza', 'checked', R.ncBaza); set('regSpPol', 'checked', R.spPol); set('regNuBaza', 'checked', R.nuBaza); set('regNsBaza', 'checked', R.nsBaza);
   set('regProgZielony', 'value', R.progZielony); set('regProgCzerwony', 'value', R.progCzerwony);
-  const m = ['ćwiczył', R.ncBaza ? 'nie ćwiczył' : '', R.bsBaza ? 'brak stroju' : '', 'nieobecny nieuspr.', R.nuBaza ? 'nieobecny uspr.' : ''].filter(Boolean).join(' + ');
+  const ns = R.nsBaza ? 'zajęcia szkolne' : '';
+  const m = ['ćwiczył', ns, R.ncBaza ? 'nie ćwiczył' : '', R.bsBaza ? 'brak stroju' : '', 'nieobecny nieuspr.', R.nuBaza ? 'nieobecny uspr.' : ''].filter(Boolean).join(' + ');
+  set('regWzorLicznik', 'textContent', ['ćwiczył', ns].filter(Boolean).join(' + '));
   set('regWzorMianownik', 'textContent', m);
   const c = getCurrentClass();
   set('regOknaKlasa', 'textContent', c ? (c.school ? c.school + ' · ' : '') + c.name : '');

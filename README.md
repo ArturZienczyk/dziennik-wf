@@ -51,8 +51,13 @@ To **świadome odstępstwo od litery PZO** (decyzja Artura 2026-09-21, na korzy�
 PZO mówi: *„nieobecności […] związane z działalnością na rzecz szkoły nie są wliczane do ogólnej
 liczby zajęć”* — czyli literalnie takie lekcje powinny z bazy **wypadać** (ten sam uczeń miałby
 wtedy 2/3 = 67%). Uzasadnienie odstępstwa: uczeń reprezentujący szkołę formalnie **jest**
-na zajęciach szkolnych, więc traktujemy to jak obecność z ćwiczeniem. Dlatego NS **nie ma
-manipulatora** w zakładce Reguły — to decyzja, nie ustawienie.
+na zajęciach szkolnych, więc traktujemy to jak obecność z ćwiczeniem.
+
+W zakładce **Reguły** stoi piąty przełącznik — *Zajęcia szkolne (NS) liczą się jak ćwiczył* —
+**domyślnie włączony**. Wyłączenie wraca do litery PZO: NS wypada z bazy jak NU i ZW.
+Przełącznik zmienia liczenie wstecz (Statystyki, % dotąd, Systematyczność, karta ucznia,
+wzór w Regułach) — wpisy zostają nietknięte. Jest po to, żeby dyrekcja albo kontrola PZO
+mogła zobaczyć obie wersje bez grzebania w kodzie, nie do codziennego klikania.
 
 W VULCANie odpowiada temu symbol **ns** („nieob. uspr. szkolne”) — skrypt
 `vulcan-frekwencja.user.js` wstawia go sam. Klawisz to `r`, nie `ns`: `n` i `s` są już
