@@ -518,9 +518,18 @@ leżą własne auto-kopie dzienne tego laptopa. Kopie zapisane przez to urządze
 nazwy co ręczna kopia z laptopa i sama data nie wystarcza. Bramka: `test_kopie_z_folderu.py`
 (uchwyt folderu podstawiony atrapą — okna systemowego nie da się kliknąć w headless).
 
+**Komenda `kopia` (21.09)** — przynosi kopie z maila jedną komendą, bez wchodzenia na Gmaila:
+`kopia` (20 ostatnich maili) albo `kopia 50`. Pobiera TYLKO załączniki pasujące do
+`dziennik-wf_*.json`, do folderu `D:\Users\Downloads\dziennik-wf-kopie` (`kopia --gdzie` pokazuje
+ścieżkę), pomijając te, które już tam leżą — drugi bieg mówi „bez zmian". Ten folder wskazuje się
+w apce raz przyciskiem „📁 Kopie", i wtedy „Kopie w folderze" pokazuje same kopie, nie całe Pobrane.
+Komenda nie dubluje `send` — woła jego `fetch_attachments`; filtr `--only` i `--nowe` doszły tam
+przy okazji (`D:/Projects/tools/send.py`). Próba na żywo 21.09: z 5 ostatnich maili wzięła kopię
+z telefonu, pominęła LinkedIn i ChatGPT.
+
 **Czego nie ma:** automatu (Drive API w apce) — decyzja: dopiero gdy ręczny transfer po
-tygodniu okaże się uciążliwy; Wi-Fi/serwer lokalny (szkolna sieć izoluje urządzenia); ściągania
-załącznika z maila skryptem — do rozważenia, gdy samo pobieranie z Gmaila zacznie uwierać.
+tygodniu okaże się uciążliwy; Wi-Fi/serwer lokalny (szkolna sieć izoluje urządzenia). Ostatni krok
+ręczny zostaje świadomie: wczytanie kopii w apce wymaga hasła, którego żaden skrypt nie zna.
 
 Bramka: `py -3.14 test_scalanie.py` (30 sprawdzeń: znaczniki z diffu, nowszy wygrywa, remis =
 lokalne, nagrobek, plan upsert, klasa nieznana, kopia bez znaczników, magazyn, „zastąp
