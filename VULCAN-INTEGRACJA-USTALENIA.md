@@ -6,6 +6,13 @@ nauczyciel klika „Zapisz". Dopasowanie po nazwisku. Per dzień.
 
 **Data ustaleń:** 2026-09-16. Sesja: rozpoznanie DOM przez DevTools (zrzuty od usera).
 
+> **Dane uczniów — zasada repo (2026-09-22):** repozytorium jest PUBLICZNE (zakładka-loader
+> ciągnie skrypt z raw.githubusercontent bez tokena), więc w plikach, testach i komunikatach
+> commitów nie ma prawdziwych nazwisk — tylko fikcyjne albo „uczeń testowy”. Notatka z 17.09
+> zawierała jedno prawdziwe nazwisko wraz ze statusem frekwencji; usunięte z bieżącego stanu
+> ORAZ z całej historii (git filter-repo, 97 commitów przepisanych). Kopia sprzed operacji:
+> `D:\Projects\nauczyciel\wf\dziennik-wf-BACKUP-przed-czyszczeniem-2026-09-22.bundle`
+
 ## ▶ RESUME — MECHANIZM DZIAŁA E2E (2026-09-17, wersja v10)
 
 **Stan:** dopasowanie + zapis potwierdzone na żywym VULCAN. `wpisano 1` na zielono, uczeń testowy
