@@ -36,10 +36,20 @@ i schodzi w dół**.
 | `w` | wagary / nieobecny nieusprawiedliwiony (NB) |
 | `u` | nieobecny usprawiedliwiony (NU) |
 | `z` | zwolnienie jednorazowe (ZW) |
-| `1`–`6` | to samo, w kolejności legendy |
+| `r` | nieobecność z przyczyn szkolnych (NS) — „r” jak *reprezentuje szkołę* |
+| `1`–`7` | to samo, w kolejności legendy |
 | `s` | dokleja spóźnienie do statusu, który już jest |
 | `0` | czyści status |
 | `Enter` | zapisuje lekcję (drugi `Enter` potwierdza okno) |
+
+**NS — nieobecność z przyczyn szkolnych** (2026-09-21). Uczeń jest na zawodach, konkursie,
+wycieczce albo w poczcie sztandarowym: nie ma go na lekcji, ale **nic nie traci**. Lekcja
+**nie wchodzi do bazy** procentu ćwiczył — tak jak NU i ZW — i żadna reguła z zakładki Reguły
+tego nie zmienia, bo PZO nie zostawia tu wyboru: *„nieobecności […] związane z działalnością
+na rzecz szkoły nie są wliczane do ogólnej liczby zajęć”*. W VULCANie odpowiada temu symbol
+**ns** („nieob. uspr. szkolne”) — skrypt `vulcan-frekwencja.user.js` wstawia go sam.
+Klawisz to `r`, nie `ns`: `n` i `s` są już zajęte (NĆ i spóźnienie).
+Bramka: `py -3.14 test_status_ns.py`.
 
 Po nadaniu statusu kursor **sam schodzi niżej** — zaznaczasz tylko wyjątki i kończysz
 `Enter`em. Okienko statusów (klik myszą) nadal działa i też przyjmuje te litery;

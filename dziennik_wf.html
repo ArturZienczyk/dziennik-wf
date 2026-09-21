@@ -425,6 +425,7 @@
   .status-zw { background: #B5D4F4; border-color: #4A8BC7; color: #042C53; }
   .status-nu { background: #C7D9F0; border-color: #6A8FBD; color: #1A2C50; }
   .status-nb { background: #F7C1C1; border-color: #C46666; color: #501313; }
+  .status-ns { background: #D6CCEC; border-color: #8874BE; color: #2B1C52; }
   .status-empty { background: var(--bg); border-color: var(--line); color: var(--ink-muted); }
   .status-blocked { background: var(--line); border-color: var(--line); color: var(--ink-muted); white-space: nowrap; }
   .late-mark { font-size: 11px; opacity: 0.85; }
@@ -1287,7 +1288,7 @@
       <div class="info-box">
         <strong>Szybki workflow:</strong> Zaznaczasz tylko <em>wyjątki</em> (kto dziś nie ćwiczył / nieobecny / brak stroju) — z klawiatury: <kbd>↑</kbd><kbd>↓</kbd> wybierasz ucznia, litera nadaje status. Pozostali dostaną <strong>C (ćwiczył)</strong> po <kbd>Enter</kbd>. Mysz i dyktowanie nadal działają, ale nie są potrzebne.
         <br><br>
-        <strong>Procent ćwiczył</strong> liczy się ze wzoru: <code>C / (C + NĆ + BS + NB)</code>. NU (usprawiedliwiony) i ZW (zwolnienie) wypadają z bazy. Wagary (NB) liczą się jak "nie ćwiczył".
+        <strong>Procent ćwiczył</strong> liczy się ze wzoru: <code>C / (C + NĆ + BS + NB)</code>. NU (usprawiedliwiony), ZW (zwolnienie) i NS (zajęcia szkolne) wypadają z bazy. Wagary (NB) liczą się jak "nie ćwiczył".
       </div>
       <div class="legend-row">
         <span style="font-size:12px; color:var(--ink-muted); margin-right:8px;">Statusy (klawisz w nawiasie niżej):</span>
@@ -1297,6 +1298,7 @@
         <span class="status-btn status-nb">NB — nieobecny nieusprawiedliwiony</span>
         <span class="status-btn status-nu">NU — nieobecny usprawiedliwiony</span>
         <span class="status-btn status-zw">ZW — zwolnienie jednorazowe</span>
+        <span class="status-btn status-ns">NS — nieobecność z przyczyn szkolnych</span>
       </div>
       <div class="kbd-bar">
         <strong>Klawiatura (nie klikaj myszą):</strong>
@@ -1307,7 +1309,8 @@
         <span><kbd>w</kbd> wagary (NB)</span>
         <span><kbd>u</kbd> usprawiedliwiony</span>
         <span><kbd>z</kbd> zwolnienie</span>
-        <span>albo <kbd>1</kbd>–<kbd>6</kbd> w kolejności legendy</span>
+        <span><kbd>r</kbd> reprezentuje szkołę (NS)</span>
+        <span>albo <kbd>1</kbd>–<kbd>7</kbd> w kolejności legendy</span>
         <span><kbd>s</kbd> spóźnienie</span>
         <span><kbd>0</kbd> wyczyść</span>
         <span><kbd>Enter</kbd> zapisz lekcję</span>
@@ -1362,6 +1365,7 @@
                 <th class="stat">NB</th>
                 <th class="stat">NU</th>
                 <th class="stat">ZW</th>
+                <th class="stat">NS</th>
                 <th class="stat">Łącznie</th>
                 <th>% dotąd</th>
               </tr>
@@ -1643,6 +1647,7 @@
             <th>NB</th>
             <th>NU</th>
             <th>ZW</th>
+            <th>NS</th>
           </tr>
         </thead>
         <tbody id="statsBody"></tbody>
@@ -1662,6 +1667,7 @@
             <th>NB</th>
             <th>NU</th>
             <th>ZW</th>
+            <th>NS</th>
             <th></th>
           </tr>
         </thead>
@@ -1695,6 +1701,7 @@
       <button class="status-btn status-nb" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus('NB')">NB — nieobecny nieusprawiedliwiony</button>
       <button class="status-btn status-nu" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus('NU')">NU — nieobecny usprawiedliwiony</button>
       <button class="status-btn status-zw" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus('ZW')" title="Obecny, nie ćwiczy Z PAPIEREM (rodzic/lekarz na tę lekcję). NIE wchodzi do bazy % ćwiczył. To jest „niećwiczący usprawiedliwiony”.">ZW — zwolnienie jednorazowe<br><small style="font-weight:normal;opacity:.75">obecny, nie ćwiczy Z PAPIEREM = niećwiczący usprawiedliwiony · nie obniża %</small></button>
+      <button class="status-btn status-ns" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus('NS')" title="Nieobecny, bo reprezentuje szkołę (zawody, konkurs, wycieczka, poczet sztandarowy). Uczeń NIC nie traci — lekcja nie wchodzi do bazy % ćwiczył. W VULCANie to symbol „ns”.">NS — nieobecność z przyczyn szkolnych<br><small style="font-weight:normal;opacity:.75">zawody, konkurs, wycieczka, poczet · nie wchodzi do bazy, uczeń nic nie traci</small></button>
       <button class="status-btn status-empty" style="padding: 10px 14px; font-size: 14px;" onclick="setStatus(null)">— wyczyść —</button>
     </div>
 
@@ -1921,14 +1928,15 @@
 // =====================================================
 const STORAGE_KEY = 'dziennik_wf_v1';
 
-// Statusy: C, NC, BS, NB (nieusprawiedliwiony), NU (usprawiedliwiony), ZW
+// Statusy: C, NC, BS, NB (nieusprawiedliwiony), NU (usprawiedliwiony), ZW, NS (zajęcia szkolne)
 const STATUS_INFO = {
   C:  { label: 'C',  desc: 'ćwiczył',                       cls: 'status-c',  baza: true,  cwiczyl: true },
   NC: { label: 'NĆ', desc: 'obecny, nie ćwiczył BEZ papieru z innego powodu niż strój (złe samopoczucie, odmowa, drobna kontuzja) — liczy się jak BS, obniża % ćwiczył',  cls: 'status-nc', baza: true,  cwiczyl: false },
   BS: { label: 'BS', desc: 'obecny, mógłby ćwiczyć, ale nie ma stroju — liczy się jak NĆ, obniża % ćwiczył; osobna kolumna tylko po to, żeby widzieć POWÓD',                   cls: 'status-bs', baza: true,  cwiczyl: false },
   NB: { label: 'NB', desc: 'nieobecny nieusprawiedliwiony', cls: 'status-nb', baza: true,  cwiczyl: false },
   NU: { label: 'NU', desc: 'nieobecny usprawiedliwiony',    cls: 'status-nu', baza: false, cwiczyl: false },
-  ZW: { label: 'ZW', desc: 'obecny, nie ćwiczy Z PAPIEREM (zwolnienie od rodzica/lekarza na tę lekcję) — NIE wchodzi do bazy % ćwiczył',        cls: 'status-zw', baza: false, cwiczyl: false }
+  ZW: { label: 'ZW', desc: 'obecny, nie ćwiczy Z PAPIEREM (zwolnienie od rodzica/lekarza na tę lekcję) — NIE wchodzi do bazy % ćwiczył',        cls: 'status-zw', baza: false, cwiczyl: false },
+  NS: { label: 'NS', desc: 'nieobecny, bo reprezentuje szkołę (zawody, konkurs, wycieczka, poczet sztandarowy) — uczeń NIC nie traci, lekcja NIE wchodzi do bazy % ćwiczył; VULCAN: symbol „ns”', cls: 'status-ns', baza: false, cwiczyl: false }
 };
 
 // Wiele klas i szkół (szkoła = pole tekstowe klasy). Każda klasa ma własne dane.
@@ -3251,7 +3259,7 @@ function nazwiskoSkrot(name) {
   if (p.length < 2) return p[0] || '—';
   return p[0] + ' ' + p.slice(1).map(x => x[0] + '.').join(' ');
 }
-const ST_MALE = { C: '✓', NC: 'nć', BS: 'bs', NB: 'nb', NU: 'nu', ZW: 'zw' };
+const ST_MALE = { C: '✓', NC: 'nć', BS: 'bs', NB: 'nb', NU: 'nu', ZW: 'zw', NS: 'ns' };
 // Zapisy w tej sesji: klucz klasy+lekcji → HH:MM (stopka „zapisano 9:52"; nie trafia do danych)
 const _zapisanoO = {};
 function _zapisanoKlucz(cls, k) { return cls.id + '|' + k; }
@@ -3334,14 +3342,14 @@ function kolumnaPodgladu(cls, iso, nr, k, dzis) {
   const niebylo = !zast && !!(cls.odwolane || {})[k];
   const brak = !jest && !niebylo && !zast && iso < dzis;
   const day = (cls.attendance || {})[k] || {};
-  const counts = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0 };
+  const counts = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0, NS: 0 };
   const active = (cls.students || []).filter(s => !s.longTermReleased);
   active.forEach(s => { const c = attRead(day[s.id]); if (c.s && counts[c.s] !== undefined) counts[c.s]++; });
   let sum;
   if (zast) sum = `<span class="zast-tag">zastępstwo</span>${zast.zaKogo ? 'za ' + escapeHtml(zast.zaKogo) : 'bez frekwencji tu'}`;
   else if (niebylo) sum = `<button type="button" class="niebylo-zmien" onclick="event.stopPropagation(); nieByloOkno('${cls.id}','${k}')" title="nie było: ${escapeHtml(cls.odwolane[k])} — kliknij, żeby zmienić powód albo dopisać komentarz">${escapeHtml(String(cls.odwolane[k]).split(' · ')[0])}</button> <button type="button" class="niebylo-cofnij" onclick="event.stopPropagation(); zalegleCofnijNieBylo('${cls.id}','${k}')" title="zdejmij „nie było” — lekcja wraca do zaległych / do wpisu">jednak była</button>`;
   else if (jest) {
-    const w = ['nć', 'bs', 'nb', 'nu', 'zw'].map((l, i) => { const key = ['NC', 'BS', 'NB', 'NU', 'ZW'][i]; return counts[key] ? counts[key] + ' ' + l : ''; }).filter(Boolean).join(' · ');
+    const w = ['nć', 'bs', 'nb', 'nu', 'zw', 'ns'].map((l, i) => { const key = ['NC', 'BS', 'NB', 'NU', 'ZW', 'NS'][i]; return counts[key] ? counts[key] + ' ' + l : ''; }).filter(Boolean).join(' · ');
     sum = counts.C + ' ćw.' + (w ? ' · ' + w : '');
   }
   else if (brak) sum = '<span style="color:var(--accent-warm)">brak wpisu</span>';
@@ -3531,7 +3539,7 @@ function getStudentStatsKlasy(cls, studentId, fromDate, toDate) {
   return getStudentStatsZ(cls.attendance || {}, studentId, fromDate, toDate);
 }
 function getStudentStatsZ(attendance, studentId, fromDate, toDate) {
-  const stats = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0, total: 0, Csp: 0 };
+  const stats = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0, NS: 0, total: 0, Csp: 0 };
   Object.keys(attendance).forEach(date => {
     const dzien = kluczData(date);
     if (fromDate && dzien < fromDate) return;
@@ -3545,7 +3553,9 @@ function getStudentStatsZ(attendance, studentId, fromDate, toDate) {
     }
   });
   // Baza wg PZO (obszar „Systematyczność"): ćwiczył + NĆ + BS + NB (nieusprawiedliwiony);
-  // wypadają NU (usprawiedliwiony) i ZW (zwolnienie). Manipulatory z zakładki Reguły
+  // wypadają NU (usprawiedliwiony), ZW (zwolnienie) i NS (zajęcia szkolne — PZO: „nieobecności
+  // […] związane z działalnością na rzecz szkoły nie są wliczane do ogólnej liczby zajęć”).
+  // NS nie ma manipulatora: PZO nie zostawia tu wyboru. Manipulatory z zakładki Reguły
   // (domyślne = dokładnie to liczenie) pozwalają zrównać z e-dziennikiem.
   const R = reguly();
   stats.baza = stats.C + (R.ncBaza ? stats.NC : 0) + (R.bsBaza ? stats.BS : 0) + stats.NB + (R.nuBaza ? stats.NU : 0);
@@ -3611,6 +3621,7 @@ function renderAttendance() {
       <td class="stat">${stats.NB || ''}</td>
       <td class="stat">${stats.NU || ''}</td>
       <td class="stat">${stats.ZW || ''}</td>
+      <td class="stat">${stats.NS || ''}</td>
       <td class="stat">${stats.total || ''}</td>
       <td>${pctHtml}</td>
     `;
@@ -3731,10 +3742,11 @@ const KARTA_KOLOR = {
   BS: { bg: '#F0997B', br: '#BA522F', ink: '#4A1B0C' },
   NB: { bg: '#F7C1C1', br: '#C46666', ink: '#501313' },
   NU: { bg: '#C7D9F0', br: '#6A8FBD', ink: '#1A2C50' },
-  ZW: { bg: '#B5D4F4', br: '#4A8BC7', ink: '#042C53' }
+  ZW: { bg: '#B5D4F4', br: '#4A8BC7', ink: '#042C53' },
+  NS: { bg: '#D6CCEC', br: '#8874BE', ink: '#2B1C52' }
 };
-const KARTA_LITERA = { C: 'C', NC: 'NĆ', BS: 'BS', NB: 'NB', NU: 'NU', ZW: 'ZW' };
-const KARTA_NAZWA = { C: 'ćwiczył', NC: 'nie ćwiczył, bez papieru', BS: 'brak stroju', NB: 'nieobecny nieuspr.', NU: 'nieobecny uspr.', ZW: 'zwolnienie (z papierem)' };
+const KARTA_LITERA = { C: 'C', NC: 'NĆ', BS: 'BS', NB: 'NB', NU: 'NU', ZW: 'ZW', NS: 'NS' };
+const KARTA_NAZWA = { C: 'ćwiczył', NC: 'nie ćwiczył, bez papieru', BS: 'brak stroju', NB: 'nieobecny nieuspr.', NU: 'nieobecny uspr.', ZW: 'zwolnienie (z papierem)', NS: 'zajęcia szkolne' };
 const KARTA_DNI = ['nd', 'pn', 'wt', 'śr', 'czw', 'pt', 'sb'];
 const KARTA_MIESIACE = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
 
@@ -3784,7 +3796,7 @@ function drukujKarte() {
 
 function kartaKafle(lekcje, tytul) {
   const f = state.kartaFilter;
-  const st = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0 };
+  const st = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0, NS: 0 };
   let sp = 0;
   lekcje.forEach(l => { st[l.s]++; if (l.sp) sp++; });
   const baza = st.C + st.NC + st.BS + st.NB;
@@ -3825,7 +3837,7 @@ function kartaKrzywa(lekcje) {
   const pts = [];
   let c = 0, baza = 0;
   lekcje.forEach((l, i) => {
-    if (l.s !== 'NU' && l.s !== 'ZW') { baza++; if (l.s === 'C') c++; }
+    if (l.s !== 'NU' && l.s !== 'ZW' && l.s !== 'NS') { baza++; if (l.s === 'C') c++; }
     pts.push({ i, l, pct: baza ? c / baza * 100 : null });
   });
   const n = pts.length;
@@ -4189,6 +4201,7 @@ function renderStats() {
       <td>${stats.NB}</td>
       <td>${stats.NU}</td>
       <td>${stats.ZW}</td>
+      <td>${stats.NS}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -4199,7 +4212,7 @@ function renderStats() {
   const dates = Object.keys(state.attendance).sort().reverse();
   dates.forEach(date => {
     const day = state.attendance[date];
-    const counts = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0 };
+    const counts = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0, NS: 0 };
     Object.values(day).forEach(c => { const st = attRead(c).s; if (counts[st] !== undefined) counts[st]++; });
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -4210,6 +4223,7 @@ function renderStats() {
       <td>${counts.NB}</td>
       <td>${counts.NU}</td>
       <td>${counts.ZW}</td>
+      <td>${counts.NS}</td>
       <td><button class="delete-btn" onclick="deleteLessonByDate('${date}')">×</button></td>
     `;
     lessonsBody.appendChild(tr);
@@ -4250,6 +4264,7 @@ function parseDictation() {
     { st: 'NU', kw: ['nieobecny usprawiedliwiony', 'nieobecna usprawiedliwiona', 'usprawiedliwiony', 'usprawiedliwiona', 'nu'] },
     { st: 'NB', kw: ['nieobecny nieusprawiedliwiony', 'nieusprawiedliwiony', 'nieusprawiedliwiona', 'wagary', 'ucieczka', 'nieobecny', 'nieobecna', 'nie był', 'nie była', 'nie ma', 'nb'] },
     { st: 'ZW', kw: ['zwolnienie', 'zwolniony', 'zwolniona', 'zw'] },
+    { st: 'NS', kw: ['zawody', 'konkurs', 'wycieczka', 'poczet', 'reprezentuje szkole', 'reprezentuje szkołę', 'olimpiada', 'przyczyny szkolne', 'ns'] },
     { st: 'C',  kw: ['ćwiczył', 'cwiczyl', 'ćwiczyła', 'cwiczyla', 'obecny', 'obecna', 'jest', 'był', 'była', 'c'] }
   ];
 
@@ -4811,18 +4826,18 @@ function copyForVulcan(clsId, klucz) {
 function exportCSV() {
   const dates = Object.keys(state.attendance).sort();
   const rows = [];
-  const header = ['Lp', 'Uczen', ...dates.map(k => k.replace('#', ' L')), 'Cwiczyl', 'NC', 'BS', 'NB', 'NU', 'ZW', 'Baza', 'Procent'];
+  const header = ['Lp', 'Uczen', ...dates.map(k => k.replace('#', ' L')), 'Cwiczyl', 'NC', 'BS', 'NB', 'NU', 'ZW', 'NS', 'Baza', 'Procent'];
   rows.push(header);
 
   state.students.forEach((s, i) => {
     if (s.longTermReleased) {
-      rows.push([i+1, s.name || '', ...dates.map(() => 'ZW-DLUG'), '', '', '', '', '', '', '', '—']);
+      rows.push([i+1, s.name || '', ...dates.map(() => 'ZW-DLUG'), '', '', '', '', '', '', '', '', '—']);
       return;
     }
     const stats = getStudentStats(s.id);
     const row = [i+1, s.name || ''];
     dates.forEach(d => { const c = attRead((state.attendance[d] || {})[s.id]); row.push(c.s ? (c.s + (c.sp ? '+sp' : '')) : ''); });
-    row.push(stats.C, stats.NC, stats.BS, stats.NB, stats.NU, stats.ZW, stats.baza, stats.percent !== null ? stats.percent.toFixed(0) + '%' : '—');
+    row.push(stats.C, stats.NC, stats.BS, stats.NB, stats.NU, stats.ZW, stats.NS, stats.baza, stats.percent !== null ? stats.percent.toFixed(0) + '%' : '—');
     rows.push(row);
   });
 
@@ -6214,8 +6229,9 @@ window.addEventListener('appinstalled', () => {
 
 // --- Obecnosc: kursor po uczniach + litera = status ---
 const KBD_STATUS = {
-  '1': 'C',  '2': 'NC', '3': 'BS', '4': 'NB', '5': 'NU', '6': 'ZW',
-  'c': 'C',  'n': 'NC', 'b': 'BS', 'w': 'NB', 'u': 'NU', 'z': 'ZW'
+  '1': 'C',  '2': 'NC', '3': 'BS', '4': 'NB', '5': 'NU', '6': 'ZW', '7': 'NS',
+  'c': 'C',  'n': 'NC', 'b': 'BS', 'w': 'NB', 'u': 'NU', 'z': 'ZW', 'r': 'NS'
+  // 'r' jak „reprezentuje szkołę”: 'n' i 's' są zajęte (NĆ i spóźnienie), więc skrótu „ns” nie da się wpisać wprost.
 };
 
 function kbdActiveStudents() {
@@ -6264,7 +6280,7 @@ function kbdToggleLate() {
   if (!sid) return;
   const day = state.attendance[attKey()];
   const cur = attRead(day ? day[sid] : undefined);
-  if (!cur.s) { showToast('Najpierw nadaj status (c/n/b/w/u/z), potem \u23F1 klawiszem s.', 'warn'); return; }
+  if (!cur.s) { showToast('Najpierw nadaj status (c/n/b/w/u/z/r), potem \u23F1 klawiszem s.', 'warn'); return; }
   day[sid] = attWrite(cur.s, !cur.sp);
   save();
   renderAttendance();

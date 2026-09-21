@@ -126,9 +126,9 @@ function keepExcused(symbolName,cellTexts){
 var P=document.createElement('div');
 P.style.cssText='position:fixed;top:10px;right:10px;z-index:2147483647;width:340px;background:#fff;border:2px solid #1E2D4F;border-radius:8px;font:13px/1.4 Arial,sans-serif;color:#1A1A1A;box-shadow:0 6px 24px rgba(0,0,0,.3)';
 P.innerHTML=''
-+'<div style="background:#1E2D4F;color:#fff;padding:8px 10px;font-weight:bold;border-radius:5px 5px 0 0;display:flex;justify-content:space-between">Dziennik WF -> VULCAN <span style="opacity:.6;font-weight:normal">v19</span><span id="wfX" style="cursor:pointer">✕</span></div>'
++'<div style="background:#1E2D4F;color:#fff;padding:8px 10px;font-weight:bold;border-radius:5px 5px 0 0;display:flex;justify-content:space-between">Dziennik WF -> VULCAN <span style="opacity:.6;font-weight:normal">v20</span><span id="wfX" style="cursor:pointer">✕</span></div>'
 +'<div style="padding:10px">'
-+'<div style="font-size:12px;color:#4A4543;margin-bottom:6px">Wklej statusy dnia: <b>Nazwisko Imię</b> [tab / ; / 2 spacje] <b>status</b> (C, NĆ, BS, NB, NU, ZW, SP)</div>'
++'<div style="font-size:12px;color:#4A4543;margin-bottom:6px">Wklej statusy dnia: <b>Nazwisko Imię</b> [tab / ; / 2 spacje] <b>status</b> (C, NĆ, BS, NB, NU, ZW, NS, SP)</div>'
 +'<textarea id="wfIn" style="width:100%;height:120px;box-sizing:border-box;font:12px monospace" placeholder="Nowak Jan\tC\nKowalska Zofia\tNU"></textarea>'
 +'<div style="margin-top:8px;display:flex;gap:6px">'
 +'<button id="wfPrev" style="flex:1;padding:8px;border:1px solid #1E2D4F;background:#fff;border-radius:5px;cursor:pointer">Podgląd</button>'
