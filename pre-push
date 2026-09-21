@@ -4,37 +4,48 @@
 # INSTALACJA (raz, po klonie repo):
 #   cp pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
 #
-# Co robi: przed kazdym pushem, ktory rusza kod (.html / .js / .py), uruchamia WSZYSTKIE bramki
-# przez sprawdz_wszystko.py (~75 s, testy leca rownolegle w grupach po porcie). Czerwona bramka
-# = push wstrzymany. Push samego README albo notatek .md idzie bez czekania.
+# DWA KROKI, w tej kolejnosci:
+#   [1] odcisk.py --check  — czy wejscia bramek (kod .html/.js/.py) sa identyczne jak przy
+#       ostatnim ZIELONYM biegu. Tak -> SKIP, push idzie od razu. Typowy przypadek: odpalasz
+#       sprawdz_wszystko.py recznie przy pracy, potem pushujesz — push nie powtarza 75 s,
+#       ktore wlasnie zaplacilies. Zmiana samego README nie uniewaznia odcisku.
+#   [2] sprawdz_wszystko.py -j 1 — caly zestaw bramek PO KOLEI. Zielony -> odcisk.py --record.
+#       Czerwony -> push wstrzymany, nic sie nie zapisuje (FAIL nigdy nie jest cache'owany).
 #
-# Dlaczego caly zestaw, nie wybrane testy: dziennik to JEDEN plik dziennik_wf.html — kazda zmiana
-# dotyka go w calosci, wiec nie ma sensownego mapowania "zmieniony plik -> te testy". Albo wszystko,
-# albo nic. 75 s zmierzone 2026-09-21 na 32 testach.
+# DLACZEGO -j 1, skoro runner umie rownolegle: kanon D:/Projects/konkurs-naukowy/docs/
+# KANON-straznicy-e2e.md ("Zakaz rownoleglosci") — rownolegle Chromium spowalnia rAF i wraca
+# jako falszywy FAIL, kolizje portow staja sie nieodroznialne od defektow, a log ma mowic,
+# ktory straznik padl PIERWSZY. Rownoleglosc zostaje do biegu RECZNEGO (tam falszywy alarm
+# kosztuje powtorzenie, nie zablokowany push). Dzwignia czasu w hooku to odcisk, nie -j.
+#
+# DLACZEGO odcisk zamiast `git diff` po sciezkach: bramka na diffie opiera sie na indukcji
+# "to, co juz na remote, bylo zielone", ktora peka po cichu przy jednym --no-verify.
+# Odcisk porownuje stan drzewa TERAZ z ostatnim faktycznie zielonym biegiem.
+# Ledger: D:/Projects/docs/ledger/2026-08-25_build-skip-odcisk-wejsc-bkk.md
 #
 # Cofniecie bramki = swiadoma edycja testu + commit z "dlaczego", nie kasowanie hooka.
-WATCH='\.(html|js|py)$'
-GUARD="py -3.14 sprawdz_wszystko.py"
 ZERO="0000000000000000000000000000000000000000"
+sprawdzone=0
 
 while read local_ref local_sha remote_ref remote_sha; do
   [ "$local_sha" = "$ZERO" ] && continue        # kasowanie galezi — nic do sprawdzania
-  if [ "$remote_sha" = "$ZERO" ]; then
-    run=1                                       # nowa galaz — sprawdz wszystko
-  elif git diff --name-only "$remote_sha" "$local_sha" | grep -qE "$WATCH"; then
-    run=1
-  else
-    run=0
+  [ "$sprawdzone" = "1" ] && continue           # jeden bieg wystarczy na caly push
+
+  if py -3.14 odcisk.py --check; then
+    echo "[pre-push] SKIP: kod bez zmian od ostatniego zielonego biegu bramek."
+    sprawdzone=1
+    continue
   fi
-  if [ "$run" = "1" ]; then
-    echo "[pre-push] kod dziennika zmieniony -> wszystkie bramki (~75 s)..."
-    $GUARD || {
-      echo "[pre-push] BLOKADA: bramka czerwona. Push wstrzymany." >&2
-      echo "[pre-push] Pojedynczy test: py -3.14 sprawdz_wszystko.py -k <fragment nazwy>" >&2
-      exit 1
-    }
+
+  echo "[pre-push] kod dziennika zmieniony -> wszystkie bramki po kolei (~3-4 min)..."
+  if py -3.14 sprawdz_wszystko.py -j 1; then
+    py -3.14 odcisk.py --record
+    echo "[pre-push] zielono — odcisk zapisany, nastepny push bez zmian w kodzie pojdzie od razu."
+    sprawdzone=1
   else
-    echo "[pre-push] push bez zmian w kodzie (same .md?) — bramki pominiete."
+    echo "[pre-push] BLOKADA: bramka czerwona. Push wstrzymany." >&2
+    echo "[pre-push] Pojedynczy test: py -3.14 sprawdz_wszystko.py -k <fragment nazwy>" >&2
+    exit 1
   fi
 done
 exit 0

@@ -441,12 +441,41 @@ było przenumerowanie portów w 33 plikach. `test_mikrofon_lokalny.py` jest jawn
 (wymaga mikrofonu i ręcznego kliku) — widać go w tabelce jako pominięty, nie jako zielony.
 
 **Zapadka `pre-push`** (plik `pre-push` w korzeniu repo; instalacja raz po klonie:
-`cp pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push`). Przed każdym pushem,
-który rusza kod (`.html` / `.js` / `.py`), odpala cały zestaw; czerwona bramka = push
-wstrzymany. Push samych `.md` idzie bez czekania. Cały zestaw, a nie wybrane testy, bo
-dziennik to **jeden plik** `dziennik_wf.html` — każda zmiana dotyka go w całości, więc
-mapowanie „zmieniony plik → te testy" nie istnieje. Sprawdzone w obie strony: przy zielonym
-zestawie hook przepuszcza (exit 0), przy rozbitym CSS słupka dyżuru blokuje (exit 1).
+`cp pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push`) ma dwa kroki:
+
+1. **`odcisk.py --check`** — czy wejścia bramek są identyczne jak przy ostatnim **zielonym**
+   biegu. Tak → SKIP, push idzie od razu (**0,4 s** zamiast pełnego biegu). To jest typowy
+   przypadek: odpalasz `sprawdz_wszystko.py` przy pracy, potem pushujesz — push nie powtarza
+   tego, co przed chwilą zapłaciłeś. Zmiana samego README odcisku nie unieważnia.
+2. **`sprawdz_wszystko.py -j 1`** — cały zestaw **po kolei** (zmierzone: **3 min 39 s**).
+   Zielony → odcisk zapisany. Czerwony → push wstrzymany, nic się nie zapisuje
+   (FAIL nigdy nie jest cache'owany).
+
+**Odcisk** = `sha256(sól środowiska | blob-hashe plików kodu z indeksu gita | brudna delta
+z `git status`)`. Wzorzec: `D:/Projects/karty/scripts/build_odcisk.py` (BKK, 2026-08-25) —
+świadoma kopia, nie import, bo `dziennik-wf` to osobne repo klonowane bez huba; poprawka
+mechanizmu w jednym miejscu nie wchodzi do drugiego sama. Sól to wersja `playwright` +
+katalog `chromium-*` + wersja Pythona, więc aktualizacja środowiska sama unieważnia werdykt.
+Granica nazwana wprost: odcisk mówi „te same **wejścia**", nie „ten sam **wynik**" — test
+zależny od zegara albo od pliku spoza repo (`plan-wf.json` czyta `test_zalegle.py`) może
+zzielenieć dziś i zczerwienieć jutro przy tym samym odcisku. To zapadka na **powtórzenia**,
+nie zamiennik biegu po zmianie kodu. Bramka odcisku: `py -3.14 test_odcisk.py` (15 sprawdzeń
+na kopii repo w tmp: edycja/commit/nowy plik → STALE, `.md` i zrzuty → SKIP, sól, CLI).
+
+**Dlaczego hook biegnie `-j 1`, skoro runner umie równolegle:** kanon
+`D:/Projects/konkurs-naukowy/docs/KANON-straznicy-e2e.md` („Zakaz równoległości") — równoległe
+Chromium spowalnia rAF i wraca jako fałszywy FAIL, kolizje portów stają się nieodróżnialne od
+defektów, a log ma mówić, który strażnik padł **pierwszy**. Równoległość zostaje do biegu
+ręcznego, gdzie fałszywy alarm kosztuje powtórzenie, nie zablokowany push. Dźwignią czasu
+w hooku jest odcisk, nie `-j` — tak samo rozstrzygnięto to w hubie 2026-08-25.
+
+**Dlaczego odcisk, a nie bramka po ścieżkach z `git diff`:** bramka na diffie opiera się na
+indukcji „to, co już na remote, było zielone", która pęka po cichu przy jednym `--no-verify`
+(ledger `2026-08-25_build-skip-odcisk-wejsc-bkk.md` odrzucił ten wariant). Odcisk porównuje
+stan drzewa **teraz** z ostatnim faktycznie zielonym biegiem.
+
+Sprawdzone w obie strony, nie tylko napisane: po zielonym biegu hook przepuszcza w 0,4 s
+(SKIP), a po rozbiciu CSS słupka dyżuru biegnie 3 min 39 s i blokuje (exit 1).
 Cofnięcie bramki = świadoma edycja testu z „dlaczego" w commicie, nie kasowanie hooka.
 
 ## Synchronizacja laptop ↔ telefon — scalanie kopii (2026-09-18)

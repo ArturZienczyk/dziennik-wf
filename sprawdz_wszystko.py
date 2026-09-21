@@ -20,6 +20,8 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
+import odcisk  # sasiedni plik: odcisk wejsc bramek (SKIP pre-pusha po zielonym biegu)
+
 ROOT = Path(__file__).resolve().parent
 PY = [sys.executable]
 
@@ -88,6 +90,8 @@ def main():
         "Uruchamiam %d testow w %d grupach (max %d naraz)...\n"
         % (len(pliki), len(grupy), a.j)
     )
+    # odcisk liczony PRZED biegiem — to jego stan bedzie sprawdzony przez testy
+    fp_przed = odcisk.fingerprint()
     t0 = time.time()
     wyniki = []
     with cf.ThreadPoolExecutor(max_workers=a.j) as ex:
@@ -104,6 +108,17 @@ def main():
         print("[--  ] %-34s        pominiete: %s" % (f.name, POMIJANE[f.name]))
 
     zle = [r for r in wyniki if not r["ok"]]
+    # Zielony PELNY bieg (bez -k) zapisuje odcisk wejsc — dzieki temu push zaraz po recznym
+    # biegu nie powtarza tych samych 75 s. Bieg zawezony -k NIE zapisuje: nie widzial calosci.
+    # Zapisujemy odcisk SPRZED biegu i tylko gdy jest nadal aktualny: edycja pliku W TRAKCIE
+    # biegu znaczy, ze zielony werdykt dotyczy juz nieistniejacego stanu — wtedy nic nie zapisujemy.
+    if not zle and not a.k:
+        if fp_przed is not None and odcisk.fingerprint() == fp_przed:
+            odcisk.save_state({"green_fp": fp_przed})
+        else:
+            print(
+                "(kod zmienil sie w trakcie biegu — odcisk NIE zapisany, push odpali bramki)"
+            )
     print(
         "\n%d/%d zielonych w %.0f s"
         % (len(wyniki) - len(zle), len(wyniki), time.time() - t0)
