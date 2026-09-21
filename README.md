@@ -42,6 +42,24 @@ i schodzi w dół**.
 | `0` | czyści status |
 | `Enter` | zapisuje lekcję (drugi `Enter` potwierdza okno) |
 
+### Procent ćwiczył — jedno źródło prawdy
+
+Cały procent liczy **jedna funkcja**: `wagaLekcji(status, spóźniony)`. Każdej lekcji przypisuje
+dwie wagi — ile wnosi do **bazy** (mianownik) i ile do **ćwiczył** (licznik). Pytają ją wszyscy:
+tabela Statystyk, wydruk i PDF, CSV, „% dotąd” w Obecności, oceny z Systematyczności, kafelki
+i krzywa na karcie ucznia, a także **wzór rysowany w zakładce Reguły** (więc wzór nie może
+skłamać — pokazuje dokładnie to, co apka liczy).
+
+Po co: do 2026-09-21 karta ucznia miała **własny wzór** i nie patrzyła na przełączniki z Reguł.
+Przy domyślnych ustawieniach oba wzory dawały to samo, więc nic nie było widać — ale wystarczyło
+przestawić jedną regułę (np. wyłączyć „Brak stroju liczy się jak nieobecność”), żeby ten sam
+uczeń miał w tabeli inny procent niż na swojej karcie. Po cichu, bez błędu.
+
+**Dokładasz nowy status albo nową regułę? Dopisz jeden warunek w `wagaLekcji()`** — reszta apki
+pójdzie za tym sama. Bramka: `py -3.14 test_jedno_zrodlo_procentu.py` przechodzi po wszystkich
+pięciu przełącznikach w obie strony i za każdym razem porównuje tabelę z kartą ucznia; pilnuje
+też, że warunki reguł występują w kodzie **dokładnie raz**.
+
 **NS — nieobecność z przyczyn szkolnych** (2026-09-21). Uczeń jest na zawodach, konkursie,
 wycieczce albo w poczcie sztandarowym. **Liczy się jak ćwiczył**: wchodzi do bazy procentu
 i do licznika, więc nie tylko nic nie zabiera, ale rozcieńcza cenę pojedynczego niećwiczenia

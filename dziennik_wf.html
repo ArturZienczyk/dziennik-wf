@@ -3539,8 +3539,38 @@ function getStudentStats(studentId, fromDate, toDate) {
 function getStudentStatsKlasy(cls, studentId, fromDate, toDate) {
   return getStudentStatsZ(cls.attendance || {}, studentId, fromDate, toDate);
 }
+// JEDNO ŹRÓDŁO PRAWDY procentu ćwiczył (2026-09-21). Każda lekcja dostaje tu dwie wagi:
+// ile wnosi do BAZY (mianownik) i ile do ĆWICZYŁ (licznik). Wszystko, co pokazuje procent —
+// Statystyki, wydruk, CSV, % dotąd, Systematyczność, kafelki i krzywa na karcie ucznia — pyta
+// tę funkcję. Powod: do 09-21 karta ucznia miała własny wzór i ignorowała przełączniki z Reguł,
+// więc po zmianie reguły ten sam uczeń miał w tabeli inny procent niż na swojej karcie — po cichu,
+// bez błędu. Nowy status albo nowa reguła: dopisz JEDEN warunek tutaj, reszta apki pójdzie za tym.
+//
+// Baza wg PZO (obszar „Systematyczność"): ćwiczył + NĆ + BS + NB (nieusprawiedliwiony);
+// wypadają NU (usprawiedliwiony) i ZW (zwolnienie). Przełączniki w Regułach (domyślne =
+// dokładnie to liczenie) pozwalają zrównać z e-dziennikiem.
+// NS (zajęcia szkolne) liczy się JAK ĆWICZYŁ — wchodzi do bazy I do licznika. To świadome
+// odstępstwo od litery PZO („nieobecności […] związane z działalnością na rzecz szkoły nie są
+// wliczane do ogólnej liczby zajęć" = wypadają z bazy), decyzja usera 2026-09-21 NA KORZYŚĆ
+// UCZNIA: uczeń reprezentujący szkołę formalnie JEST na zajęciach szkolnych, a większa baza
+// rozcieńcza cenę pojedynczego niećwiczenia (C, C, NĆ, NS: 75% tutaj, 67% wg litery PZO).
+// Przełącznik `nsBaza` (domyślnie WŁĄCZONY = ta decyzja) pozwala wrócić do litery PZO.
+function wagaLekcji(status, spozniony) {
+  const R = reguly();
+  switch (status) {
+    case 'C':  return { baza: 1, cwiczyl: (R.spPol && spozniony) ? 0.5 : 1 };
+    case 'NS': return R.nsBaza ? { baza: 1, cwiczyl: 1 } : { baza: 0, cwiczyl: 0 };
+    case 'NB': return { baza: 1, cwiczyl: 0 };
+    case 'NC': return { baza: R.ncBaza ? 1 : 0, cwiczyl: 0 };
+    case 'BS': return { baza: R.bsBaza ? 1 : 0, cwiczyl: 0 };
+    case 'NU': return { baza: R.nuBaza ? 1 : 0, cwiczyl: 0 };
+    default:   return { baza: 0, cwiczyl: 0 };   // ZW i brak statusu
+  }
+}
+
 function getStudentStatsZ(attendance, studentId, fromDate, toDate) {
   const stats = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0, NS: 0, total: 0, Csp: 0 };
+  let baza = 0, cwiczyl = 0;
   Object.keys(attendance).forEach(date => {
     const dzien = kluczData(date);
     if (fromDate && dzien < fromDate) return;
@@ -3551,22 +3581,13 @@ function getStudentStatsZ(attendance, studentId, fromDate, toDate) {
       stats[st]++;
       stats.total++;
       if (st === 'C' && c.sp) stats.Csp++;
+      const w = wagaLekcji(st, c.sp);
+      baza += w.baza; cwiczyl += w.cwiczyl;
     }
   });
-  // Baza wg PZO (obszar „Systematyczność"): ćwiczył + NĆ + BS + NB (nieusprawiedliwiony);
-  // wypadają NU (usprawiedliwiony) i ZW (zwolnienie).
-  // NS (zajęcia szkolne) liczy się JAK ĆWICZYŁ — wchodzi do bazy I do licznika. To świadome
-  // odstępstwo od litery PZO („nieobecności […] związane z działalnością na rzecz szkoły nie są
-  // wliczane do ogólnej liczby zajęć” = wypadają z bazy), decyzja usera 2026-09-21 NA KORZYŚĆ
-  // UCZNIA: uczeń reprezentujący szkołę formalnie JEST na zajęciach szkolnych, a większa baza
-  // rozcieńcza cenę pojedynczego niećwiczenia (3C+1NĆ+1NS: 75% wg litery PZO, 80% tutaj).
-  // Przelacznik `nsBaza` w Regułach (domyślnie WŁĄCZONY = ta decyzja) pozwala wrócić do litery
-  // PZO, gdyby ktoś tego zażądał: wyłączony — NS wypada z bazy jak NU i ZW. Manipulatory z zakładki Reguły
-  // (domyślne = dokładnie to liczenie) pozwalają zrównać z e-dziennikiem.
-  const R = reguly();
-  stats.baza = stats.C + (R.nsBaza ? stats.NS : 0) + (R.ncBaza ? stats.NC : 0) + (R.bsBaza ? stats.BS : 0) + stats.NB + (R.nuBaza ? stats.NU : 0);
-  stats.cwiczyl = (R.spPol ? stats.C - stats.Csp * 0.5 : stats.C) + (R.nsBaza ? stats.NS : 0);
-  stats.percent = stats.baza > 0 ? (stats.cwiczyl / stats.baza * 100) : null;
+  stats.baza = baza;
+  stats.cwiczyl = cwiczyl;
+  stats.percent = baza > 0 ? (cwiczyl / baza * 100) : null;
   return stats;
 }
 
@@ -3804,10 +3825,13 @@ function kartaKafle(lekcje, tytul) {
   const f = state.kartaFilter;
   const st = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0, NS: 0 };
   let sp = 0;
-  lekcje.forEach(l => { st[l.s]++; if (l.sp) sp++; });
-  const ns = reguly().nsBaza ? st.NS : 0;   // ten sam przełącznik co w Statystykach
-  const baza = st.C + ns + st.NC + st.BS + st.NB;
-  const pct = baza ? Math.round((st.C + ns) / baza * 100) : null;
+  let baza = 0, cwiczyl = 0;
+  lekcje.forEach(l => {
+    st[l.s]++; if (l.sp) sp++;
+    const w = wagaLekcji(l.s, l.sp);   // to samo źródło co Statystyki — karta nie ma własnego wzoru
+    baza += w.baza; cwiczyl += w.cwiczyl;
+  });
+  const pct = baza ? Math.round(cwiczyl / baza * 100) : null;
   let h = '<div class="karta-okno-tytul">' + escapeHtml(tytul) + ' · lekcji: ' + lekcje.length + '</div><div class="karta-kafle">';
   h += '<div class="kafel static"><div class="n">' + (pct === null ? '—' : pct + '%') + '</div><div class="l">ćwiczył (z ' + baza + ' liczonych)</div></div>';
   Object.keys(st).forEach(k => {
@@ -3837,17 +3861,18 @@ function kartaOsCzasu(lekcje) {
 }
 
 // Krzywa skumulowana: % ćwiczył liczony narastająco po każdej lekcji wchodzącej do bazy.
-// NU i ZW nie ruszają krzywej (nie wchodzą do bazy) — punkt zostaje na poprzedniej wysokości.
+// Co wchodzi do bazy — decyduje wagaLekcji() (wspólne źródło z zakładką Statystyki), nie ta funkcja.
+// Lekcja poza bazą (NU, ZW, przy wyłączonym przełączniku także NS) nie rusza krzywej — punkt
+// zostaje na poprzedniej wysokości.
 function kartaKrzywa(lekcje) {
   const f = state.kartaFilter;
   const W = 900, H = 220, L = 36, R = 12, T = 14, B = 28;
   const pts = [];
   let c = 0, baza = 0;
-  const nsDoBazy = reguly().nsBaza;   // ten sam przełącznik co w Statystykach; wyłączony = NS jak NU/ZW (litera PZO)
   lekcje.forEach((l, i) => {
-    const wBazie = l.s !== 'NU' && l.s !== 'ZW' && (l.s !== 'NS' || nsDoBazy);
-    if (wBazie) { baza++; if (l.s === 'C' || l.s === 'NS') c++; }   // NS liczy się jak ćwiczył
-    pts.push({ i, l, pct: baza ? c / baza * 100 : null });          // punkt zostaje zawsze — lekcja poza bazą trzyma poprzednią wysokość
+    const w = wagaLekcji(l.s, l.sp);   // to samo źródło co Statystyki
+    baza += w.baza; c += w.cwiczyl;
+    pts.push({ i, l, pct: baza ? c / baza * 100 : null });   // punkt zostaje zawsze — lekcja poza bazą trzyma poprzednią wysokość
   });
   const n = pts.length;
   if (n < 2) return '<div class="karta-uwaga">Za mało lekcji na krzywą (min. 2).</div>';
@@ -5309,10 +5334,12 @@ function renderReguly() {
   const set = (id, prop, v) => { const x = document.getElementById(id); if (x) x[prop] = v; };
   set('regBsBaza', 'checked', R.bsBaza); set('regNcBaza', 'checked', R.ncBaza); set('regSpPol', 'checked', R.spPol); set('regNuBaza', 'checked', R.nuBaza); set('regNsBaza', 'checked', R.nsBaza);
   set('regProgZielony', 'value', R.progZielony); set('regProgCzerwony', 'value', R.progCzerwony);
-  const ns = R.nsBaza ? 'zajęcia szkolne' : '';
-  const m = ['ćwiczył', ns, R.ncBaza ? 'nie ćwiczył' : '', R.bsBaza ? 'brak stroju' : '', 'nieobecny nieuspr.', R.nuBaza ? 'nieobecny uspr.' : ''].filter(Boolean).join(' + ');
-  set('regWzorLicznik', 'textContent', ['ćwiczył', ns].filter(Boolean).join(' + '));
-  set('regWzorMianownik', 'textContent', m);
+  // Wzór rysujemy z wagaLekcji() — tej samej funkcji, która liczy procent. Dzięki temu nie da się
+  // pokazać wzoru innego niż rzeczywiste liczenie (druga kopia warunków rozjechałaby się po cichu).
+  const NAZWA_W_WZORZE = { C: 'ćwiczył', NS: 'zajęcia szkolne', NC: 'nie ćwiczył', BS: 'brak stroju', NB: 'nieobecny nieuspr.', NU: 'nieobecny uspr.' };
+  const wBazie = Object.keys(NAZWA_W_WZORZE).filter(k => wagaLekcji(k, false).baza > 0);
+  set('regWzorLicznik', 'textContent', wBazie.filter(k => wagaLekcji(k, false).cwiczyl > 0).map(k => NAZWA_W_WZORZE[k]).join(' + '));
+  set('regWzorMianownik', 'textContent', wBazie.map(k => NAZWA_W_WZORZE[k]).join(' + '));
   const c = getCurrentClass();
   set('regOknaKlasa', 'textContent', c ? (c.school ? c.school + ' · ' : '') + c.name : '');
   const g = c ? oknaGranice(c) : null;
