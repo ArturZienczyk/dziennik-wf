@@ -165,6 +165,9 @@
   .plan-lekcja.niebylo { border-style: dashed; color: var(--ink-muted); background: var(--line-soft); }
   .plan-lekcja.aktywna { border: 2px solid var(--ink); font-weight: 600; }
   .plan-lekcja.inne { background: transparent; border-style: dashed; color: var(--ink-muted); cursor: default; }
+  /* Tydzien: lekcje stoja jedna pod druga, wiec przerwa jest tu cienka belka POZIOMA - pionowy napis
+     ma sens tylko w widoku dnia, gdzie kafelki stoja obok siebie. */
+  .plan-przerwa { display: flex; gap: 6px; align-items: center; margin: 2px 0; padding: 1px 8px; font-size: 10.5px; color: var(--ink-muted); border-top: 1px dashed var(--line); border-bottom: 1px dashed var(--line); }
   /* Zakładka Plan w języku pozostałych zakładek (19.09): trzy karty w kolejności czytania — Siatka tygodnia →
      Inne zajęcia → Dni wolne; numery lekcji jako chipy (jak .rel-chip), pusta komórka jako blade pole. */
   .plan-karty { display: grid; gap: 14px; }
@@ -324,6 +327,17 @@
   .kol.wolny button { grid-column: 1; grid-row: 3; justify-self: start; white-space: nowrap; margin-top: 6px; font: inherit; font-size: 12px; padding: 3px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); cursor: pointer; }
   .kol.inne .kol-head { background: transparent; }
   .kol.inne .kl { color: var(--ink-muted); }
+  /* Przerwa z dyzurem (2026-09-21): NIE kafelek jak lekcja, tylko waski slupek MIEDZY kafelkami z napisem
+     pionowym. Przerwa nie ma numeru lekcji - ona jest POMIEDZY numerami; kafelek "L3" klamalby o tym, czym
+     jest. Napis = miejsce dyzuru ("parter"), bo tego szukasz w biegu; ze to dyzur, niesie ksztalt i kreska. */
+  .kol.przerwa { flex: 0 0 26px; width: 26px; min-width: 26px; max-width: 26px; align-self: stretch; padding: 6px 0; display: flex; align-items: center; justify-content: center; border: 1px dashed var(--line); border-radius: 8px; background: repeating-linear-gradient(135deg, transparent 0 5px, rgba(0,0,0,.05) 5px 6px); cursor: default; }
+  .kol.przerwa .txt { writing-mode: vertical-rl; text-orientation: mixed; font-size: 11px; line-height: 1; letter-spacing: .04em; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-height: 100%; }
+  /* Para "kafelek + slupek" w jednym pudelku: przy zawijaniu paska slupek nie moze zostac sam na poczatku
+     wiersza - stracilby sens "pomiedzy". Sklejanie robi renderDzien() po wstawieniu kafelkow. */
+  .kol-para { display: flex; gap: 6px; align-items: stretch; flex: 1 1 150px; min-width: 0; max-width: 292px; }
+  .kol-para > .kol { flex: 1 1 auto; max-width: none; }
+  .kol-para > .kol.przerwa { flex: 0 0 26px; max-width: 26px; }
+  .kol-para > .kol.inne, .kol-para > .kol.okienko-zast { flex: 0 1 auto; }
   .kol.otwarta { flex: 1 0 100%; min-width: 0; max-width: none; border: 2px solid var(--ink); border-radius: 8px; }
   .kol.otwarta > .kol-head { display: none; }
   .kol.otwarta .table-wrap { margin: 0; border: none; border-radius: 0; }
@@ -1947,7 +1961,9 @@ let state = {
   classes: [],          // [{ id, school, name, students, attendance, measurements, gradeColumns, grades }]
   currentClassId: null,
   // planWf: { plany: [{od, do, klasy: {nazwa: {dzien0=Pn: [nrLekcji]}}, inne: {nazwa: {dzien: [nr]}}, wolne: [daty], zrodlo}] }
-  // inne = zajęcia widoczne w pasku tygodnia bez frekwencji (EZ, GW, dyżur)
+  // inne = zajęcia widoczne w pasku tygodnia bez frekwencji (EZ, GW)
+  // dyzury: {miejsce: {dzien: [nrPoLekcji]}} — dyżur na przerwie PO lekcji nr; w widoku dnia słupek
+  // między kafelkami (nie kafelek: przerwa nie ma numeru, ona jest między numerami)
   // — siatka z Ustawień (klik) i/lub plik z zbuduj_plan_wf.py; v1 (nazwa: [dni]) czyta się dalej
   planWf: null,
   // zastepstwaOkienka (19.09): { 'YYYY-MM-DD#nr': {klasa, zaKogo} } — zastępstwo na okienku, nie należy do żadnej klasy
@@ -2553,6 +2569,23 @@ function inneUsun(nazwa) {
   delete p.inne[nazwa];
   save(); renderZalegle(); renderZalegleChip(); renderAttendance();
 }
+function dyzurDodaj() {
+  const inp = document.getElementById('dyzurMiejsce');
+  const miejsce = (inp ? inp.value : '').trim();
+  if (!miejsce) return;
+  const p = planAktywny(true);
+  p.dyzury = p.dyzury || {};
+  if (!p.dyzury[miejsce]) p.dyzury[miejsce] = {};
+  if (inp) inp.value = '';
+  siatkaOtwarta = { clsId: 'dyzur:' + miejsce, dzien: 0 };
+  save(); renderZalegle(); renderZalegleChip(); renderAttendance();
+}
+function dyzurUsun(miejsce) {
+  const p = planAktywny(false);
+  if (!p || !p.dyzury) return;
+  delete p.dyzury[miejsce];
+  save(); renderZalegle(); renderZalegleChip(); renderAttendance();
+}
 function siatkaPrzelacz(clsId, dzien, nr) {
   const p = planAktywny(true);
   let klucz, cel;
@@ -2560,6 +2593,10 @@ function siatkaPrzelacz(clsId, dzien, nr) {
     klucz = clsId.slice(5);
     p.inne = p.inne || {};
     cel = p.inne;
+  } else if (String(clsId).startsWith('dyzur:')) {
+    klucz = clsId.slice(6);
+    p.dyzury = p.dyzury || {};
+    cel = p.dyzury;
   } else {
     const cls = state.classes.find(c => c.id === clsId);
     if (!cls) return;
@@ -2686,10 +2723,10 @@ function renderPlanUstawienia() {
     return `<button type="button" class="siatka-kom${otw ? ' otw' : ''}${inne ? ' inne' : ''}" data-cls="${escapeHtml(id)}" data-dzien="${d}" onclick="siatkaOtworz(${JSON.stringify(id).replace(/"/g, '&quot;')},${d})" title="kliknij: numery lekcji w ${DNI[d]}">` +
       (nrs.length ? nrs.map(n => `<span class="chip">${n === null ? '?' : n}</span>`).join('') : '<span class="kropka">·</span>') + '</button>';
   };
-  const nrWiersz = (id, nazwa, s) => {
+  const nrWiersz = (id, nazwa, s, etykieta) => {
     const d = siatkaOtwarta.dzien;
     const nrs = (s[d] || []).filter(n => n !== null);
-    return `<tr><td colspan="${COLS}"><div class="s-nr"><span>${escapeHtml(nazwa)} · ${DNI[d]} · numery lekcji:</span>` +
+    return `<tr><td colspan="${COLS}"><div class="s-nr"><span>${escapeHtml(nazwa)} · ${DNI[d]} · ${etykieta || 'numery lekcji:'}</span>` +
       SIATKA_NR.map(n => `<button type="button" class="siatka-nr${nrs.includes(n) ? ' on' : ''}" data-nr="${n}" onclick="siatkaPrzelacz(${JSON.stringify(id).replace(/"/g, '&quot;')},${d},${n})">${n}</button>`).join('') +
       `</div></td></tr>`;
   };
@@ -2741,7 +2778,26 @@ function renderPlanUstawienia() {
     h += '</table>';
   }
   h += `<div class="dodaj"><input type="text" id="inneNazwa" placeholder="np. EZ 4a, GW 7b, dyżur" style="width:180px;" onkeydown="if(event.key==='Enter'){event.preventDefault();inneDodaj();}"> <button type="button" onclick="inneDodaj()">dodaj zajęcia</button></div></div>`;
-  // --- karta 3: dni wolne
+  // --- karta 3: dyżury na przerwach — w widoku dnia słupek MIĘDZY kafelkami lekcji, nie kafelek.
+  // Numer w siatce = lekcja, PO której jest przerwa („po L3"), bo przerwa własnego numeru nie ma.
+  const dyzury = (p && p.dyzury) || {};
+  const miejsca = Object.keys(dyzury).sort();
+  h += '<div class="plan-karta"><h3>Dyżury na przerwach</h3>' +
+    '<p class="opis">Stały grafik tygodniowy. Klik komórki (miejsce × dzień) otwiera numery lekcji — klikasz lekcję, <b>po której</b> masz dyżur. W Obecności wchodzi jako wąski słupek między kafelkami lekcji, z napisem pionowym; bez frekwencji, nie da się go otworzyć.</p>';
+  if (miejsca.length) {
+    h += '<table>' + naglowek('miejsce', '');
+    miejsca.forEach(miejsce => {
+      const id = 'dyzur:' + miejsce;
+      const sd = planSiatkaZ(dyzury, miejsce);
+      h += `<tr class="plan-inne"><td class="kl">${escapeHtml(miejsce)} <button type="button" class="usun" onclick="dyzurUsun('${escapeHtml(miejsce).replace(/'/g, "\\'")}')" title="usuń z planu">×</button></td>`;
+      for (let d = 0; d < 5; d++) h += `<td>${kom(id, sd, d, true)}</td>`;
+      h += `</tr>`;
+      if (siatkaOtwarta && siatkaOtwarta.clsId === id) h += nrWiersz(id, miejsce, sd, 'dyżur po lekcji:');
+    });
+    h += '</table>';
+  }
+  h += `<div class="dodaj"><input type="text" id="dyzurMiejsce" placeholder="miejsce, np. parter, szatnie, boisko" style="width:220px;" onkeydown="if(event.key==='Enter'){event.preventDefault();dyzurDodaj();}"> <button type="button" onclick="dyzurDodaj()">dodaj miejsce</button></div></div>`;
+  // --- karta 4: dni wolne
   const zakresy = wolneZakresy(p ? p.wolne : []);
   h += `<div class="plan-karta"><h3>Dni wolne <span class="licz">(${p ? (p.wolne || []).length : 0})</span></h3>` +
     '<p class="opis">W pasku tygodnia dzień wyszarzony, lekcje nie liczą się do zaległych.</p><div>' +
@@ -2922,12 +2978,13 @@ function zaleglePlanZastosuj(plan) {
   if (stary) {
     stary.klasy = Object.assign({}, stary.klasy || {}, plan.klasy);
     if (plan.inne) stary.inne = Object.assign({}, stary.inne || {}, plan.inne);
+    if (plan.dyzury) stary.dyzury = Object.assign({}, stary.dyzury || {}, plan.dyzury);
     stary.wolne = Array.from(new Set((stary.wolne || []).concat(plan.wolne || []))).sort();
     if (plan.do) stary.do = plan.do;
     stary.wygenerowano = plan.wygenerowano || stary.wygenerowano || '';
     stary.zrodlo = plan.zrodlo || stary.zrodlo || '';
   } else {
-    state.planWf.plany.push({ od: plan.od, do: plan.do || '', klasy: plan.klasy, inne: plan.inne || {}, wolne: plan.wolne || [], wygenerowano: plan.wygenerowano || '', zrodlo: plan.zrodlo || '' });
+    state.planWf.plany.push({ od: plan.od, do: plan.do || '', klasy: plan.klasy, inne: plan.inne || {}, dyzury: plan.dyzury || {}, wolne: plan.wolne || [], wygenerowano: plan.wygenerowano || '', zrodlo: plan.zrodlo || '' });
   }
   state.planWf.plany.sort((a, b) => a.od < b.od ? -1 : 1);
   save();
@@ -3240,6 +3297,23 @@ function lekcjeDniaWszystkie(iso) {
   lekcje.sort((a, b) => (a.nr === null) - (b.nr === null) || (a.nr || 0) - (b.nr || 0) || (b.cls ? 1 : 0) - (a.cls ? 1 : 0) || a.nazwa.localeCompare(b.nazwa));
   return { wolny, lekcje };
 }
+// Dyżury na przerwach danego dnia: [{miejsce, po}], gdzie „po" = numer lekcji, po której jest ta
+// przerwa. Przerwa nie ma własnego numeru — pozycję niesie numer sąsiada z lewej.
+function dyzuryDnia(iso) {
+  const dzien = zalegleDzienTyg(iso);
+  const out = [];
+  zaleglePlany().forEach(p => {
+    if (!planObejmuje(p, iso) || (p.wolne || []).includes(iso)) return;
+    Object.keys(p.dyzury || {}).forEach(miejsce => (planSiatkaZ(p.dyzury, miejsce)[dzien] || []).forEach(po => {
+      if (po !== null) out.push({ miejsce, po });
+    }));
+  });
+  out.sort((a, b) => a.po - b.po || a.miejsce.localeCompare(b.miejsce));
+  return out;
+}
+function slupekPrzerwy(d) {
+  return `<div class="kol przerwa" data-po="${d.po}" data-miejsce="${escapeHtml(d.miejsce)}" title="przerwa po lekcji ${d.po} — dyżur: ${escapeHtml(d.miejsce)}"><span class="txt">${escapeHtml(d.miejsce)}</span></div>`;
+}
 // Przełącznik Dzień / Tydzień (preferencja UI, nie dane — localStorage, nie kopia)
 function ustawWidok(w) {
   state.widok = w === 'tydzien' ? 'tydzien' : 'dzien';
@@ -3312,7 +3386,11 @@ function renderDzien() {
   const bezLekcji = (weekend || wolny) && !lekcje.length && !cur.attendance[kOtw] && state.dzienWolnyOtw !== iso;
   wrap.classList.toggle('bez-lekcji', bezLekcji);
   let cel = przed, otwartaZPlanu = false;
+  const dyz = bezLekcji ? [] : dyzuryDnia(iso);
+  let iDyz = 0;
   lekcje.forEach(({ cls, nr, nazwa }) => {
+    // słupek przerwy wchodzi przed pierwszą lekcją o wyższym numerze (lekcja bez numeru = koniec dnia)
+    while (iDyz < dyz.length && nr !== null && dyz[iDyz].po < nr) cel.insertAdjacentHTML('beforeend', slupekPrzerwy(dyz[iDyz++]));
     if (!cls) {
       cel.insertAdjacentHTML('beforeend', `<div class="kol inne" data-inne="${escapeHtml(nazwa)}" title="inne zajęcia — bez frekwencji w tym dzienniku"><div class="kol-head"><span class="nr">${nr === null ? '' : 'L' + nr}</span><span class="kl">${escapeHtml(nazwa)}</span><span class="sum">bez frekwencji</span></div></div>`);
       return;
@@ -3321,6 +3399,7 @@ function renderDzien() {
     if (cls.id === cur.id && k === kOtw) { otwartaZPlanu = true; cel.insertAdjacentHTML('beforeend', guzikOtwartej(cur, kOtw, head)); return; }
     cel.insertAdjacentHTML('beforeend', kolumnaPodgladu(cls, iso, nr, k, dzis));
   });
+  while (iDyz < dyz.length) przed.insertAdjacentHTML('beforeend', slupekPrzerwy(dyz[iDyz++]));   // dyżur po ostatniej lekcji
   // Zastępstwa na okienkach tego dnia + kafelek „+ zastępstwo” (dni z planem, nie wolne)
   Object.keys(state.zastepstwaOkienka || {}).filter(k => kluczData(k) === iso).sort((a, b) => (kluczNr(a) || 0) - (kluczNr(b) || 0)).forEach(k => {
     const z = state.zastepstwaOkienka[k];
@@ -3330,6 +3409,16 @@ function renderDzien() {
   if ((wolny || weekend) && !lekcje.length) przed.insertAdjacentHTML('beforeend', `<div class="kol inne wolny"><div class="kol-head"><span class="kl">${weekend ? 'weekend' : 'dzień wolny'}</span><span class="sum">${wolny ? 'z kalendarium — ' : ''}brak lekcji</span>${bezLekcji ? `<button type="button" onclick="state.dzienWolnyOtw='${iso}'; renderAttendance()">otwórz lekcję mimo to</button>` : ''}</div></div>`);
   // Otwarta lekcja spoza planu (albo bez planu): jej guzik na końcu paska
   if (!otwartaZPlanu && !bezLekcji) przed.insertAdjacentHTML('beforeend', guzikOtwartej(cur, kOtw, head));
+  // Słupek nigdy sam na początku zawiniętego wiersza: skleja się z kafelkiem po lewej w jedno pudełko.
+  przed.querySelectorAll('.kol.przerwa').forEach(sl => {
+    const lewy = sl.previousElementSibling;
+    if (!lewy || !lewy.classList.contains('kol') || lewy.classList.contains('przerwa') || lewy.classList.contains('otwarta')) return;
+    const para = document.createElement('div');
+    para.className = 'kol-para';
+    lewy.parentNode.insertBefore(para, lewy);
+    para.appendChild(lewy);
+    para.appendChild(sl);
+  });
   void po;
 }
 // Guzik otwartej lekcji w pasku dnia: kopia nagłówka otwartej (#kolOtwartaHead zostaje źródłem
@@ -3378,7 +3467,11 @@ function renderPlanTydzien() {
     const { wolny, lekcje } = lekcjeDniaWszystkie(iso);
     h += `<div class="plan-dzien${iso === dzis ? ' dzis' : ''}${wolny ? ' wolny' : ''}"><div class="dz-naglowek"><span>${ZALEGLE_DNI[i]} ${iso.slice(8, 10)}.${iso.slice(5, 7)}</span>${wolny ? '<span>wolne</span>' : ''}</div>`;
     if (!lekcje.length && !wolny) h += '<div style="font-size:12px;color:var(--ink-muted);">—</div>';
+    const dyz = dyzuryDnia(iso);
+    let iDyz = 0;
+    const belka = d => `<div class="plan-przerwa" data-po="${d.po}" title="przerwa po lekcji ${d.po} — dyżur"><span>przerwa</span><span>${escapeHtml(d.miejsce)}</span></div>`;
     lekcje.forEach(({ cls, nr, nazwa }) => {
+      while (iDyz < dyz.length && nr !== null && dyz[iDyz].po < nr) h += belka(dyz[iDyz++]);
       if (!cls) {
         h += `<div class="plan-lekcja inne" data-inne="${escapeHtml(nazwa)}" data-iso="${iso}" data-nr="${nr === null ? '' : nr}" title="inne zajęcia — bez frekwencji"><span class="nr">${nr === null ? '' : 'L' + nr}</span><span>${escapeHtml(nazwa)}</span></div>`;
         return;
@@ -3394,6 +3487,7 @@ function renderPlanTydzien() {
       h += `<button type="button" class="${klasa}" data-cls="${cls.id}" data-iso="${iso}" data-nr="${nr === null ? '' : nr}" title="${escapeHtml(tytul)}" onclick="wybierzLekcje('${cls.id}','${iso}',${nr === null ? 'null' : nr})">` +
         `<span class="nr">${nr === null ? '' : 'L' + nr}</span><span>${escapeHtml(cls.name)}</span><span class="st">${jest ? '✓' : zast ? 'z' : niebylo ? '–' : brak ? '!' : ''}</span></button>`;
     });
+    while (iDyz < dyz.length) h += belka(dyz[iDyz++]);
     h += '</div>';
   }
   el.innerHTML = h;

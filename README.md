@@ -374,6 +374,20 @@ linii). Każdy nauczyciel wpisuje plan sam — to jest produkt, plik z EduPage t
 Okno „Zaległe" jest tylko listą braków; planu się w nim nie edytuje (feedback usera:
 ustawienia schowane w alarmie były nieczytelne).
 
+**Dyżury na przerwach — słupek, nie kafelek (2026-09-21).** Karta „Dyżury na przerwach"
+w zakładce Plan: miejsce (`parter`, `szatnie`) × dzień → numery lekcji, po których masz
+dyżur. Stały grafik tygodniowy, jak siatka lekcji. W Obecności dyżur wchodzi jako wąski
+(26 px) kreskowany **słupek między kafelkami lekcji, z napisem pionowym** — miejscem
+dyżuru; bez frekwencji, bez kliku. Dlaczego nie kafelek jak lekcja: przerwa nie ma numeru
+lekcji, ona jest **pomiędzy** numerami — kafelek „L3" kłamałby o tym, czym jest, a numer
+w danych oznacza lekcję, PO której przerwa wypada. W widoku Tydzień kafelki stoją jedna
+pod drugą, więc tam ta sama rzecz jest cienką **belką poziomą** (pionowy napis miałby sens
+tylko przy kafelkach obok siebie). Przy zawijaniu paska słupek jest sklejony z kafelkiem
+po lewej (`.kol-para`), żeby nigdy nie został sam na początku wiersza i nie stracił sensu
+„pomiędzy". Dzień wolny dyżuru nie pokazuje. Bramka: `py -3.14 test_dyzury.py`
+(kolejność w pasku, szerokość i `writing-mode`, brak kliku w lekcję, sklejenie na 430 px,
+widok Tydzień, dzień wolny, klikanie grafiku w zakładce Plan; zrzuty `_zrzuty/dyzury_*.png`).
+
 Dodatek: `plan-roczny/plan-lekcji-RRRR-MM/zbuduj_plan_wf.py` → `plan-wf.json` (EduPage +
 `technikum-recznie.json` + kalendarium ICS + święta ustawowe; format v2: klasa → dzień →
 numery lekcji; `inne` = pozostałe moje lekcje jako EZ/GW). „Wczytaj plan" (zakładka Plan) o tym

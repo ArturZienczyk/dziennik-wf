@@ -136,10 +136,10 @@ with sync_playwright() as pw:
     )
 
     # 5. Plan jako karty + pusty stan (19.09): 0 klas → karta „trzy kroki”, klasa bez uczniów → krok 1 ✓,
-    #    z uczniami → trzy karty (Siatka / Inne zajęcia / Dni wolne) i chipy numerów
+    #    z uczniami → cztery karty (Siatka / Inne zajęcia / Dyżury na przerwach / Dni wolne) i chipy numerów
     page.click("button.tab:has-text('Plan')")
     page.wait_for_timeout(200)
-    check("Plan z klasami: trzy karty", page.locator("#planUstawienia .plan-karta").count() == 3)
+    check("Plan z klasami: cztery karty", page.locator("#planUstawienia .plan-karta").count() == 4)
     check("numer lekcji jako chip", page.locator("#planUstawienia .siatka-kom .chip").count() >= 4)
     check("„Zaawansowane” w stopce karty siatki", page.locator("#planUstawienia .plan-karta .stopka details.plan-zaaw").count() == 1)
     page.evaluate("() => { state.classes = [makeClass('ZSS', '1x', [])]; renderPlanUstawienia(); }")
