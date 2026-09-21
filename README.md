@@ -43,13 +43,20 @@ i schodzi w dół**.
 | `Enter` | zapisuje lekcję (drugi `Enter` potwierdza okno) |
 
 **NS — nieobecność z przyczyn szkolnych** (2026-09-21). Uczeń jest na zawodach, konkursie,
-wycieczce albo w poczcie sztandarowym: nie ma go na lekcji, ale **nic nie traci**. Lekcja
-**nie wchodzi do bazy** procentu ćwiczył — tak jak NU i ZW — i żadna reguła z zakładki Reguły
-tego nie zmienia, bo PZO nie zostawia tu wyboru: *„nieobecności […] związane z działalnością
-na rzecz szkoły nie są wliczane do ogólnej liczby zajęć”*. W VULCANie odpowiada temu symbol
-**ns** („nieob. uspr. szkolne”) — skrypt `vulcan-frekwencja.user.js` wstawia go sam.
-Klawisz to `r`, nie `ns`: `n` i `s` są już zajęte (NĆ i spóźnienie).
-Bramka: `py -3.14 test_status_ns.py`.
+wycieczce albo w poczcie sztandarowym. **Liczy się jak ćwiczył**: wchodzi do bazy procentu
+i do licznika, więc nie tylko nic nie zabiera, ale rozcieńcza cenę pojedynczego niećwiczenia
+(C, C, NĆ, NS → 3/4 = **75%**).
+
+To **świadome odstępstwo od litery PZO** (decyzja Artura 2026-09-21, na korzyść ucznia).
+PZO mówi: *„nieobecności […] związane z działalnością na rzecz szkoły nie są wliczane do ogólnej
+liczby zajęć”* — czyli literalnie takie lekcje powinny z bazy **wypadać** (ten sam uczeń miałby
+wtedy 2/3 = 67%). Uzasadnienie odstępstwa: uczeń reprezentujący szkołę formalnie **jest**
+na zajęciach szkolnych, więc traktujemy to jak obecność z ćwiczeniem. Dlatego NS **nie ma
+manipulatora** w zakładce Reguły — to decyzja, nie ustawienie.
+
+W VULCANie odpowiada temu symbol **ns** („nieob. uspr. szkolne”) — skrypt
+`vulcan-frekwencja.user.js` wstawia go sam. Klawisz to `r`, nie `ns`: `n` i `s` są już
+zajęte (NĆ i spóźnienie). Bramka: `py -3.14 test_status_ns.py`.
 
 Po nadaniu statusu kursor **sam schodzi niżej** — zaznaczasz tylko wyjątki i kończysz
 `Enter`em. Okienko statusów (klik myszą) nadal działa i też przyjmuje te litery;

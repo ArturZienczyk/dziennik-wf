@@ -1,7 +1,8 @@
 # Test statusu NS (2026-09-21): „nieobecność z przyczyn szkolnych” — uczeń reprezentuje szkołę
-# (zawody, konkurs, wycieczka, poczet) i NIC nie traci. PZO ZSS: nieobecności związane
-# z działalnością na rzecz szkoły NIE wliczają się do ogólnej liczby zajęć, więc NS musi
-# wypadać z bazy % ćwiczył — tak jak NU i ZW, i niezależnie od manipulatorów w Regułach.
+# (zawody, konkurs, wycieczka, poczet). Decyzja usera: NS liczy się JAK ĆWICZYŁ — wchodzi do
+# bazy I do licznika. Świadome odstępstwo od litery PZO (tam takie nieobecności z bazy
+# wypadają), na korzyść ucznia: formalnie jest na zajęciach szkolnych, a większa baza
+# rozcieńcza cenę pojedynczego niećwiczenia (3C+1NĆ+1NS: 75% wg litery PZO, 80% tutaj).
 # Sprawdza: liczenie (baza/%), klawisze (7 i r), kafelek na karcie ucznia, kolumnę w tabelach,
 # CSV, eksport do VULCANa (surowy kod NS — mapę trzyma vulcan-frekwencja.user.js).
 import sys
@@ -32,16 +33,17 @@ def check(name, cond, detail=""):
         FAILS.append(name)
 
 
-# 3 uczniów, 4 lekcje. Ala: C,C,C,NS — NS ma wypaść z bazy, więc 100%.
+# 4 uczniów, 4 lekcje. Ala: C,C,C,NS — 100% (NS jak ćwiczył).
+# Dawid: C,C,NĆ,NS — 3/4 = 75%; gdyby NS wypadało z bazy, miałby 2/3 = 67%.
 FIXTURE = """() => {
   const c = state.classes[0];
   c.name = '7b'; c.school = 'SSP';
-  c.students = [{id:'u1', name:'Ala Zawodniczka'}, {id:'u2', name:'Bartek Zwykly'}, {id:'u3', name:'Celina Chora'}];
+  c.students = [{id:'u1', name:'Ala Zawodniczka'}, {id:'u2', name:'Bartek Zwykly'}, {id:'u3', name:'Celina Chora'}, {id:'u4', name:'Dawid Wyjezdza'}];
   c.attendance = {
-    '2026-09-01': { u1:'C', u2:'C',  u3:'NU' },
-    '2026-09-02': { u1:'C', u2:'NB', u3:'C'  },
-    '2026-09-03': { u1:'C', u2:'C',  u3:'C'  },
-    '2026-09-04': { u1:'NS', u2:'C', u3:'ZW' }
+    '2026-09-01': { u1:'C', u2:'C',  u3:'NU', u4:'C'  },
+    '2026-09-02': { u1:'C', u2:'NB', u3:'C',  u4:'C'  },
+    '2026-09-03': { u1:'C', u2:'C',  u3:'C',  u4:'NC' },
+    '2026-09-04': { u1:'NS', u2:'C', u3:'ZW', u4:'NS' }
   };
   activateClass(c.id);          // state.students/attendance to ZYWE wskazniki — po podmianie obiektu trzeba je przepiac
   state.currentDate = '2026-09-04';
@@ -65,35 +67,46 @@ with sync_playwright() as pw:
     page.evaluate(FIXTURE)
     page.wait_for_timeout(400)
 
-    # ---------- 1. Liczenie: NS wypada z bazy, uczen nic nie traci ----------
+    # ---------- 1. Liczenie: NS liczy sie JAK CWICZYL ----------
     st = page.evaluate("() => getStudentStats('u1')")
     check("NS policzone osobno", st.get("NS") == 1, st)
     check(
-        "NS NIE wchodzi do bazy (3 lekcje, nie 4)",
-        st.get("baza") == 3,
+        "NS WCHODZI do bazy (4 lekcje)",
+        st.get("baza") == 4,
         {"baza": st.get("baza"), "total": st.get("total")},
     )
     check(
-        "uczen z NS ma 100% (nic nie traci)",
-        st.get("percent") == 100,
-        st.get("percent"),
+        "NS liczy sie jak cwiczyl (licznik 4 z 4)",
+        st.get("cwiczyl") == 4 and st.get("percent") == 100,
+        {"cwiczyl": st.get("cwiczyl"), "percent": st.get("percent")},
     )
     check(
-        "STATUS_INFO: NS poza baza i nie liczy sie jako cwiczyl",
+        "STATUS_INFO: NS w bazie i jako cwiczyl",
         page.evaluate(
-            "() => STATUS_INFO.NS.baza === false && STATUS_INFO.NS.cwiczyl === false"
+            "() => STATUS_INFO.NS.baza === true && STATUS_INFO.NS.cwiczyl === true"
         ),
     )
+    # rdzen decyzji: NS rozciencza cene niecwiczenia. Dawid: C,C,NC,NS
+    d = page.evaluate("() => getStudentStats('u4')")
+    check(
+        "NS rozciencza niecwiczenie: 3/4 = 75% (wg litery PZO byloby 2/3 = 67%)",
+        d.get("baza") == 4 and d.get("cwiczyl") == 3 and d.get("percent") == 75,
+        {
+            "baza": d.get("baza"),
+            "cwiczyl": d.get("cwiczyl"),
+            "percent": d.get("percent"),
+        },
+    )
 
-    # manipulatory z Regul (bsBaza/ncBaza/nuBaza) nie moga wciagnac NS do bazy — PZO nie daje wyboru
+    # NS nie ma manipulatora w Regulach — to decyzja, nie ustawienie: zadna regula go nie wyrzuca z bazy
     page.evaluate(
         "() => { regulaUstaw('nuBaza', true); regulaUstaw('bsBaza', false); regulaUstaw('ncBaza', false); }"
     )
     page.wait_for_timeout(300)
     st2 = page.evaluate("() => getStudentStats('u1')")
     check(
-        "zadna regula nie wciaga NS do bazy",
-        st2.get("baza") == 3 and st2.get("percent") == 100,
+        "zadna regula nie wyrzuca NS z bazy",
+        st2.get("baza") == 4 and st2.get("percent") == 100,
         st2,
     )
     page.evaluate(
@@ -135,8 +148,8 @@ with sync_playwright() as pw:
     check("picker ma przycisk NS", btn is not None)
     if btn:
         check(
-            "przycisk NS tlumaczy, ze uczen nic nie traci",
-            "nic nie traci" in (btn.get_attribute("title") or "").lower(),
+            "opis NS mowi, ze liczy sie jak cwiczyl",
+            "jak ćwiczył" in (btn.get_attribute("title") or "").lower(),
             btn.get_attribute("title"),
         )
 
@@ -173,8 +186,8 @@ with sync_playwright() as pw:
         kafle,
     )
     check(
-        "karta ucznia liczy % bez NS (100%)",
-        any(k.startswith("100%") for k in kafle),
+        "karta ucznia liczy NS do bazy i do licznika (100% z 4)",
+        any(k.startswith("100%") and "z 4 liczonych" in k for k in kafle),
         kafle,
     )
     page.keyboard.press("Escape")
