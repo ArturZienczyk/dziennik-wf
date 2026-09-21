@@ -2789,7 +2789,7 @@ function renderPlanUstawienia() {
     miejsca.forEach(miejsce => {
       const id = 'dyzur:' + miejsce;
       const sd = planSiatkaZ(dyzury, miejsce);
-      h += `<tr class="plan-inne"><td class="kl">${escapeHtml(miejsce)} <button type="button" class="usun" onclick="dyzurUsun('${escapeHtml(miejsce).replace(/'/g, "\\'")}')" title="usuń z planu">×</button></td>`;
+      h += `<tr class="plan-inne"><td class="kl">${escapeHtml(miejsce)} <button type="button" class="usun" onclick="dyzurUsun(${escapeHtml(JSON.stringify(miejsce))})" title="usuń z planu">×</button></td>`;
       for (let d = 0; d < 5; d++) h += `<td>${kom(id, sd, d, true)}</td>`;
       h += `</tr>`;
       if (siatkaOtwarta && siatkaOtwarta.clsId === id) h += nrWiersz(id, miejsce, sd, 'dyżur po lekcji:');

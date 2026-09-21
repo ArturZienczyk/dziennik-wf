@@ -225,6 +225,30 @@ with sync_playwright() as pw:
         path=str(SHOTS / "dyzury_plan.png")
     )
 
+    # Przypadek wrogi: nazwa miejsca z apostrofem i backslashem. escapeHtml zamienia ' na &#39;,
+    # ale przegladarka dekoduje encje ZANIM atrybut trafi do parsera JS - bez JSON.stringify
+    # taka nazwa wykonuje sie jako kod (XSS z pliku planu / ze scalonej kopii).
+    ZLE = "x'); window.__xss = 1; ('\\\\"
+    page.evaluate(
+        "(m) => { const p = zaleglePlany()[0]; p.dyzury[m] = { '4': [1] }; save(); renderPlanUstawienia(); }",
+        ZLE,
+    )
+    page.wait_for_timeout(200)
+    page.click(
+        '.plan-karta:has-text("Dyżury na przerwach") tr.plan-inne:last-of-type button.usun'
+    )
+    page.wait_for_timeout(300)
+    # sprawdzane PO kliku: onclick odpala sie dopiero przy kliknieciu, sam render niczego nie wykonuje
+    check(
+        "wroga nazwa miejsca nie wykonuje sie jako kod (po kliku w ×)",
+        page.evaluate("() => window.__xss === undefined"),
+    )
+    check(
+        "usuwanie miejsca dziala tez dla nazwy z apostrofem i backslashem",
+        page.evaluate("(m) => !(m in (zaleglePlany()[0].dyzury || {}))", ZLE),
+        page.evaluate("() => Object.keys(zaleglePlany()[0].dyzury || {})"),
+    )
+
     page.click('button.tab:has-text("Obecno")')
     page.wait_for_timeout(300)
     page.screenshot(path=str(SHOTS / "dyzury_dzien.png"), full_page=False)
