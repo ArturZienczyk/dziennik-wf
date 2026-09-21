@@ -70,10 +70,13 @@ with sync_playwright() as pw:
         " {id:'u8', name:'', longTermReleased:false},"
         " {id:'u9', name:'Sowa Igor', longTermReleased:false},"
         " {id:'u10', name:'Dudek Ewa', longTermReleased:false},"
-        " {id:'u11', name:'Kruk Oliwia', longTermReleased:false});"
+        " {id:'u11', name:'Kruk Oliwia', longTermReleased:false},"
+        # para imiennikow zapisana w appce odwrotnie niz w VULCANie (Imie Nazwisko / Nazwisko Imie)
+        " {id:'u12', name:'Anna Wilk', longTermReleased:false},"
+        " {id:'u13', name:'Marcin Wilk', longTermReleased:false});"
         " state.currentDate='2026-09-17';"
         " state.attendance['2026-09-17']={u1:'C', u2:attWrite('C',true), u3:'BS', u4:attWrite('NC',true), u5:'NB', u7:'NU',"
-        "   u9:'NS', u10:attWrite('NS',true), u11:attWrite('NU',true)};"
+        "   u9:'NS', u10:attWrite('NS',true), u11:attWrite('NU',true), u12:'NS', u13:'NU'};"
         " save(); renderStudents(); renderAttendance(); }"
     )
     page.click("#saveBarKopiuj")  # C v2: „📋 do VULCANa” w stopce kolumny
@@ -81,8 +84,8 @@ with sync_playwright() as pw:
     clip = page.evaluate("() => navigator.clipboard.readText()")
     lines = clip.replace("\r", "").split("\n")
     check(
-        "schowek: 9 wierszy (bez czystego C, bez pustego nazwiska)",
-        len(lines) == 9,
+        "schowek: 11 wierszy (bez czystego C, bez pustego nazwiska)",
+        len(lines) == 11,
         lines,
     )
     check("format Nazwisko<TAB>status", all("\t" in l for l in lines), lines)
@@ -104,6 +107,8 @@ with sync_playwright() as pw:
         "Sowa Igor",
         "Dudek Ewa",
         "Kruk Oliwia",
+        "Wilk Anna",
+        "Wilk Marcin",
         "Obcy Uczeń",
     ]
     res = page.evaluate(
@@ -128,6 +133,11 @@ with sync_playwright() as pw:
         "Sowa Igor": "ns",  # NS bez ⏱
         "Dudek Ewa": "ns",  # NS + ⏱ — nieobecnosc zachowuje swoj symbol
         "Kruk Oliwia": "u",  # NU + ⏱
+        # bug 09-21 (8b): para imiennikow blokowala sie nawzajem — dopasowanie szlo po nazwisku,
+        # ktore wymagalo unikalnosci, wiec OBOJE zostawali bez wpisu. Rozstrzyga imie, mimo ze
+        # appka pisze "Anna Wilk", a VULCAN "Wilk Anna".
+        "Wilk Anna": "ns",
+        "Wilk Marcin": "u",
         "Obcy Uczeń": None,
     }
     for n, e in exp.items():

@@ -97,21 +97,36 @@ function parseInput(txt){
   });
   return map;
 }
-// dopasuj input do par: pelne nazwisko, potem samo nazwisko (1. token) jesli jednoznaczne
+// dopasuj input do par. Trzy szczeble, od najpewniejszego:
+//   1. identyczny zapis nazwy,
+//   2. te same slowa w dowolnej kolejnosci — VULCAN pisze "Nowak Jan", appka "Jan Nowak",
+//      wiec IMIE jest tu jedyna rzecza, ktora rozroznia dwoje uczniow o tym samym nazwisku,
+//   3. awaryjnie samo nazwisko, ale TYLKO gdy jest jedno takie w siatce I jeden taki wpis.
+// Bug 09-21 (8b): szczebla 2 nie bylo, wiec kazde dopasowanie szlo przez nazwisko — para
+// imiennikow blokowala sie nawzajem i OBOJE zostawali bez wpisu (NS i U "nie weszly").
 function match(pairs,inputMap){
   var res=[], keys=Object.keys(inputMap), used={};
+  var toks=function(s){return norm(s).split(' ').filter(Boolean);};
+  var sortKey=function(s){return toks(s).slice().sort().join(' ');};
+  // indeks wejscia po slowach bez kolejnosci
+  var bySorted={};
+  keys.forEach(function(k){var sk=sortKey(k); (bySorted[sk]=bySorted[sk]||[]).push(k);});
   // indeks nazwisk (1. token) z siatki
   var bySurname={};
-  pairs.forEach(function(p){var sn=norm(p.name).split(' ')[0]; (bySurname[sn]=bySurname[sn]||[]).push(p);});
+  pairs.forEach(function(p){var sn=toks(p.name)[0]; (bySurname[sn]=bySurname[sn]||[]).push(p);});
   pairs.forEach(function(p){
-    var full=norm(p.name);
-    var st = inputMap[full];
-    if(st===undefined){ // sprobuj po samym nazwisku
-      var sn=full.split(' ')[0];
-      // szukaj w input klucza, ktorego 1. token == sn
-      // nazwisko moze byc 1. tokenem (VULCAN: "Nowak Jan") LUB ostatnim (appka WF: "Jan Nowak")
-      for(var i=0;i<keys.length;i++){ var tk=keys[i].split(' '); if((tk[0]===sn||tk[tk.length-1]===sn) && bySurname[sn] && bySurname[sn].length===1){ st=inputMap[keys[i]]; used[keys[i]]=1; break; } }
-    } else used[full]=1;
+    var full=norm(p.name), key=null;
+    if(inputMap[full]!==undefined) key=full;
+    if(key===null){ var sk=sortKey(p.name); if(bySorted[sk] && bySorted[sk].length===1) key=bySorted[sk][0]; }
+    if(key===null){
+      var sn=toks(p.name)[0];
+      if(bySurname[sn] && bySurname[sn].length===1){
+        var cand=keys.filter(function(k){var tk=toks(k); return tk[0]===sn||tk[tk.length-1]===sn;});
+        if(cand.length===1) key=cand[0];   // dwa wpisy z tym samym nazwiskiem: nie zgaduj, zglos w Podgladzie
+      }
+    }
+    var st = key===null ? undefined : inputMap[key];
+    if(key!==null) used[key]=1;
     var sym = st!==undefined ? symbolFor(st) : null;
     res.push({pair:p, status:(st===undefined?null:st), symbol:sym});
   });
@@ -133,7 +148,7 @@ function keepExcused(symbolName,cellTexts){
 var P=document.createElement('div');
 P.style.cssText='position:fixed;top:10px;right:10px;z-index:2147483647;width:340px;background:#fff;border:2px solid #1E2D4F;border-radius:8px;font:13px/1.4 Arial,sans-serif;color:#1A1A1A;box-shadow:0 6px 24px rgba(0,0,0,.3)';
 P.innerHTML=''
-+'<div style="background:#1E2D4F;color:#fff;padding:8px 10px;font-weight:bold;border-radius:5px 5px 0 0;display:flex;justify-content:space-between">Dziennik WF -> VULCAN <span style="opacity:.6;font-weight:normal">v21</span><span id="wfX" style="cursor:pointer">✕</span></div>'
++'<div style="background:#1E2D4F;color:#fff;padding:8px 10px;font-weight:bold;border-radius:5px 5px 0 0;display:flex;justify-content:space-between">Dziennik WF -> VULCAN <span style="opacity:.6;font-weight:normal">v22</span><span id="wfX" style="cursor:pointer">✕</span></div>'
 +'<div style="padding:10px">'
 +'<div style="font-size:12px;color:#4A4543;margin-bottom:6px">Wklej statusy dnia: <b>Nazwisko Imię</b> [tab / ; / 2 spacje] <b>status</b> (C, NĆ, BS, NB, NU, ZW, NS, SP)</div>'
 +'<textarea id="wfIn" style="width:100%;height:120px;box-sizing:border-box;font:12px monospace" placeholder="Nowak Jan\tC\nKowalska Zofia\tNU"></textarea>'
