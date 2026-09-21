@@ -1416,6 +1416,7 @@
       <button onclick="document.getElementById('fileImport').click()" title="Wczytaj STARĄ, nieszyfrowaną kopię (sprzed września 2026)">📂 Wczytaj stary JSON</button>
       <input type="file" id="fileImport" accept=".json" style="display:none" onchange="importJSON(event)">
       <button onclick="document.getElementById('fileImportEnc').click()" title="Wczytaj kopię zaszyfrowaną hasłem">🔓 Wczytaj szyfrowaną</button>
+      <button onclick="pokazKopieZFolderu()" title="Kopie .json leżące w folderze kopii, najnowsze na górze — klik wczytuje. Po pobraniu załącznika z maila nie trzeba szukać pliku w oknie systemowym.">📂 Kopie w folderze</button>
       <input type="file" id="fileImportEnc" accept=".enc.json,.json" style="display:none" onchange="importEncrypted(event)">
       <button onclick="exportCSV()">📥 Eksport CSV (obecność)</button>
       <button id="btnInstall" class="primary" style="display:none" onclick="installPWA()" title="Zainstaluj jako aplikację na telefonie">📲 Zainstaluj na telefonie</button>
@@ -1747,6 +1748,19 @@
     <div style="display: flex; gap: 8px; justify-content: flex-end;">
       <button onclick="confirmCancel()" style="padding: 10px 20px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; font-family: inherit; font-size: 14px; cursor: pointer;">Anuluj</button>
       <button onclick="confirmOk()" style="padding: 10px 20px; background: #1D9E75; color: white; border: 1px solid #1D9E75; border-radius: 6px; font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer;">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: kopie leżące w folderze kopii (21.09) — po pobraniu załącznika z maila plik trzeba było
+     odszukać w oknie systemowym wśród wszystkiego, co leży w Pobranych. Tu tylko kopie, z datami. -->
+<div class="modal-bg" id="kopieFolderModal" onclick="if(event.target===this) zamknijKopieFolder()">
+  <div class="modal" style="max-width: 560px;">
+    <h3 style="margin-bottom: 6px;">Kopie w folderze</h3>
+    <div id="kopieFolderInfo" style="font-size: 13px; line-height: 1.5; color: var(--ink-muted); margin-bottom: 12px;"></div>
+    <div id="kopieFolderLista" style="display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow: auto;"></div>
+    <div style="display: flex; justify-content: flex-end; margin-top: 14px;">
+      <button onclick="zamknijKopieFolder()" style="padding: 10px 20px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; font-family: inherit; font-size: 14px; cursor: pointer;">Zamknij</button>
     </div>
   </div>
 </div>
@@ -4703,6 +4717,7 @@ async function writeBackupFile(tag) {
   try {
     const text = await encryptSnapshot(pwd);
     const fname = 'dziennik-wf_' + tag + '_SZYFROWANA_' + fileStamp() + '.enc.json';
+    zapamietajWlasnaKopie(fname);   // żeby lista „Kopie w folderze" umiała odróżnić własną od przyniesionej z telefonu
     const gdzie = await zapiszDoFolderuKopii(text, fname);
     const gdzie2 = await zapiszDoFolderuKopii(text, fname, 2);
     if (_folderKopii2Nazwa && !gdzie2) showToast('Drugi folder kopii niedostępny — kopia poszła tylko do pierwszego.', 'warn');
@@ -4885,28 +4900,112 @@ function importEncrypted(event) {
     return;
   }
   const reader = new FileReader();
-  reader.onload = (e) => {
-    const fileText = e.target.result;
-    showPasswordPrompt('Hasło tej kopii',
-      'Podaj hasło, którym ten plik został zaszyfrowany.',
-      'Odszyfruj i wczytaj',
-      async (pwd) => {
-        let data;
-        try {
-          data = await decryptBackup(fileText, pwd);
-        } catch (err) {
-          showToast('Nie udało się odszyfrować — złe hasło lub uszkodzony / nie ten plik.', 'error');
-          return;
-        }
-        showConfirm('Wczytaj dane', 'Hasło OK. ' + IMPORT_TEKST,
-          async () => {
-            if (!await backupBeforeDestruction('IMPORT-ENC')) { showToast('Przerwano — kopia bezpieczeństwa nie powstała, dane nietknięte.', 'warn'); return; }
-            importZastosuj(data);
-          });
-      });
-  };
+  reader.onload = (e) => wczytajSzyfrowanyTekst(e.target.result, file.name);
   reader.readAsText(file);
   event.target.value = '';
+}
+
+// Jedna droga dla obu wejść (okno wyboru pliku i lista „Kopie w folderze"): hasło → odszyfruj → scal.
+function wczytajSzyfrowanyTekst(fileText, nazwaPliku) {
+  showPasswordPrompt('Hasło tej kopii',
+    'Podaj hasło, którym ten plik został zaszyfrowany.' + (nazwaPliku ? '\nPlik: ' + nazwaPliku : ''),
+    'Odszyfruj i wczytaj',
+    async (pwd) => {
+      let data;
+      try {
+        data = await decryptBackup(fileText, pwd);
+      } catch (err) {
+        showToast('Nie udało się odszyfrować — złe hasło lub uszkodzony / nie ten plik.', 'error');
+        return;
+      }
+      showConfirm('Wczytaj dane', 'Hasło OK. ' + IMPORT_TEKST,
+        async () => {
+          if (!await backupBeforeDestruction('IMPORT-ENC')) { showToast('Przerwano — kopia bezpieczeństwa nie powstała, dane nietknięte.', 'warn'); return; }
+          importZastosuj(data);
+        });
+    });
+}
+
+// Kopie leżące w folderze kopii. Powód (21.09): kopię z telefonu przynosisz mailem, a po pobraniu
+// załącznika plik ginie w Pobranych wśród wszystkiego innego. Tu widać tylko kopie i ich daty.
+// LISTA, nie „wczytaj najnowszą" — w tym samym folderze leżą własne auto-kopie dzienne tego laptopa
+// i to data, nie nazwa, mówi, która jest z telefonu.
+// Nazwy kopii zapisanych PRZEZ TO urządzenie. Kopia z telefonu ma dokładnie taki sam wzorzec nazwy
+// co ręczna kopia z laptopa, więc bez tego rejestru zostaje sama data i trzeba zgadywać.
+// Lista nazw, nie dane — nic wrażliwego, trzymana jawnie obok reszty ustawień.
+const WLASNE_KOPIE_KEY = 'dziennikwf_wlasne_kopie';
+function wlasneKopie() {
+  try { const v = JSON.parse(localStorage.getItem(WLASNE_KOPIE_KEY) || '[]'); return Array.isArray(v) ? v : []; }
+  catch (e) { return []; }
+}
+function zapamietajWlasnaKopie(fname) {
+  try {
+    const l = wlasneKopie().filter(n => n !== fname);
+    l.unshift(fname);
+    localStorage.setItem(WLASNE_KOPIE_KEY, JSON.stringify(l.slice(0, 60)));
+  } catch (e) { /* pełny magazyn nie może wysadzić zapisu kopii */ }
+}
+
+let _kopieFolderPliki = [];
+function zamknijKopieFolder() { document.getElementById('kopieFolderModal').classList.remove('active'); }
+
+async function pokazKopieZFolderu() {
+  if (!cryptoAvailable()) { showToast('Odczyt szyfrowanej kopii wymaga otwarcia przez https://.', 'error'); return; }
+  const h = await folderKopiiCzytaj(1);
+  if (!h) { showToast('Najpierw wskaż folder kopii przyciskiem „📁 Kopie” (np. Pobrane).', 'warn'); return; }
+  let perm = await h.queryPermission({ mode: 'read' });
+  if (perm !== 'granted') perm = await h.requestPermission({ mode: 'read' });
+  if (perm !== 'granted') { showToast('Przeglądarka nie dała dostępu do folderu „' + h.name + '”.', 'warn'); return; }
+
+  _kopieFolderPliki = [];
+  try {
+    for await (const wpis of h.values()) {
+      if (wpis.kind !== 'file' || !/\.json$/i.test(wpis.name)) continue;
+      const f = await wpis.getFile();
+      _kopieFolderPliki.push({ name: wpis.name, mtime: f.lastModified, size: f.size, file: f });
+    }
+  } catch (e) {
+    showToast('Nie udało się odczytać folderu: ' + e.message, 'error');
+    return;
+  }
+  _kopieFolderPliki.sort((a, b) => b.mtime - a.mtime);
+  _kopieFolderPliki = _kopieFolderPliki.slice(0, 12);
+
+  const info = document.getElementById('kopieFolderInfo');
+  const lista = document.getElementById('kopieFolderLista');
+  lista.innerHTML = '';
+  if (!_kopieFolderPliki.length) {
+    info.textContent = 'Folder „' + h.name + '” nie ma żadnego pliku .json. Kopię z telefonu najpierw pobierz z maila do tego folderu.';
+  } else {
+    info.textContent = 'Folder „' + h.name + '”, najnowsze na górze. Kopie zapisane przez to urządzenie są oznaczone — nieoznaczona to ta przyniesiona z telefonu.';
+    const wlasne = wlasneKopie();
+    _kopieFolderPliki.forEach((p, i) => {
+      p.wlasna = wlasne.indexOf(p.name) >= 0;
+      const b = document.createElement('button');
+      b.style.cssText = 'padding: 10px 12px; text-align: left; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; font-family: inherit; font-size: 13px; cursor: pointer; line-height: 1.5;';
+      const nazwa = document.createElement('div');
+      nazwa.style.cssText = 'font-weight: 500; word-break: break-all;';
+      nazwa.textContent = p.name;                       // textContent, nie innerHTML — nazwa pliku jest cudzym tekstem
+      const opis = document.createElement('div');
+      opis.style.cssText = 'color: var(--ink-muted); font-size: 12px;';
+      opis.textContent = new Date(p.mtime).toLocaleString('pl-PL') + ' · ' + Math.round(p.size / 1024) + ' kB'
+        + (p.wlasna ? ' · zapisana tutaj' : '');
+      b.appendChild(nazwa); b.appendChild(opis);
+      b.onclick = () => wczytajKopieZFolderu(i);
+      lista.appendChild(b);
+    });
+  }
+  document.getElementById('kopieFolderModal').classList.add('active');
+}
+
+async function wczytajKopieZFolderu(i) {
+  const p = _kopieFolderPliki[i];
+  if (!p) return;
+  zamknijKopieFolder();
+  let text;
+  try { text = await p.file.text(); }
+  catch (e) { showToast('Nie udało się odczytać pliku: ' + e.message, 'error'); return; }
+  wczytajSzyfrowanyTekst(text, p.name);
 }
 
 // Kopiuj dla VULCAN — JEDEN dzień (bieżący), surowe kody apki (C+sp, BS, NĆ…),
@@ -6606,6 +6705,7 @@ document.addEventListener('keydown', function (e) {
     else if (open.id === 'columnModal') closeColumnModal();
     else if (open.id === 'classPromptModal') classPromptCancel();
     else if (open.id === 'pwdPromptModal') pwdPromptCancel();
+    else if (open.id === 'kopieFolderModal') zamknijKopieFolder();
     return;
   }
 

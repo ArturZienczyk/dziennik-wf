@@ -508,8 +508,19 @@ idzie do obu; drugi to np. folder Dysku Google na komputerze (wymaga aplikacji *
 komputer*; na tym laptopie 18.09 jej **nie było** — bez niej „Kopia 2" może wskazać dowolny
 folder, ale do chmury nic samo nie pójdzie). Błąd drugiego folderu nie blokuje kopii (dymek).
 
+**Kopie w folderze (21.09)** — przycisk obok „Wczytaj szyfrowaną" w zakładce Uczniowie. Pokazuje
+pliki `.json` leżące w folderze kopii (do 12, najnowsze na górze, z datą i rozmiarem); klik wczytuje
+tą samą drogą co okno wyboru pliku: hasło → scalenie. Powód: kopia z telefonu przychodzi **mailem**
+(decyzja Artura 21.09 — „nie ufam Dyskowi, nie odnajduję się na nim"), a po pobraniu załącznika plik
+ginie w Pobranych wśród wszystkiego innego. Lista, nie „wczytaj najnowszą" — w tym samym folderze
+leżą własne auto-kopie dzienne tego laptopa. Kopie zapisane przez to urządzenie mają podpis
+**„zapisana tutaj"** (rejestr nazw w `localStorage`), bo kopia z telefonu ma identyczny wzorzec
+nazwy co ręczna kopia z laptopa i sama data nie wystarcza. Bramka: `test_kopie_z_folderu.py`
+(uchwyt folderu podstawiony atrapą — okna systemowego nie da się kliknąć w headless).
+
 **Czego nie ma:** automatu (Drive API w apce) — decyzja: dopiero gdy ręczny transfer po
-tygodniu okaże się uciążliwy; Wi-Fi/serwer lokalny (szkolna sieć izoluje urządzenia).
+tygodniu okaże się uciążliwy; Wi-Fi/serwer lokalny (szkolna sieć izoluje urządzenia); ściągania
+załącznika z maila skryptem — do rozważenia, gdy samo pobieranie z Gmaila zacznie uwierać.
 
 Bramka: `py -3.14 test_scalanie.py` (30 sprawdzeń: znaczniki z diffu, nowszy wygrywa, remis =
 lokalne, nagrobek, plan upsert, klasa nieznana, kopia bez znaczników, magazyn, „zastąp
