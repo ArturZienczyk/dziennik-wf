@@ -4573,8 +4573,14 @@ async function writeBackupFile(tag) {
   }
 }
 
-// Auto-backup raz dziennie — wyzwalany przy pierwszym "Zapisz lekcję" w danym dniu.
-// Przeżywa wyczyszczenie localStorage. Pliki lądują w systemowym folderze Downloads.
+// Auto-backup raz dziennie. Dwa wyzwalacze, bo jeden nie wystarczał:
+//  1) pierwsze "Zapisz lekcję" w danym dniu,
+//  2) odblokowanie dziennika hasłem (zamekUI_haslo) — 2026-09-21: dzień bez zapisanej
+//     lekcji nie zostawiał ŻADNEJ kopii, choć stan się zmieniał (import z telefonu,
+//     same oceny, pomiary). Teraz samo otwarcie dziennika wystarczy.
+// Oba wyzwalacze idą przez ten sam licznik dnia, więc kopia jest najwyżej jedna dziennie.
+// Przeżywa wyczyszczenie localStorage. Pliki lądują w folderze kopii, a gdy go nie ma —
+// w systemowym folderze Downloads.
 const AUTOBACKUP_KEY = 'dziennik_wf_last_autobackup';
 async function autoBackupDaily() {
   const today = new Date().toISOString().slice(0, 10);
@@ -6094,6 +6100,7 @@ async function zamekUI_haslo() {
   zamekBlad('Sprawdzam…');
   const ok = await zamekOdblokuj(h);
   if (!ok) { zamekBlad('Złe hasło.'); const i = document.getElementById('zamekInput'); if (i) { i.value = ''; i.focus(); } return; }
+  autoBackupDaily();   // pierwsze otwarcie dnia = kopia, nawet gdy nie zapiszesz dziś żadnej lekcji
   zamekZaproponujPin();
 }
 function zamekUI_pinInput() { if (zamekPoleWartosc().length === 4) zamekUI_pin(); }

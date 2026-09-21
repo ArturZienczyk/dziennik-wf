@@ -77,6 +77,12 @@ szyfrowana (AES-GCM 256 + PBKDF2-SHA256, 150 000 iteracji).
 
 - Hasło ustawiasz **raz** — apka poprosi o nie przy pierwszym zapisie lekcji.
   Potem żadna kopia już nie pyta; wpisywanie danych idzie bez przerw.
+- **Auto-kopia ma dwa wyzwalacze** (drugi od 2026-09-21): pierwsze „Zapisz lekcję"
+  w danym dniu **oraz** odblokowanie dziennika hasłem. Powód: dzień bez zapisanej
+  lekcji nie zostawiał żadnej kopii, choć stan się zmieniał (import kopii z telefonu,
+  same oceny, pomiary). Licznik dnia jest wspólny, więc kopia jest najwyżej jedna na
+  dobę i na urządzenie. Odblokowanie PIN-em po bezczynności kopii nie robi — to ten
+  sam, już otwarty dzień pracy. Bramka: `py -3.14 test_kopie.py`.
 - Hasło pamięta ta przeglądarka. To świadomy kompromis: kto ma odblokowany laptop,
   widzi dane i tak w samym dzienniku — więc hasło obok nich niczego nie osłabia.
   Chroniony jest **plik, który wychodzi z laptopa**.

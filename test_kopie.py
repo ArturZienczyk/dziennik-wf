@@ -105,6 +105,49 @@ with sync_playwright() as pw:
         {k: obj.get(k) for k in ("app", "cipher", "kdf")},
     )
 
+    # ---------- 1b. Auto-kopia takze przy ODBLOKOWANIU dziennika ----------
+    # (2026-09-21: dzien bez zapisanej lekcji nie zostawial zadnej kopii, choc stan
+    #  sie zmienial - import z telefonu, same oceny. Samo otwarcie dziennika ma wystarczyc.)
+    page.evaluate("() => localStorage.removeItem('dziennik_wf_last_autobackup')")
+    page.reload()
+    page.wait_for_timeout(500)
+    page.fill("#zamekInput", HASLO)
+    with page.expect_download(timeout=15000) as dl_odb_info:
+        page.click('#zamek button:has-text("Otw")')
+    dl_odb = dl_odb_info.value
+    page.evaluate("() => zamekUI_pinPomin()")   # apka proponuje PIN po odblokowaniu z ekranu
+    check(
+        "odblokowanie dziennika robi auto-kopie, gdy dzis jeszcze zadnej nie bylo",
+        "AUTO-codzienna" in dl_odb.suggested_filename
+        and "SZYFROWANA" in dl_odb.suggested_filename,
+        dl_odb.suggested_filename,
+    )
+    odb_path = SHOTS / "auto_kopia_odblokowanie.enc.json"
+    dl_odb.save_as(str(odb_path))
+    check(
+        "kopia z odblokowania: NIE ZAWIERA nazwiska dziecka",
+        NAZWISKO not in odb_path.read_text(encoding="utf-8"),
+    )
+
+    # drugie odblokowanie tego samego dnia -> licznik dnia trzyma, kopii nie ma
+    page.reload()
+    page.wait_for_timeout(500)
+    page.fill("#zamekInput", HASLO)
+    druga = "BRAK"
+    try:
+        with page.expect_download(timeout=2500):
+            page.click('#zamek button:has-text("Otw")')
+        druga = "POWSTALA"
+    except Exception:
+        pass
+    page.evaluate("() => zamekUI_pinPomin()")
+    check(
+        "drugie odblokowanie tego samego dnia NIE mnozy kopii",
+        druga == "BRAK",
+        druga,
+    )
+    page.wait_for_timeout(300)
+
     # ---------- 2. Kolejna kopia NIE pyta juz o haslo ----------
     page.click('button:has-text("Uczniowie")')
     page.wait_for_timeout(200)
