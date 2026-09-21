@@ -95,11 +95,19 @@ with tempfile.TemporaryDirectory() as tmp:
     html.write_text(oryginal, encoding="utf-8")
     check("powrot do tej samej tresci -> znowu ten sam odcisk", fp(repo) == a)
 
-    # 4: commit tej samej zmiany tez jest zmiana wejsc
+    # 4: NAJWAZNIEJSZY przypadek — typowy flow "zmiana -> bieg -> commit -> push".
+    # Commit ma byc przezroczysty: odcisk jest o TRESCI, nie o stanie gita. Pierwsza wersja
+    # (blob-hashe z indeksu + brudna delta) oblewala to i kasowala caly zysk mechanizmu,
+    # bo push po biegu-i-commicie powtarzal zestaw od zera (zmierzone 2026-09-21).
     html.write_text("<h1>zmiana</h1>", encoding="utf-8")
+    przed_commitem = fp(repo)
+    check("edycja przed commitem -> STALE wzgledem startu", przed_commitem != a)
     git(repo, "add", "-A")
     git(repo, "commit", "-qm", "zmiana")
-    check("commit zmiany kodu -> STALE", fp(repo) != a)
+    check(
+        "commit TEJ SAMEJ tresci -> odcisk bez zmian (bieg sprzed commita nadal wazny)",
+        fp(repo) == przed_commitem,
+    )
     b = fp(repo)
 
     # 5: nowy test nieśledzony musi uniewaznic (inaczej wjechalby bez ani jednego biegu)

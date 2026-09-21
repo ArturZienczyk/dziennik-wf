@@ -14,13 +14,14 @@ uruchamiasz `sprawdz_wszystko.py` recznie przy pracy, potem pushujesz — push n
 75 s, ktore wlasnie zaplacilies.
 
 ODCISK = sha256( sol srodowiska
-                 | `git ls-files -s` plikow kodu (.html/.js/.py + pre-push)   <- blob-hashe z indeksu
-                 | posortowana brudna delta: (status, sciezka, sha256 tresci)
-                   tych samych plikow wg `git status --porcelain=v1 -z -uall` )
-- blob-hashe z indeksu: git juz policzyl content-addressed hash kazdego pliku — nie liczymy sami;
-  indeks (a nie HEAD) reaguje juz po `git add`, czyli wczesniej niz po commicie;
-- brudna delta: lapie zmiany niezacommitowane i pliki nieśledzone (ignorowane sa NIEWIDOCZNE,
-  wiec zrzuty w _zrzuty/ nie robia falszywego STALE);
+                 | posortowane (sciezka, sha256 TRESCI Z DYSKU) plikow kodu:
+                   `git ls-files` + `git ls-files --others --exclude-standard` dla .html/.js/.py
+                   i pre-push )
+- git sluzy TYLKO do wypisania listy plikow (respektuje .gitignore), hash liczymy z tresci:
+  dzieki temu `git add` i `git commit` NIE uniewazniaja odciskiem (ta sama tresc = te same
+  wejscia bramek), a kazda realna zmiana tresci uniewaznia. Pierwsza wersja mieszala blob-hashe
+  z indeksu z brudna delta i commit tej samej tresci dawal STALE — zmierzone i poprawione 09-21;
+- pliki ignorowane (_zrzuty/*.png) sa poza lista, wiec zrzuty z biegu nie robia falszywego STALE;
 - sol: wersja pakietu playwright + katalog przegladarki chromium-* + wersja Pythona — update
   srodowiska sam uniewaznia werdykt, bez --clear.
 
@@ -95,54 +96,45 @@ def env_salt(root=ROOT):
     return "ENV:" + "|".join(parts)
 
 
-def pliki_kodu(root=ROOT):
-    """`git ls-files -s` dla wzorcow kodu: linie 'tryb blob stage\\tsciezka'. None = blad gita."""
-    out = _git(["ls-files", "-s", "--"] + WZORCE, root)
+def _sciezki(args, root):
+    """Lista sciezek z `git ls-files -z ...`. None = blad gita."""
+    out = _git(args + ["-z", "--"] + WZORCE, root)
     if out is None:
         return None
-    return sorted(out.decode("utf-8", "replace").splitlines())
+    return [p.decode("utf-8", "replace") for p in out.split(b"\0") if p]
 
 
-def dirty_delta(root=ROOT):
-    """Posortowane (XY, sciezka, hash tresci) dla plikow kodu wg git status. None = blad gita.
+def stan_kodu(root=ROOT):
+    """Posortowane 'sciezka sha256-tresci-Z-DYSKU' dla plikow kodu. None = blad gita.
 
-    -z: NUL-separator (bezpieczne polskie sciezki); -uall: pojedyncze pliki zamiast katalogow.
+    Liczone z TRESCI drzewa roboczego, nie ze stanu gita — dlatego `git add`/`git commit`
+    same w sobie NIE zmieniaja odcisku (treść ta sama = te same wejscia bramek). Pierwsza
+    wersja tego pliku mieszala blob-hashe z indeksu z brudna delta i commit tej samej tresci
+    dawal STALE, czyli push po biegu-i-commicie powtarzal caly zestaw — zmierzone 2026-09-21.
     """
-    out = _git(["status", "--porcelain=v1", "-z", "-uall", "--"] + WZORCE, root)
-    if out is None:
+    sledzone = _sciezki(["ls-files"], root)
+    nowe = _sciezki(["ls-files", "--others", "--exclude-standard"], root)
+    if sledzone is None or nowe is None:
         return None
     entries = []
-    fields = out.split(b"\0")
-    i = 0
-    while i < len(fields):
-        f = fields[i]
-        i += 1
-        if len(f) < 4:
-            continue
-        xy = f[:2].decode("ascii", "replace")
-        path = f[3:].decode("utf-8", "replace")
-        if "R" in xy or "C" in xy:
-            i += 1  # nastepne pole to sciezka zrodlowa rename/copy — nieistotna
+    for path in set(sledzone) | set(nowe):
         full = root / path
         digest = (
             hashlib.sha256(full.read_bytes()).hexdigest() if full.is_file() else "DEL"
         )
-        entries.append("%s %s %s" % (xy, path, digest))
+        entries.append("%s %s" % (path, digest))
     return sorted(entries)
 
 
 def fingerprint(root=ROOT, salt=None):
     """Odcisk wejsc bramek albo None (git niedostepny -> zawsze biegnij)."""
-    kod = pliki_kodu(root)
-    delta = dirty_delta(root)
-    if kod is None or delta is None:
+    kod = stan_kodu(root)
+    if kod is None:
         return None
     h = hashlib.sha256()
     h.update((salt if salt is not None else env_salt(root)).encode("utf-8"))
     for linia in kod:
         h.update(b"KOD:" + linia.encode("utf-8"))
-    for entry in delta:
-        h.update(b"DIRTY:" + entry.encode("utf-8"))
     return h.hexdigest()
 
 
