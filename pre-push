@@ -1,0 +1,40 @@
+#!/bin/sh
+# pre-push — zapadka bramek dziennika WF (wzor: D:/Projects/design/tools/pre-push.sample).
+#
+# INSTALACJA (raz, po klonie repo):
+#   cp pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+#
+# Co robi: przed kazdym pushem, ktory rusza kod (.html / .js / .py), uruchamia WSZYSTKIE bramki
+# przez sprawdz_wszystko.py (~75 s, testy leca rownolegle w grupach po porcie). Czerwona bramka
+# = push wstrzymany. Push samego README albo notatek .md idzie bez czekania.
+#
+# Dlaczego caly zestaw, nie wybrane testy: dziennik to JEDEN plik dziennik_wf.html — kazda zmiana
+# dotyka go w calosci, wiec nie ma sensownego mapowania "zmieniony plik -> te testy". Albo wszystko,
+# albo nic. 75 s zmierzone 2026-09-21 na 32 testach.
+#
+# Cofniecie bramki = swiadoma edycja testu + commit z "dlaczego", nie kasowanie hooka.
+WATCH='\.(html|js|py)$'
+GUARD="py -3.14 sprawdz_wszystko.py"
+ZERO="0000000000000000000000000000000000000000"
+
+while read local_ref local_sha remote_ref remote_sha; do
+  [ "$local_sha" = "$ZERO" ] && continue        # kasowanie galezi — nic do sprawdzania
+  if [ "$remote_sha" = "$ZERO" ]; then
+    run=1                                       # nowa galaz — sprawdz wszystko
+  elif git diff --name-only "$remote_sha" "$local_sha" | grep -qE "$WATCH"; then
+    run=1
+  else
+    run=0
+  fi
+  if [ "$run" = "1" ]; then
+    echo "[pre-push] kod dziennika zmieniony -> wszystkie bramki (~75 s)..."
+    $GUARD || {
+      echo "[pre-push] BLOKADA: bramka czerwona. Push wstrzymany." >&2
+      echo "[pre-push] Pojedynczy test: py -3.14 sprawdz_wszystko.py -k <fragment nazwy>" >&2
+      exit 1
+    }
+  else
+    echo "[pre-push] push bez zmian w kodzie (same .md?) — bramki pominiete."
+  fi
+done
+exit 0

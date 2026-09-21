@@ -426,6 +426,29 @@ Bramka: `py -3.14 test_zalegle.py` (54 sprawdzeń: liczenie v1 i v2, pasek tygod
 dnia, klawiatura pod `#nr`, siatka, dni wolne, „nie było", „wpisz", magazyn, prawdziwy
 `plan-wf.json`).
 
+## Bramki: jedna komenda i zapadka przed pushem (2026-09-21)
+
+`py -3.14 sprawdz_wszystko.py` uruchamia **wszystkie** bramki dziennika i drukuje tabelkę
+plik → wynik → czas. 32 testy, **~75 s**, bo lecą równolegle. Fragment nazwy zawęża:
+`py -3.14 sprawdz_wszystko.py -k dyzur`.
+
+Dlaczego grupowanie, a nie zwykła równoległość: każdy test stawia własny serwer HTTP na
+stałym porcie wpisanym w pliku, a kilka testów dzieli ten sam numer (8771 mają cztery,
+8769 trzy). Na Windows `SO_REUSEADDR` pozwala drugiemu procesowi przejąć zajęty port — dwa
+testy na tym samym porcie uruchomione naraz zaczęłyby sobie podawać cudze strony i sypać
+losowo. Runner grupuje więc testy po porcie: w grupie po kolei, grupy równolegle. Alternatywą
+było przenumerowanie portów w 33 plikach. `test_mikrofon_lokalny.py` jest jawnie **pomijany**
+(wymaga mikrofonu i ręcznego kliku) — widać go w tabelce jako pominięty, nie jako zielony.
+
+**Zapadka `pre-push`** (plik `pre-push` w korzeniu repo; instalacja raz po klonie:
+`cp pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push`). Przed każdym pushem,
+który rusza kod (`.html` / `.js` / `.py`), odpala cały zestaw; czerwona bramka = push
+wstrzymany. Push samych `.md` idzie bez czekania. Cały zestaw, a nie wybrane testy, bo
+dziennik to **jeden plik** `dziennik_wf.html` — każda zmiana dotyka go w całości, więc
+mapowanie „zmieniony plik → te testy" nie istnieje. Sprawdzone w obie strony: przy zielonym
+zestawie hook przepuszcza (exit 0), przy rozbitym CSS słupka dyżuru blokuje (exit 1).
+Cofnięcie bramki = świadoma edycja testu z „dlaczego" w commicie, nie kasowanie hooka.
+
 ## Synchronizacja laptop ↔ telefon — scalanie kopii (2026-09-18)
 
 Dane żyją osobno w każdej przeglądarce. Do teraz „Wczytaj szyfrowaną" **podmieniało** wszystko
