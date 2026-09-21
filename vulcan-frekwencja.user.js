@@ -97,13 +97,22 @@ function parseInput(txt){
   });
   return map;
 }
-// dopasuj input do par. Trzy szczeble, od najpewniejszego:
+// dopasuj input do par. Cztery szczeble, od najpewniejszego:
 //   1. identyczny zapis nazwy,
 //   2. te same slowa w dowolnej kolejnosci — VULCAN pisze "Nowak Jan", appka "Jan Nowak",
 //      wiec IMIE jest tu jedyna rzecza, ktora rozroznia dwoje uczniow o tym samym nazwisku,
+//   2B. jeden zapis jest PODZBIOREM drugiego — VULCAN trzyma DRUGIE IMIE ("Zawadzki Jan
+//      Piotr"), apka tylko pierwsze ("Jan Zawadzki"), wiec szczebel 2 nigdy nie zrownuje
+//      trzech slow z dwoma. Liczy sie tylko przy jednoznacznosci W OBIE STRONY: ten wpis pasuje
+//      do jednego wiersza I ten wiersz do jednego wpisu — inaczej sam "Zawadzki" zostalby
+//      przypisany obu braciom naraz.
 //   3. awaryjnie samo nazwisko, ale TYLKO gdy jest jedno takie w siatce I jeden taki wpis.
 // Bug 09-21 (8b): szczebla 2 nie bylo, wiec kazde dopasowanie szlo przez nazwisko — para
 // imiennikow blokowala sie nawzajem i OBOJE zostawali bez wpisu (NS i U "nie weszly").
+// Bug 09-22 (zmierzony na zywej klasie; nazwiska w przykladzie FIKCYJNE): sam szczebel 2 tego
+// NIE domykal — para Zawadzki Jan Piotr / Zawadzki Michal Karol nadal wypadala ("nie znalazlem (2)"), bo drugie
+// imie w siatce psuje rownosc tokenow. Stad 2B. 7b przechodzilo tylko dlatego, ze ma same
+// unikalne nazwiska i ratowal je szczebel 3.
 function match(pairs,inputMap){
   var res=[], keys=Object.keys(inputMap), used={};
   var toks=function(s){return norm(s).split(' ').filter(Boolean);};
@@ -114,10 +123,18 @@ function match(pairs,inputMap){
   // indeks nazwisk (1. token) z siatki
   var bySurname={};
   pairs.forEach(function(p){var sn=toks(p.name)[0]; (bySurname[sn]=bySurname[sn]||[]).push(p);});
-  pairs.forEach(function(p){
+  // indeks zawierania (szczebel 2B), liczony raz dla calej siatki — potrzebny w obie strony,
+  // zeby wpis pasujacy do dwoch wierszy nie zostal wpisany zadnemu (zamiast obu).
+  var subset=function(a,b){return a.every(function(t){return b.indexOf(t)>=0;});};
+  var zgodne=function(nazwa,k){var tp=toks(nazwa),tk=toks(k); return subset(tk,tp)||subset(tp,tk);};
+  var kandDlaWiersza=pairs.map(function(p){return keys.filter(function(k){return zgodne(p.name,k);});});
+  var ileWierszy={};
+  keys.forEach(function(k){ileWierszy[k]=pairs.filter(function(p){return zgodne(p.name,k);}).length;});
+  pairs.forEach(function(p,pi){
     var full=norm(p.name), key=null;
     if(inputMap[full]!==undefined) key=full;
     if(key===null){ var sk=sortKey(p.name); if(bySorted[sk] && bySorted[sk].length===1) key=bySorted[sk][0]; }
+    if(key===null){ var kk=kandDlaWiersza[pi]; if(kk.length===1 && ileWierszy[kk[0]]===1) key=kk[0]; }
     if(key===null){
       var sn=toks(p.name)[0];
       if(bySurname[sn] && bySurname[sn].length===1){
@@ -148,7 +165,7 @@ function keepExcused(symbolName,cellTexts){
 var P=document.createElement('div');
 P.style.cssText='position:fixed;top:10px;right:10px;z-index:2147483647;width:340px;background:#fff;border:2px solid #1E2D4F;border-radius:8px;font:13px/1.4 Arial,sans-serif;color:#1A1A1A;box-shadow:0 6px 24px rgba(0,0,0,.3)';
 P.innerHTML=''
-+'<div style="background:#1E2D4F;color:#fff;padding:8px 10px;font-weight:bold;border-radius:5px 5px 0 0;display:flex;justify-content:space-between">Dziennik WF -> VULCAN <span style="opacity:.6;font-weight:normal">v22</span><span id="wfX" style="cursor:pointer">✕</span></div>'
++'<div style="background:#1E2D4F;color:#fff;padding:8px 10px;font-weight:bold;border-radius:5px 5px 0 0;display:flex;justify-content:space-between">Dziennik WF -> VULCAN <span style="opacity:.6;font-weight:normal">v23</span><span id="wfX" style="cursor:pointer">✕</span></div>'
 +'<div style="padding:10px">'
 +'<div style="font-size:12px;color:#4A4543;margin-bottom:6px">Wklej statusy dnia: <b>Nazwisko Imię</b> [tab / ; / 2 spacje] <b>status</b> (C, NĆ, BS, NB, NU, ZW, NS, SP)</div>'
 +'<textarea id="wfIn" style="width:100%;height:120px;box-sizing:border-box;font:12px monospace" placeholder="Nowak Jan\tC\nKowalska Zofia\tNU"></textarea>'

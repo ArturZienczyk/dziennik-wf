@@ -164,6 +164,52 @@ with sync_playwright() as pw:
         keys,
     )
 
+    # ---------- B2. imiennicy, a VULCAN trzyma DRUGIE IMIE (regresja 09-22, zmierzona na zywej klasie) ----------
+    # Ksztalt wziety z realnego przypadku (22.09), nazwiska FIKCYJNE — w repo nie trzymamy
+    # danych dzieci. Apka ma "Jan Zawadzki", siatka "Zawadzki Jan Piotr" (drugie imie).
+    # Szczebel 2 (rownosc tokenow) tego nie zrownuje, szczebel 3 (samo nazwisko) przy imiennikach
+    # slusznie odmawia — panel meldowal "nie znalazlem (2): jan zawadzki, michal zawadzki",
+    # czyli DWOJE dzieci po cichu bez wpisu. Domyka to szczebel 2B (zawieranie tokenow).
+    html_b2 = siatka(
+        [
+            ("Zawadzki Jan Piotr", "wf-214", ""),
+            ("Zawadzki Michal Karol", "wf-215", ""),
+            ("Borecki Krzysztof", "wf-218", ""),
+        ]
+    )
+    r = uruchom(
+        html_b2, "Jan Zawadzki\tNS\nMichal Zawadzki\tBS\nKrzysztof Borecki\tNB"
+    )
+    got = {w["key"]: (w["status"], w["symbol"]) for w in r["wiersze"]}
+    check(
+        "B2: Zawadzki Jan -> NS (drugie imie w siatce nie blokuje)",
+        got.get("wf-214") == ("NS", "nieob. uspr. szkolne"),
+        got.get("wf-214"),
+    )
+    check(
+        "B2: Zawadzki Michal -> BS w SWOJEJ kratce, nie w kratce brata",
+        got.get("wf-215") == ("BS", "nie ćwiczy na zajęciach WF"),
+        got.get("wf-215"),
+    )
+    check(
+        "B2: nikt nie wypada z dopasowania",
+        r["nieznalezione"] == [],
+        r["nieznalezione"],
+    )
+    # Granica szczebla 2B: samo nazwisko pasuje do OBU braci — wtedy ma NIE zgadywac.
+    r = uruchom(html_b2, "Zawadzki\tNS\nKrzysztof Borecki\tNB")
+    got = {w["key"]: w["symbol"] for w in r["wiersze"]}
+    check(
+        "B2: wpis pasujacy do obu imiennikow nie trafia do zadnego",
+        got.get("wf-214") is None and got.get("wf-215") is None,
+        got,
+    )
+    check(
+        "B2: niejednoznaczny wpis zgloszony w 'nie znalazlem'",
+        r["nieznalezione"] == ["zawadzki"],
+        r["nieznalezione"],
+    )
+
     # ---------- C. duplikat kratki w DOM: ta sama data-key, kopia ukryta ----------
     # VULCAN trzyma bufor wierszy — ta sama kratka potrafi byc w DOM dwa razy. Dedup ma zostawic
     # kopie WIDOCZNA (w ukryta klikniecie nie trafi) i nie ruszyc kolejnosci pozostalych.
