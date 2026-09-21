@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Dziennik WF -> VULCAN frekwencja
 // @namespace    dziennik-wf
-// @version      0.3
+// @version      0.4
 // @description  Wypelnia kolumne frekwencji WF w VULCAN z danych z Dziennika WF. FILL-ONLY, nie zapisuje.
 // @match        https://dziennik-dziennik.vulcan.net.pl/lodz/016197/*
 // @grant        none
@@ -13,7 +13,14 @@ if(window.__wfvulcan)return; window.__wfvulcan=1;
 // --- nasz status -> nazwa symbolu w legendzie VULCAN ---
 function symbolFor(status){
   var s=(status||'').toUpperCase().replace(/Ć/g,'C').replace(/[^A-Z+#•—-]/g,'');
-  if(s.indexOf('SP')>=0 && s!=='') { if(/SP/.test(s)) return 'spóźnienie'; }
+  // Apka doklej a spoznienie do statusu bazowego: "C+sp", "NS+sp". Jedna kratka VULCANa = jeden symbol,
+  // wiec trzeba wybrac. Decyzja Artura 09-21: spoznienie wygrywa TYLKO gdy uczen byl na sali (C, NC, BS);
+  // przy nieobecnosci (NB/NU/NS/ZW) wygrywa wlasny symbol — inaczej kratka gubi POWOD nieobecnosci
+  // (bug 09-21: kazdy status z ⏱ szedl jako 's', bo warunek "zawiera SP" stal PRZED tablica).
+  var parts=s.split('+'), base=parts[0], late=parts.indexOf('SP')>0;
+  if(base==='SP'||base==='S'||base==='') { if(late||base) return 'spóźnienie'; }
+  if(late && (base==='C'||base==='NC'||base==='BS')) return 'spóźnienie';
+  s=base;
   var M={'C':'obecność','•':'obecność',
     'NC':'nie ćwiczy na zajęciach WF','NĆ':'nie ćwiczy na zajęciach WF','BS':'nie ćwiczy na zajęciach WF',
     'NB':'nieobecność','—':'nieobecność','-':'nieobecność',
@@ -126,7 +133,7 @@ function keepExcused(symbolName,cellTexts){
 var P=document.createElement('div');
 P.style.cssText='position:fixed;top:10px;right:10px;z-index:2147483647;width:340px;background:#fff;border:2px solid #1E2D4F;border-radius:8px;font:13px/1.4 Arial,sans-serif;color:#1A1A1A;box-shadow:0 6px 24px rgba(0,0,0,.3)';
 P.innerHTML=''
-+'<div style="background:#1E2D4F;color:#fff;padding:8px 10px;font-weight:bold;border-radius:5px 5px 0 0;display:flex;justify-content:space-between">Dziennik WF -> VULCAN <span style="opacity:.6;font-weight:normal">v20</span><span id="wfX" style="cursor:pointer">✕</span></div>'
++'<div style="background:#1E2D4F;color:#fff;padding:8px 10px;font-weight:bold;border-radius:5px 5px 0 0;display:flex;justify-content:space-between">Dziennik WF -> VULCAN <span style="opacity:.6;font-weight:normal">v21</span><span id="wfX" style="cursor:pointer">✕</span></div>'
 +'<div style="padding:10px">'
 +'<div style="font-size:12px;color:#4A4543;margin-bottom:6px">Wklej statusy dnia: <b>Nazwisko Imię</b> [tab / ; / 2 spacje] <b>status</b> (C, NĆ, BS, NB, NU, ZW, NS, SP)</div>'
 +'<textarea id="wfIn" style="width:100%;height:120px;box-sizing:border-box;font:12px monospace" placeholder="Nowak Jan\tC\nKowalska Zofia\tNU"></textarea>'
