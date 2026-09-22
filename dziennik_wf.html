@@ -1436,7 +1436,10 @@
     <div class="toolbar">
       <button class="primary" onclick="addStudent()">+ Dodaj ucznia</button>
       <input type="file" id="fileImport" accept=".json" style="display:none" onchange="importJSON(event)">
-      <input type="file" id="fileImportEnc" accept=".enc.json,.json,.enc.txt,.txt" style="display:none" onchange="importEncrypted(event)">
+      <!-- BEZ accept (23.09): Android tłumaczy filtr końcówek po swojemu i ukrywał najnowszą kopię .enc.txt,
+           pokazując stare .json — Artur wybierał „ostatni widoczny" i dostawał same zera. Treść i tak
+           sprawdza odszyfrowanie; zły plik kończy się komunikatem, nie cichą porażką. -->
+      <input type="file" id="fileImportEnc" style="display:none" onchange="importEncrypted(event)">
       <button onclick="exportCSV()">📥 Eksport CSV (obecność)</button>
       <button id="btnInstall" class="primary" style="display:none" onclick="installPWA()" title="Zainstaluj jako aplikację na telefonie">📲 Zainstaluj na telefonie</button>
     </div>
@@ -5081,7 +5084,8 @@ function importEncrypted(event) {
     return;
   }
   const reader = new FileReader();
-  reader.onload = (e) => wczytajSzyfrowanyTekst(e.target.result, file.name);
+  // Typ pliku obok nazwy (23.09): filtr zdjęty na ślepo — to jest dowód, jak telefon/WhatsApp zapisał kopię.
+  reader.onload = (e) => wczytajSzyfrowanyTekst(e.target.result, file.name + ' · ' + (file.type || 'typ nieznany'));
   reader.readAsText(file);
   event.target.value = '';
 }
