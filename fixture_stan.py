@@ -83,14 +83,19 @@ def serwer(port=8781):
         httpd.server_close()
 
 
-def otworz(pw, port, viewport=None, plik="dziennik_wf.html"):
+def otworz(pw, port, viewport=None, plik="dziennik_wf.html", telefon=False):
     """Czysta przeglądarka + odblokowany zamek. Zwraca (browser, ctx, page, errors).
     `errors` to żywa lista — rośnie sama przy każdym błędzie JS i console.error.
-    `plik` pozwala obejrzeć wersję roboczą/piaskownicę tym samym fixture'm."""
+    `plik` pozwala obejrzeć wersję roboczą/piaskownicę tym samym fixture'm.
+    `telefon=True` = dotyk + mobile (pointer: coarse). Sama wąska szerokość to NIE telefon:
+    apka czyta pointer, nie szerokość (22.09: krytyk K4 dostał etykietę „na telefon" na
+    zrzucie 390 px, bo trasa nie emulowała dotyku)."""
     browser = pw.chromium.launch()
     ctx = browser.new_context(
         service_workers="block",
         viewport=viewport or {"width": 1500, "height": 1000},
+        is_mobile=telefon,
+        has_touch=telefon,
     )
     page = ctx.new_page()
     errors = []

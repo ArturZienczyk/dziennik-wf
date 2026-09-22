@@ -650,6 +650,26 @@ od komentarza; pełna treść w dymku i w kafelku otwartym. Test: `test_niebylo_
 uruchomienia. Fix: `page.clock.set_fixed_time('2026-09-18T10:00:00')` przed `goto` — nowy test z datą
 w fixture ma mrozić zegar tak samo.
 
+## Ocena czytelności — panel krytyków na zgłoszenie (2026-09-22)
+
+**Kiedy:** Artur mówi „nieczytelne", „szum", „za dużo przycisków", „nie wiem, gdzie kliknąć".
+To jest jedyny wyzwalacz — NIE pre-push i NIE każdy render (decyzja Artura 22.09). Panel to
+trzy modele: niedeterministyczny, płatny, a 22.09 dwa z siedmiu findingów były fałszywe.
+
+1. `py -3.14 ocena_czytelnosci.py <trasa>` → `_zrzuty/czytelnosc/<trasa>/*.png` + `brief.md`.
+   Zgłoszony ekran nie ma trasy? Dopisz wpis do `TRASY` (kroki = dane), nie nowy skrypt.
+   Stan jest pełny (`fixture_stan.zasiej`), bo pusty nad-raportuje.
+2. Trzy agenty `krytyk-ux` (`~/.claude/agents/krytyk-ux.md`) równolegle, różne role:
+   K1 Nielsen · K2 information scent / wayfinding · K4 cognitive walkthrough (K3 WCAG, gdy
+   chodzi o kontrast lub dotyk). Każdy pisze `<ROLA>.json` obok briefu.
+3. `py -3.14 D:/Projects/tools/contracts/ux_panel.py --weryfikuj K1.json K2.json K4.json --kod dziennik_wf.html`
+   — odrzuca raport niezgodny z kontraktem, flaguje findingi „spoza zrzutu" i cytaty, których
+   nie ma dosłownie w kodzie. **Nie rozstrzyga** — zbieżność krytyków nie jest dowodem.
+4. Werdykt przy kodzie. Uznany finding → reguła w `test_audyt_ux.py` (zapadka).
+
+Bramka `test_ocena_czytelnosci.py` sprawdza tylko, że każda trasa wciąż przechodzi — żeby
+pierwsze zgłoszenie po miesiącu nie zaczynało się od naprawiania selektorów.
+
 ## Uwaga operacyjna: jedno miejsce uruchamiania
 
 Dane siedzą w `localStorage`, który jest **osobny dla pliku na dysku i dla adresu
