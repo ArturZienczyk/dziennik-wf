@@ -2027,6 +2027,12 @@
 <div id="toast" style="position: fixed; top: 20px; right: 20px; padding: 14px 20px; background: #1D9E75; color: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: 14px; font-weight: 500; z-index: 200; display: none; max-width: 350px;"></div>
 
 <script>
+// Dzisiejsza data LOKALNIE (2026-09-23). toISOString() liczy w UTC — od polnocy do 2:00 (zima 1:00)
+// dziennik bral wczoraj: start na wczorajszej dacie, puls dyzuru i „dzis" w planie na zlym dniu.
+function dzisISO() {
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
 // =====================================================
 // DANE
 // =====================================================
@@ -2072,7 +2078,7 @@ let state = {
   gradeColumns: [],
   // grades: { columnId: { studentId: value (0-100) } }
   grades: {},
-  currentDate: new Date().toISOString().slice(0, 10),
+  currentDate: dzisISO(),
   currentNr: null,      // numer lekcji z planu (0-11) albo null = wpis pod samą datą
   pickerStudentId: null,
   pickerLate: false,
@@ -2573,7 +2579,7 @@ function zalegleBrakujace(cls, iso, nrs) {
   return brak;
 }
 function zaleglePolicz(dzis) {
-  dzis = dzis || new Date().toISOString().slice(0, 10);
+  dzis = dzis || dzisISO();
   const out = [];
   state.classes.forEach(cls => {
     const klucz = zaleglePlanKlasa(cls);
@@ -2614,7 +2620,7 @@ function zamknijZalegle() { document.getElementById('zalegleModal').classList.re
 // ---------- plan aktywny (ten, który edytuje siatka) ----------
 function rokSzkolnyStart(iso) { const y = +iso.slice(0, 4); return (iso.slice(5, 7) >= '09' ? y : y - 1) + '-09-01'; }
 function planAktywny(utworz) {
-  const dzis = new Date().toISOString().slice(0, 10);
+  const dzis = dzisISO();
   const plany = zaleglePlany();
   let p = plany.filter(x => x.od <= dzis).pop() || plany[0] || null;
   if (!p && utworz) {
@@ -3003,7 +3009,7 @@ function zastepstwoOkno(clsId, klucz) {
   const sel = document.getElementById('zastLekcja');
   sel.parentElement.style.display = wybor ? '' : 'none';
   if (wybor) {
-    const dzis = new Date().toISOString().slice(0, 10);
+    const dzis = dzisISO();
     void dzis;
     const opcje = [];
     lekcjeDniaWszystkie(iso).lekcje.forEach(({ cls: c, nr }) => {
@@ -3453,7 +3459,7 @@ function renderDzien() {
   przed.innerHTML = ''; po.innerHTML = '';
   const cur = getCurrentClass();
   if (!cur) { head.innerHTML = ''; return; }
-  const iso = state.currentDate, dzis = new Date().toISOString().slice(0, 10);
+  const iso = state.currentDate, dzis = dzisISO();
   const kOtw = attKey();
   // nagłówek otwartej kolumny
   const active = cur.students.filter(s => !s.longTermReleased);
@@ -3548,7 +3554,7 @@ function renderPlanTydzien() {
   const zapas = document.getElementById('lessonNrZapas');
   if (zapas) zapas.style.display = plany.length ? 'none' : 'inline-flex';
   if (!plany.length) { el.innerHTML = ''; return; }
-  const dzis = new Date().toISOString().slice(0, 10);
+  const dzis = dzisISO();
   const pn = tydzienPoniedzialek(state.currentDate);
   const cur = getCurrentClass();
   let h = '';
@@ -3609,7 +3615,7 @@ function dateOffset(days) {
   if (!dopasujLekcjeDoDnia()) renderAttendance();
 }
 function setToday() {
-  state.currentDate = new Date().toISOString().slice(0, 10);
+  state.currentDate = dzisISO();
   state.currentNr = null;
   document.getElementById('lessonDate').value = state.currentDate;
   if (!dopasujLekcjeDoDnia()) renderAttendance();
@@ -4125,7 +4131,7 @@ function renderKarta() {
   const brk = getSemesterBreak();
   const cls = getCurrentClass();
   const f = state.kartaFilter;
-  let h = '<div class="karta-head"><div><h3>' + (escapeHtml(s.name) || 'uczeń') + '</h3><div class="sub">' + escapeHtml((cls && cls.name) || '') + ' · karta ucznia · stan na ' + kartaData(new Date().toISOString().slice(0, 10)) + (s.longTermReleased ? ' · <b>zwolniony długoterminowo</b>' : '') + (getReleases(s).length ? ' · zwolnienia OD–DO: ' + getReleases(s).map(r => relData(r.od) + '–' + relData(r.do)).join(', ') : '') + '</div></div>'
+  let h = '<div class="karta-head"><div><h3>' + (escapeHtml(s.name) || 'uczeń') + '</h3><div class="sub">' + escapeHtml((cls && cls.name) || '') + ' · karta ucznia · stan na ' + kartaData(dzisISO()) + (s.longTermReleased ? ' · <b>zwolniony długoterminowo</b>' : '') + (getReleases(s).length ? ' · zwolnienia OD–DO: ' + getReleases(s).map(r => relData(r.od) + '–' + relData(r.do)).join(', ') : '') + '</div></div>'
     + '<div class="karta-actions"><label class="karta-druk-opt" title="Domyślnie wydruk to 1 strona: bilans, oś czasu, krzywa, oceny, pomiary. Zaznacz, żeby dodać listę wszystkich lekcji (2-3 strony więcej)."><input type="checkbox" id="kartaDrukLista"' + (state.kartaDrukLista ? ' checked' : '') + ' onchange="state.kartaDrukLista = this.checked"> z listą lekcji</label><button onclick="drukujKarte()">🖨 Drukuj / PDF</button><button onclick="closeKarta()">Zamknij</button></div></div>'
     + '<div class="karta-zakres"><label>Zakres: od <input type="date" id="kartaOd" value="' + (state.kartaOd || '') + '" onchange="kartaZakres(this.value, document.getElementById(\'kartaDo\').value)"></label>'
     + '<label>do <input type="date" id="kartaDo" value="' + (state.kartaDo || '') + '" onchange="kartaZakres(document.getElementById(\'kartaOd\').value, this.value)"></label>'
@@ -4180,7 +4186,7 @@ function renderStudents() {
   pasekKopii();
   const tbody = document.getElementById('studentsBody');
   tbody.innerHTML = '';
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dzisISO();
   const qaInfo = document.getElementById('quickAddInfo');
   if (qaInfo) {
     const n = state.students.length;
@@ -4862,7 +4868,7 @@ async function writeBackupFile(tag) {
 // w systemowym folderze Downloads.
 const AUTOBACKUP_KEY = 'dziennik_wf_last_autobackup';
 async function autoBackupDaily() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = dzisISO();
   if (localStorage.getItem(AUTOBACKUP_KEY) === today) return; // już dziś był
   const ok = await writeBackupFile('AUTO-codzienna');
   if (ok) { localStorage.setItem(AUTOBACKUP_KEY, today); pasekKopii(); }   // bez hasła spróbujemy jeszcze raz jutro
@@ -5308,7 +5314,7 @@ function exportCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'dziennik_wf_obecnosc_' + classTag() + new Date().toISOString().slice(0, 10) + '.csv';
+  a.download = 'dziennik_wf_obecnosc_' + classTag() + dzisISO() + '.csv';
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -6648,7 +6654,7 @@ try {
   magazyn.lsPelna = true;
   magazyn.ostatniBlad = (e && e.name) || String(e);
 }
-state.currentDate = new Date().toISOString().slice(0, 10);
+state.currentDate = dzisISO();
 Promise.all([folderKopiiCzytaj(), folderKopiiCzytaj(2)]).then(odswiezFolderKopii);
 zamekStart();
 
