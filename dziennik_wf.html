@@ -329,9 +329,12 @@
   .kol.inne .kl { color: var(--ink-muted); }
   /* Przerwa z dyzurem (2026-09-21): NIE kafelek jak lekcja, tylko waski slupek MIEDZY kafelkami z napisem
      pionowym. Przerwa nie ma numeru lekcji - ona jest POMIEDZY numerami; kafelek "L3" klamalby o tym, czym
-     jest. Napis = miejsce dyzuru ("parter"), bo tego szukasz w biegu; ze to dyzur, niesie ksztalt i kreska. */
-  .kol.przerwa { flex: 0 0 26px; width: 26px; min-width: 26px; max-width: 26px; align-self: stretch; padding: 6px 0; display: flex; align-items: center; justify-content: center; border: 1px dashed var(--line); border-radius: 8px; background: repeating-linear-gradient(135deg, transparent 0 5px, rgba(0,0,0,.05) 5px 6px); cursor: default; }
-  .kol.przerwa .txt { writing-mode: vertical-rl; text-orientation: mixed; font-size: 11px; line-height: 1; letter-spacing: .04em; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-height: 100%; }
+     jest. Napis = miejsce dyzuru ("parter"), bo tego szukasz w biegu; ze to dyzur, niesie ksztalt i kreska.
+     Kolor (2026-09-22): zloto --gold zamiast szarosci --line. Szary slupek gubil sie miedzy kafelkami lekcji;
+     zloto jest jedynym kolorem palety NIE uzywanym na stany frekwencji, wiec wyroznia przerwe, nie mylac jej
+     z obecnoscia/nieobecnoscia. */
+  .kol.przerwa { flex: 0 0 26px; width: 26px; min-width: 26px; max-width: 26px; align-self: stretch; padding: 6px 0; display: flex; align-items: center; justify-content: center; border: 1px dashed var(--gold); border-radius: 8px; background: repeating-linear-gradient(135deg, rgba(176,143,78,.14) 0 5px, rgba(176,143,78,.42) 5px 6px); cursor: default; }
+  .kol.przerwa .txt { writing-mode: vertical-rl; text-orientation: mixed; font-size: 11px; line-height: 1; letter-spacing: .04em; font-weight: 500; color: #7A6129; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-height: 100%; }
   /* Para "kafelek + slupek" w jednym pudelku: przy zawijaniu paska slupek nie moze zostac sam na poczatku
      wiersza - stracilby sens "pomiedzy". Sklejanie robi renderDzien() po wstawieniu kafelkow. */
   .kol-para { display: flex; gap: 6px; align-items: stretch; flex: 1 1 150px; min-width: 0; max-width: 292px; }
