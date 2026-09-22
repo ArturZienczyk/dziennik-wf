@@ -1635,7 +1635,7 @@
         <div id="regSzkoly"></div>
         <p class="uwaga">Stąd etykieta przycisku w kolumnie dnia („do VULCANa” / „do Librusa”). Przy „+ klasa” to samo pytanie pada od razu. Automatyczne wklejanie frekwencji działa w VULCANie; w Librusie kopiujesz ze schowka.</p>
         <p class="uwaga">„Zasady frekwencji (PZO)” — wklej cytat z Przedmiotowych Zasad Oceniania swojej szkoły (co wlicza się do puli zajęć, próg klasyfikacji, widełki %→ocena). Pokaże się w karcie „Jak liczona jest frekwencja” dla klas tej szkoły.</p>
-        <h3 style="margin-top:16px;">Forma: ćwiczył / ćwiczyła</h3>
+        <h3 style="margin-top:16px;">Płeć klasy: ćwiczył / ćwiczyła</h3>
         <div id="regPlec"></div>
         <p class="uwaga">Dla klas jednorodnych płciowo (np. dziewczęta) — ustawienie per klasa (w Uczniowie), nie per uczeń. Zmienia tylko etykiety (stopka, legenda), nie liczenie.</p>
       </div>
@@ -2589,7 +2589,7 @@ function renderZalegleChip() {
   const el = document.getElementById('zalegleChip');
   if (!el) return;
   if (!zaleglePlany().length) {
-    el.innerHTML = '<button id="zalegleChipBtn" onclick="otworzZalegle()" title="Wpisz plan w Ustawieniach (siatka) albo wczytaj plan-wf.json, a dziennik pokaże lekcje bez wpisu" style="padding:6px 12px;border:1px dashed var(--line);border-radius:999px;background:var(--paper);cursor:pointer;font-family:inherit;font-size:13px;color:var(--ink-muted)">Zaległe: brak planu</button>';
+    el.innerHTML = '<button id="zalegleChipBtn" onclick="otworzZalegle()" title="Dziennik pokaże lekcje bez wpisanej frekwencji, gdy zna plan lekcji — wpisz go w zakładce Plan" style="padding:6px 12px;border:1px dashed var(--line);border-radius:999px;background:var(--paper);cursor:pointer;font-family:inherit;font-size:13px;color:var(--ink-muted)">Zaległe: wpisz plan lekcji</button>';
     return;
   }
   const n = zaleglePolicz().length;
@@ -3113,8 +3113,8 @@ function renderClassBar() {
     `<button onclick="uiAddClass()" style="${btnStyle}">+ klasa</button>` +
     `<button onclick="uiRenameClass()" style="${btnStyle}">zmień nazwę</button>` +
     `<button onclick="uiDeleteClass()" style="${btnStyle};border-color:#E5C5C0;color:var(--accent-warm)">usuń klasę</button>` +
-    `<span style="font-size:13px;color:var(--ink-muted);margin-left:8px" title="Klasy ZSS są jednorodne płciowo — zmienia etykiety ćwiczył/ćwiczyła">Forma:</span>` +
-    `<select id="klasaPlec" onchange="ustawPlec(this.value)" style="${selStyle};font-size:13px"><option value="" ${cur && !cur.plec ? 'selected' : ''}>ćwiczył (domyślnie)</option><option value="chl" ${cur && cur.plec === 'chl' ? 'selected' : ''}>chłopcy — ćwiczył</option><option value="dz" ${cur && cur.plec === 'dz' ? 'selected' : ''}>dziewczęta — ćwiczyła</option></select>`;
+    `<span style="font-size:13px;color:var(--ink-muted);margin-left:8px" title="Zmienia tylko słowo w etykietach tej klasy: ćwiczył / ćwiczyła">Płeć klasy:</span>` +
+    `<select id="klasaPlec" onchange="ustawPlec(this.value)" style="${selStyle};font-size:13px"><option value="" ${cur && !cur.plec ? 'selected' : ''}>nie ustawiono — ćwiczył</option><option value="chl" ${cur && cur.plec === 'chl' ? 'selected' : ''}>chłopcy — ćwiczył</option><option value="dz" ${cur && cur.plec === 'dz' ? 'selected' : ''}>dziewczęta — ćwiczyła</option></select>`;
 }
 // Tytuł klasy w Pomiarach / Ocenach / Statystykach: duża nazwa z ▾ = wybór klasy (bez paska szkoła/klasa)
 function renderKlasaTytul() {
@@ -4092,7 +4092,7 @@ function kartaOceny(studentId) {
   let h = '<table class="lista"><thead><tr><th>Data</th><th>Ocena</th><th>Pkt</th><th>Waga</th></tr></thead><tbody>';
   cols.forEach(col => {
     const v = (state.grades[col.id] || {})[studentId];
-    h += '<tr><td>' + (col.date ? kartaData(col.date) : '—') + '</td><td>' + escapeHtml(col.fullName || col.shortName || '') + '</td><td>' + (v === undefined || v === null ? '—' : v) + '</td><td>' + (col.weight === 0 ? 'info' : '×' + col.weight) + '</td></tr>';
+    h += '<tr><td>' + (col.date ? kartaData(col.date) : '—') + '</td><td>' + escapeHtml(col.fullName || col.shortName || '') + '</td><td>' + (v === undefined || v === null ? '—' : v) + '</td><td>' + (wagaKolumny(col) === 0 ? 'info' : '×' + wagaKolumny(col)) + '</td></tr>';
   });
   const avg = calculateStudentAverage(studentId);
   h += '</tbody></table><div class="karta-uwaga">Średnia ważona: <b>' + (avg === null ? '—' : avg) + '</b></div>';
@@ -5597,17 +5597,21 @@ function shortDate(isoDate) {
   return parts[2] + '.' + parts[1];
 }
 
+// Kolumna bez wagi (np. z kopii spoza apki) liczy się jak nowa z formularza: waga 1
+function wagaKolumny(col) { return typeof col.weight === 'number' ? col.weight : 1; }
+
 // Średnia ważona ucznia
 function calculateStudentAverage(studentId) {
   let sumVal = 0;
   let sumWag = 0;
   state.gradeColumns.forEach(col => {
-    if (col.weight === 0) return; // info nie liczy
+    const w = wagaKolumny(col);
+    if (w === 0) return; // info nie liczy
     const colGrades = state.grades[col.id] || {};
     const v = colGrades[studentId];
     if (v === undefined || v === null) return; // brak oceny - pomijamy
-    sumVal += v * col.weight;
-    sumWag += col.weight;
+    sumVal += v * w;
+    sumWag += w;
   });
   if (sumWag === 0) return null;
   return Math.round(sumVal / sumWag);
@@ -5801,8 +5805,8 @@ function renderOcenyHead() {
   h += '<th class="col-name">Uczeń</th>';
 
   state.gradeColumns.forEach((col, idx) => {
-    const wagaClass = col.weight === 2 ? 'w2' : (col.weight === 0 ? 'w0' : '');
-    const wagaText = col.weight === 0 ? 'info' : '×' + col.weight;
+    const wagaClass = wagaKolumny(col) === 2 ? 'w2' : (wagaKolumny(col) === 0 ? 'w0' : '');
+    const wagaText = wagaKolumny(col) === 0 ? 'info' : '×' + wagaKolumny(col);
     h += `<th class="col-ocena${col.auto ? ' kol-auto' : ''}" title="${escapeHtml(col.fullName || col.shortName)}" onclick="editColumn('${col.id}')">`;
     h += `<span class="skrot">${escapeHtml(col.shortName)}</span>`;
     h += `<span class="waga-badge ${wagaClass}">${wagaText}</span>`;

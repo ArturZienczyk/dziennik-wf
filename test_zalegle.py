@@ -69,7 +69,7 @@ with sync_playwright() as pw:
     page.evaluate("() => ustawWidok('tydzien')")
 
     # 1. bez planu: chip „brak planu”
-    check("chip bez planu", "brak planu" in page.inner_text("#zalegleChip"))
+    check("chip bez planu", "wpisz plan lekcji" in page.inner_text("#zalegleChip"))
 
     # 2. dwie klasy: „7 b” (auto po nazwie → 7b) i „5 inf” (brak w planie → nie licz)
     page.evaluate("""() => {

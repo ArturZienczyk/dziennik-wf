@@ -58,7 +58,9 @@ with sync_playwright() as pw:
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.goto("http://127.0.0.1:%d/dziennik_wf.html" % PORT)
     page.wait_for_timeout(400)
-    page.evaluate("() => zamekPierwszeHaslo('haslo-x1')")  # zamek (Szczebel 5): pusty magazyn -> pierwsze haslo
+    page.evaluate(
+        "() => zamekPierwszeHaslo('haslo-x1')"
+    )  # zamek (Szczebel 5): pusty magazyn -> pierwsze haslo
     page.evaluate(SEED)
     page.click('button:has-text("Statystyki")')
     page.click('button.stats-name-btn:has-text("Jan Kowalski")')
@@ -204,6 +206,21 @@ with sync_playwright() as pw:
     check(
         "uczeń bez lekcji: komunikat",
         "Brak zapisanych lekcji" in page.locator("#kartaBody").text_content(),
+    )
+
+    # kolumna bez pola weight (kopia spoza apki): waga 1, bez „×undefined” i NaN
+    page.evaluate(
+        "() => { state.gradeColumns.push({id:'g3', fullName:'Bez wagi', shortName:'BW', date:'2026-10-10'}); state.grades.g3 = {u1: 50}; openKarta('u1'); }"
+    )
+    txt = page.locator("#kartaBody").text_content()
+    check(
+        "bez wagi: brak „undefined” i „NaN”",
+        "undefined" not in txt and "NaN" not in txt,
+    )
+    # (70×1 + 90×2 + 50×1) / 4 = 75
+    check(
+        "bez wagi: liczy się jak waga 1 (średnia 75)",
+        "75" in page.locator("#kartaBody .dwie .karta-uwaga").first.text_content(),
     )
     check("brak błędów JS", errors == [], errors)
     browser.close()
