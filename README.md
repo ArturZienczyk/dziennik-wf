@@ -520,7 +520,9 @@ nazwy co ręczna kopia z laptopa i sama data nie wystarcza. Bramka: `test_kopie_
 
 **Komenda `kopia` (21.09)** — przynosi kopie z maila jedną komendą, bez wchodzenia na Gmaila:
 `kopia` (20 ostatnich maili) albo `kopia 50`. Pobiera TYLKO załączniki pasujące do
-`dziennik-wf_*.json`, do folderu `D:\Users\Downloads\dziennik-wf-kopie` (`kopia --gdzie` pokazuje
+`dziennik-wf_*.json`, do folderu `D:\Users\Desktop\Dziennik WF kopie` — **tego samego, w którym apka
+zapisuje własne kopie** (`kopia.py:FOLDER`), więc przyniesione z telefonu i zrobione tutaj leżą razem
+na jednej liście „Kopie w folderze"; (`kopia --gdzie` pokazuje
 ścieżkę), pomijając te, które już tam leżą — drugi bieg mówi „bez zmian". Ten folder wskazuje się
 w apce raz przyciskiem „📁 Kopie", i wtedy „Kopie w folderze" pokazuje same kopie, nie całe Pobrane.
 Komenda nie dubluje `send` — woła jego `fetch_attachments`; filtr `--only` i `--nowe` doszły tam
