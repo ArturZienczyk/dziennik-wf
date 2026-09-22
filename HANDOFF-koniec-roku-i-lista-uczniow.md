@@ -47,7 +47,38 @@ Cztery sprawy pod jednym zgłoszeniem:
 - Produkt dla kolegów (HANDOFF-plan-produkt): nowy nauczyciel nie ma historii — ścieżka „nowy rok"
   nie może zakładać, że poprzedni rok istnieje.
 
+## Dopisek 1 — „nie było" wpisane z wyprzedzeniem (Artur 22.09, słowa)
+> „możliwość dopisania do lekcji wcześniej niż teraz, że lekcja nie odbyła się lub nie odbędzie się,
+> bo teraz muszę specjalnie czekać, a czasem jest czas, by wpisać do planu dużo szybciej, że jej nie będzie"
+
+**Stan kodu (zmierzony, nie decyzja):** jedyne wejście, które znalazłem, żeby **ustawić** „nie było",
+to przycisk w liście **Zaległe** (`zalegleNieBylo`, `dziennik_wf.html` ~2774/~2906). A Zaległe to
+lekcje z przeszłości bez wpisu. Stąd czekanie: lekcja przyszła albo dzisiejsza jeszcze nie jest zaległa,
+więc nie ma gdzie kliknąć. Kafelek lekcji (`kolumnaPodgladu` ~3520) pokazuje „nie było" dopiero,
+gdy flaga już jest (klik = zmiana powodu), a nie pozwala jej postawić. Model danych przyszłości nie
+blokuje: `cls.odwolane[klucz]`, gdzie klucz to data + numer lekcji (tak samo dla dnia przyszłego).
+Nie sprawdzałem, czy ◀ ▶ w widoku dnia pozwala wejść w przyszły tydzień i czy kafelki przyszłych lekcji
+się tam rysują — **do weryfikacji przed projektem**.
+
+**Pytania:**
+- **P6.** Skąd zwykle wiesz z wyprzedzeniem: wycieczka, rekolekcje, apel, egzaminy, Twoje szkolenie?
+  Czy to zwykle **pojedyncza lekcja**, **cały dzień**, czy **kilka dni** (np. wyjazd klasy na 3 dni)?
+- **P7.** Gdzie byś tego szukał odruchowo: w **Planie** (siatka tygodnia), w **Obecności** na kafelku
+  lekcji w przyszłym dniu, czy obok „Dni wolne"?
+
+## Dopisek 2 — „Start w 5 minut" (link w stopce) do uaktualnienia
+> „uaktualnić, jeżeli będzie taka potrzeba, dziennik w 5 minut, który jest w stopce"
+
+**Stan (zmierzony): potrzeba już JEST.** `start.html` krok 6 „Kopia zapasowa" podaje przyciski, których
+w apce nie ma od 22.09: „🔒 Zapisz kopię" i „🔓 Wczytaj szyfrowaną". Teraz jest blok **„Kopia dziennika"**:
+💾 Zrób kopię dziennika teraz · 📤 Wyślij kopię dziennika na telefon · 📂 Wczytaj kopię dziennika z
+telefonu (README §„Blok »Kopia dziennika« w dwóch krokach"). Pozostałe kroki (hasło, + klasa, lista,
+Plan, pierwsza lekcja, Reguły) nie były sprawdzane pod kątem dzisiejszych zmian nazw — **przejść cały
+plik z apką obok**, nie tylko krok 6. Kandydat na strażnika: test, że każda nazwa przycisku cytowana
+w `start.html` istnieje w `dziennik_wf.html` (dziś takiej bramki nie ma, stąd rozjazd) — **rozważany,
+nie zatwierdzony**.
+
 ## Resume
 „Robimy handoff »koniec roku i lista uczniów« z
 `D:\Projects\nauczyciel\wf\dziennik-wf\HANDOFF-koniec-roku-i-lista-uczniow.md`.
-Zacznij od pytań P1–P5 — najpierw moje odpowiedzi, potem propozycja."
+Zacznij od pytań P1–P7 — najpierw moje odpowiedzi, potem propozycja. „Start w 5 minut" (dopisek 2) można zrobić od razu, bez pytań."
