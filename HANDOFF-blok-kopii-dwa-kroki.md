@@ -39,3 +39,4 @@ przez niego 21–22.09, pocztą) — to już NIE jest „niezweryfikowane".
 
 ## Stan 22.09 ~22:00
 - Blok z pkt 1 zbudowany w roboczym (`#kopiaBlok`, `ostatniaKopiaZapisz/Opis`, klucz `dziennik_wf_ostatnia_kopia`), piaskownica odświeżona, render 1400/390 obejrzany, zero błędów JS. **Czeka na klik Artura w piaskownicy**, potem: `wdroz_roboczy.py --wdroz`, zapadka testu + README, v45, push, skasować skrót „Kopia dziennika na telefon.cmd".
+- **WDROZONE 22.09 ~22:40:** commit `0149945` na origin, v45, 37/37. Skrot „Kopia dziennika na telefon.cmd" przeniesiony do `_wersje-poprzednie/`; „Kopie dziennika z maila.cmd" (zrodlo `tools/kopia_skrot.cmd`) wskazuje nowy przycisk. Granica test_uklad Uczniowie 620 px = decyzja Artura.
