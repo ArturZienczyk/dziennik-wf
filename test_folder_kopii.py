@@ -65,10 +65,15 @@ with sync_playwright() as pw:
     page.evaluate(SEED)
     page.click('button.tab:has-text("Uczniowie")')
     page.wait_for_timeout(200)
+    # Od 22.09 foldery kopii mieszkaja w oknie „Kopia zapasowa" -> „Ustawienia kopii".
+    # Otwieram je raz i zostawiam otwarte: klikanie folderu okna nie zamyka.
+    page.click('#tab-uczniowie button:has-text("Kopia zapasowa")')
+    page.wait_for_timeout(200)
+    page.evaluate("() => { document.querySelector('#kopiaModal details').open = true; }")
 
     check(
         "start: przycisk mówi Pobrane",
-        page.text_content("#btnFolderKopii").strip() == "📁 Kopie: Pobrane",
+        page.text_content("#btnFolderKopii").strip() == "📁 Folder kopii: Pobrane",
     )
 
     # kopia bez folderu -> pobieranie
@@ -90,7 +95,7 @@ with sync_playwright() as pw:
     page.wait_for_timeout(300)
     check(
         "po wyborze: przycisk pokazuje nazwę folderu",
-        page.text_content("#btnFolderKopii").strip() == "📁 Kopie: Kopie WF",
+        page.text_content("#btnFolderKopii").strip() == "📁 Folder kopii: Kopie WF",
     )
 
     # kopia z folderem -> do folderu, nie do pobierania
@@ -138,7 +143,7 @@ with sync_playwright() as pw:
     page.wait_for_timeout(300)
     check(
         "Shift+klik: wraca Pobrane",
-        page.text_content("#btnFolderKopii").strip() == "📁 Kopie: Pobrane",
+        page.text_content("#btnFolderKopii").strip() == "📁 Folder kopii: Pobrane",
     )
 
     # auto-kopia dzienna też idzie tą samą drogą (folder ustawiony ponownie)

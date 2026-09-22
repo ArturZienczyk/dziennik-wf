@@ -1,5 +1,12 @@
 # HANDOFF — „Jedna droga kopii" (2026-09-22)
 
+> **STATUS 2026-09-22 wieczór: punkty 1–4 wykonane w kodzie.** Pasek Uczniowie ma dwa wejścia
+> w kopie (📤 Wyślij kopię / 📦 Kopia zapasowa) zamiast ośmiu, wysyłka idzie przez
+> `navigator.share({files})` z fallbackiem, nazwy przepisane wg zasady „co się stanie, nie jak
+> działa", komunikat dla kogoś z zewnątrz jest w README. Bramka: `test_wyslij_kopie.py` (18/18),
+> pełny bieg 36/36, `CACHE_VERSION` v42. **Zapadki nie kliknął jeszcze nikt** — „zrobione" stwierdza
+> Artur, gdy otworzy apkę i nie zawaha się, w co kliknąć. Dokument zostaje jako rekord decyzji.
+
 > **Po polsku:** Zadanie na następną sesję: schować cały transfer kopii do wnętrza aplikacji
 > i zostawić JEDNĄ zrozumiałą drogę zamiast ośmiu przycisków. Po co: dziś zakładka Uczniowie
 > wygląda jak Librus — pasek enigmatycznych kafelków, przy których nauczyciel nie wie, w który

@@ -34,6 +34,16 @@ def check(name, cond, detail=""):
         FAILS.append(name + " :: " + str(detail))
 
 
+def przez_okno_kopii(page, tekst):
+    """Od 22.09 kopie i hasla siedza w oknie „Kopia zapasowa" — jedna droga zamiast osmiu przyciskow."""
+    page.click('#tab-uczniowie button:has-text("Kopia zapasowa")')
+    page.wait_for_timeout(200)
+    # „Ustawienia kopii" sa zwiniete swiadomie (konfiguracja nie udaje czynnosci) — rozwijam jak user
+    page.evaluate("() => { const d = document.querySelector('#kopiaModal details'); if (d) d.open = true; }")
+    page.click('#kopiaModal button:has-text("%s")' % tekst)
+    page.wait_for_timeout(200)
+
+
 with sync_playwright() as pw:
     browser = pw.chromium.launch()
     ctx = browser.new_context(
@@ -152,7 +162,7 @@ with sync_playwright() as pw:
     page.click('button:has-text("Uczniowie")')
     page.wait_for_timeout(200)
     with page.expect_download(timeout=15000) as dl2_info:
-        page.click('#tab-uczniowie button:has-text("Zapisz kopię")')
+        przez_okno_kopii(page, "Zapisz kopię na tym komputerze")
     dl2 = dl2_info.value
     ręczna = SHOTS / "reczna_kopia.enc.json"
     dl2.save_as(str(ręczna))
@@ -190,7 +200,7 @@ with sync_playwright() as pw:
         "przycisk 'Haslo kopii' (pokaz haslo) zniknal",
         page.query_selector('button:has-text("Hasło kopii")') is None,
     )
-    page.click('button:has-text("Zmień hasło")')
+    przez_okno_kopii(page, "Zmień hasło dziennika")
     page.wait_for_timeout(300)
     check(
         "'Zmien haslo' nie podstawia biezacego hasla do pola",
@@ -204,7 +214,7 @@ with sync_playwright() as pw:
         page.evaluate("() => zamek.haslo") == HASLO
         and page.query_selector("#pwdPromptModal.modal-bg.active") is None,
     )
-    page.click('button:has-text("Zmień hasło")')
+    przez_okno_kopii(page, "Zmień hasło dziennika")
     page.wait_for_timeout(200)
     page.fill("#pwdPromptInput", HASLO)
     page.click("#pwdPromptOk")
@@ -224,7 +234,7 @@ with sync_playwright() as pw:
         ),
     )
     with page.expect_download(timeout=15000) as dl3_info:
-        page.click('#tab-uczniowie button:has-text("Zapisz kopię")')
+        przez_okno_kopii(page, "Zapisz kopię na tym komputerze")
     dl3 = dl3_info.value
     raw3 = SHOTS / "kopia_po_zmianie.enc.json"
     dl3.save_as(str(raw3))

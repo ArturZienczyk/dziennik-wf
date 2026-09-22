@@ -314,7 +314,7 @@ with sync_playwright() as pw:
     )
 
     # 8. Drugi folder kopii: przycisk i atrapa zapisu do obu
-    check("przycisk Kopia 2 jest", "Kopia 2" in page.inner_text("#btnFolderKopii2"))
+    check("przycisk zapasowego folderu jest", "Zapasowy folder" in page.inner_text("#btnFolderKopii2"))
     page.evaluate("""async () => {
       window._zapisy = [];
       const atrapa = nazwa => ({ name: nazwa, queryPermission: async () => 'granted',

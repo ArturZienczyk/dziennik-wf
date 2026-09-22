@@ -8,13 +8,21 @@ pomiarów sprawności i ocen na WF. Dyktowanie głosem na sali (mikrofon / Win+H
 Otwórz `dziennik_wf.html` w przeglądarce (dwuklik). Działa lokalnie, nic nie wychodzi
 na żaden serwer.
 
+**Dla kogoś, kto dostaje dziennik od Artura (ustalone 22.09):** to jeden plik HTML —
+**nie trzeba Pythona ani niczego poza przeglądarką**. Python napędza wyłącznie skróty Artura na
+pulpicie (`kopia`, `kopia --na-telefon`) i bramki testowe, a realną barierą w tych skrótach nie
+jest zresztą Python, tylko **hasło aplikacji Gmaila w zmiennej środowiskowej** — każdy musiałby
+wygenerować własne. Dostajesz plik, otwierasz, działa; kopie wysyłasz z samej apki przyciskiem
+**📤 Wyślij kopię**.
+
 ## Dane i backup
 
 - Dane żyją w `localStorage` **i** w IndexedDB tej przeglądarki — per przeglądarka,
   per komputer — **wyłącznie jako szyfrogram** (hasło dziennika; patrz „Zamek”). Drugi magazyn jest po to, by wpisy nie ginęły, gdy wspólny limit
   plików otwieranych z dysku się zapełni (patrz „Pełna pamięć przeglądarki").
 - Kopia zapasowa: **zawsze zaszyfrowana hasłem** — auto raz dziennie przy zapisie
-  lekcji, przed każdą operacją kasującą i ręcznie przyciskiem „Zapisz kopię".
+  lekcji, przed każdą operacją kasującą i ręcznie: **📦 Kopia zapasowa → „Zapisz kopię
+  na tym komputerze"** (albo **📤 Wyślij kopię**, gdy ma od razu pojechać na drugie urządzenie).
   Szczegóły: „Kopie zapasowe — zawsze zaszyfrowane" niżej.
 - Backupy trzymaj w `backups/` — folder jest w `.gitignore` (imiona/oceny dzieci
   NIGDY nie idą do git ani na Drive bez szyfrowania — zakaz CLAUDE.md projektu).
@@ -131,13 +139,44 @@ szyfrowana (AES-GCM 256 + PBKDF2-SHA256, 150 000 iteracji).
 - Operacja kasująca dane (wyczyść wszystko / import / usuń klasę) **nie wykona się**,
   jeśli kopia bezpieczeństwa nie powstała. Anulowanie hasła = dane nietknięte.
 - Jawny przycisk „Zapis JSON" zniknął. Wczytywanie **starych**, nieszyfrowanych
-  kopii zostaje („📂 Wczytaj stary JSON") — te sprzed września nadal się otwierają.
+  kopii zostaje (📦 Kopia zapasowa → Ustawienia kopii → „Wczytaj kopię sprzed września
+  2026") — te sprzed września nadal się otwierają.
 - Przeglądarka bez Web Crypto: kopia powstaje jawna, ale z głośnym ostrzeżeniem
   (utrata danych jest gorsza niż jawny plik na własnym dysku). Zmierzone 2026-09-14:
   w Chromium szyfrowanie działa **także z pliku otwartego z dysku** (`file://`) —
   zaszyfrowanie i odszyfrowanie przechodzą.
 
-**Folder kopii (2026-09-17).** Przycisk **📁 Kopie: Pobrane** w zakładce Uczniowie — raz wskazujesz
+**Jedna droga kopii (2026-09-22).** Pasek zakładki Uczniowie miał 12 przycisków, z tego 8 wokół
+kopii i haseł — powód zmiany słowami Artura: *„gdy otwierasz a tam kafelki, które są dla ciebie
+enigmą, to bardzo odpycha — ma to aplikacja Librusa, która nazywa rzeczy tak, że nie rozumiem po
+co"*. Zostały **dwa**: **📤 Wyślij kopię** (czynność codzienna, jeden klik) i **📦 Kopia zapasowa**
+(okno z resztą). W oknie trzy czynności nazwane czasownikiem — *Wyślij kopię na telefon* (na
+telefonie: „na laptop"), *Zapisz kopię na tym komputerze*, *Wczytaj kopię* — a pod nimi zwinięte
+**Ustawienia kopii**: folder kopii, zapasowy folder, hasło, PIN, wczytanie kopii sprzed września
+2026. Konfiguracja przestała udawać czynność.
+
+Zasada nazewnicza (to jest właściwy produkt tej zmiany, nie sam przycisk): **nazwa mówi, co się
+stanie dla nauczyciela, nie jak to działa w środku.** Stąd „Wczytaj stary JSON" → „Wczytaj kopię
+sprzed września 2026", „Kopia 2" → „Zapasowy folder", a „(szyfrowana)" zeszło z etykiet do jednego
+zdania na górze okna.
+
+Dwie drogi do wczytania (lista z folderu / okno systemowe) zlały się w jedną: klik **Wczytaj kopię**
+rozwija listę kopii z folderu, a pod nią jest link **📂 Wybierz plik ręcznie** — żadna nie znika.
+Lista wczytuje się **dopiero po tym kliknięciu** (decyzja Artura): Chrome pyta wtedy o dostęp do
+folderu, a to pytanie ma wychodzić z wyraźnej intencji, nie z samego otwarcia okna przez kogoś, kto
+wszedł zmienić PIN. Szyfrowanie, hasło i scalanie przy wczytaniu **nietknięte** — uproszczone są
+nazwy i drogi, nie bezpieczeństwo. Bramka: `py -3.14 test_wyslij_kopie.py` (pilnuje też, żeby pasek
+nie zarósł z powrotem: ≤5 przycisków, dokładnie dwa wejścia w kopie, zero słów typu „JSON").
+
+**📤 Wyślij kopię (2026-09-22).** Szyfruje migawkę i oddaje plik do **systemowego okna
+udostępniania** (`navigator.share({files})`): Gmail, Dysk, WhatsApp — bez kroku „zapisz plik, znajdź
+go w Pobranych, załącz do maila". Na Androidzie to standardowa ścieżka PWA; w Chrome na laptopie
+zmierzone 22.09 (`canShare({files}) === true`). Przeglądarka bez tego API → kopia zapisuje się jak
+dotąd, a dymek mówi, co się stało (przycisk nigdy nie milczy). Zamknięcie okna udostępniania nie
+robi kopii awaryjnej — to nie błąd.
+
+**Folder kopii (2026-09-17).** Przycisk **📁 Folder kopii: Pobrane** (📦 Kopia zapasowa →
+Ustawienia kopii) — raz wskazujesz
 folder (np. `Dziennik WF kopie` na pulpicie) i od tej pory każda kopia, automatyczna i ręczna, zapisuje
 się prosto tam, bez okienka. Przeglądarka pamięta folder między uruchomieniami (uchwyt w IndexedDB);
 Chrome może raz na sesję zapytać o zgodę na zapis. Gdy folder jest niedostępny (brak zgody, folder
@@ -497,18 +536,18 @@ Pod spodem: `cls._t[ścieżka] = ms` obok danych (format komórek nietknięty). 
 `a|klucz|uczeń` frekwencja · `o|klucz` nie było · `g|kol|uczeń` ocena · `gc|kol` kolumna ·
 `m|uczeń` pomiary · `s|uczeń` uczeń · `k` meta klasy.
 
-**Rytm dnia (jedno kliknięcie na urządzenie):** laptop zapisuje kopię sam (auto raz dziennie
-+ „Zapisz kopię"); na telefonie: Dysk Google → plik `.enc.json` → otwórz w dzienniku →
-„Wczytaj szyfrowaną" → hasło → OK. Kierunek telefon → laptop: „Zapisz kopię" (plik w
-Pobranych) → Udostępnij → Dysk (Android nie synchronizuje Pobranych sam — **nie testowane
-u użytkownika**), na laptopie „Wczytaj szyfrowaną" z folderu Dysku.
+**Rytm dnia (jedno kliknięcie na urządzenie):** laptop zapisuje kopię sam (auto raz dziennie),
+a ręcznie idzie **📤 Wyślij kopię** → wybierasz Gmaila → koniec. Na drugim urządzeniu: **📦 Kopia
+zapasowa → Wczytaj kopię** → hasło → scalenie. Droga mailem została opisana niżej (`kopia`,
+`kopia --na-telefon`) i zostaje jako automat Artura; dla kogoś z zewnątrz wystarcza sama apka.
 
-**Dwa foldery kopii:** „📁 Kopie" (główny, dotychczasowy) i **„📁 Kopia 2"** — każda kopia
+**Dwa foldery kopii:** „📁 Folder kopii" (główny) i **„📁 Zapasowy folder"** — każda kopia
 idzie do obu; drugi to np. folder Dysku Google na komputerze (wymaga aplikacji *Dysk Google na
 komputer*; na tym laptopie 18.09 jej **nie było** — bez niej „Kopia 2" może wskazać dowolny
 folder, ale do chmury nic samo nie pójdzie). Błąd drugiego folderu nie blokuje kopii (dymek).
+Oba siedzą w **Ustawieniach kopii** wewnątrz okna „Kopia zapasowa".
 
-**Kopie w folderze (21.09)** — przycisk obok „Wczytaj szyfrowaną" w zakładce Uczniowie. Pokazuje
+**Lista kopii (21.09; od 22.09 wewnątrz okna „Kopia zapasowa", pod „Wczytaj kopię")**. Pokazuje
 pliki `.json` leżące w folderze kopii (do 12, najnowsze na górze, z datą i rozmiarem); klik wczytuje
 tą samą drogą co okno wyboru pliku: hasło → scalenie. Powód: kopia z telefonu przychodzi **mailem**
 (decyzja Artura 21.09 — „nie ufam Dyskowi, nie odnajduję się na nim"), a po pobraniu załącznika plik
@@ -522,9 +561,10 @@ nazwy co ręczna kopia z laptopa i sama data nie wystarcza. Bramka: `test_kopie_
 `kopia` (20 ostatnich maili) albo `kopia 50`. Pobiera TYLKO załączniki pasujące do
 `dziennik-wf_*.json`, do folderu `D:\Users\Desktop\Dziennik WF kopie` — **tego samego, w którym apka
 zapisuje własne kopie** (`kopia.py:FOLDER`), więc przyniesione z telefonu i zrobione tutaj leżą razem
-na jednej liście „Kopie w folderze"; (`kopia --gdzie` pokazuje
+na jednej liście pod „Wczytaj kopię"; (`kopia --gdzie` pokazuje
 ścieżkę), pomijając te, które już tam leżą — drugi bieg mówi „bez zmian". Ten folder wskazuje się
-w apce raz przyciskiem „📁 Kopie", i wtedy „Kopie w folderze" pokazuje same kopie, nie całe Pobrane.
+w apce raz (📦 Kopia zapasowa → Ustawienia kopii → „📁 Folder kopii"), i wtedy lista pokazuje same
+kopie, nie całe Pobrane.
 Komenda nie dubluje `send` — woła jego `fetch_attachments`; filtr `--only` i `--nowe` doszły tam
 przy okazji (`D:/Projects/tools/send.py`). Próba na żywo 21.09: z 5 ostatnich maili wzięła kopię
 z telefonu, pominęła LinkedIn i ChatGPT.
@@ -537,7 +577,7 @@ oba błędy są ciche: **kopia jawna nigdy nie wychodzi mailem** (jest pomijana 
 przemilczana — mailem jadą dane dzieci), a **kopia starsza niż 3 h dostaje głośne ostrzeżenie**, bo
 znaczy, że po jej zapisaniu była praca, której telefon nie dostanie (22.09 najnowsza kopia pochodziła
 sprzed wdrożenia dyżurów). Najnowszość liczona z `mtime`, nie z nazwy pliku. Kolejność jest
-nieusuwalna: **najpierw** „Zapisz kopię (szyfrowana)" w dzienniku, **potem** skrót — skrypt nie ma
+nieusuwalna: **najpierw** „Zapisz kopię na tym komputerze" w dzienniku, **potem** skrót — skrypt nie ma
 dostępu do danych w przeglądarce i sam kopii nie zrobi. Bramka: `py -3.12
 D:/Projects/tools/test_kopia_na_telefon.py` (10 sprawdzeń, zero wysyłki).
 

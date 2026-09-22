@@ -1423,15 +1423,9 @@
     <div id="classBar"></div>
     <div class="toolbar">
       <button class="primary" onclick="addStudent()">+ Dodaj ucznia</button>
-      <button class="primary" onclick="exportEncrypted()" title="Kopia zaszyfrowana hasłem — tę można wysłać mailem">🔒 Zapisz kopię (szyfrowana)</button>
-      <button onclick="zmienHaslo()" title="Zmień hasło dziennika i kopii (wymaga obecnego). Apka nie pokazuje hasła — zapomniane = dane nie do odzyskania poza kopiami.">🔑 Zmień hasło</button>
-      <button onclick="zamekUI_pinZmien()" title="PIN 4 cyfry do szybkiego odblokowania po bezczynności na lekcji">🔢 PIN</button>
-      <button id="btnFolderKopii" onclick="wybierzFolderKopii(event)" title="Wskaż folder, do którego mają trafiać kopie (zamiast Pobranych). Shift+klik = wróć do Pobranych.">📁 Kopie: Pobrane</button>
-      <button id="btnFolderKopii2" onclick="wybierzFolderKopii(event, 2)" title="Drugi folder — każda kopia idzie też tam (np. Dysk Google na komputerze). Shift+klik = wyłącz.">📁 Kopia 2: brak</button>
-      <button onclick="document.getElementById('fileImport').click()" title="Wczytaj STARĄ, nieszyfrowaną kopię (sprzed września 2026)">📂 Wczytaj stary JSON</button>
+      <button class="primary" onclick="wyslijKopie()" title="Zaszyfrowana kopia prosto z dziennika do Gmaila, Dysku, WhatsAppa — bez szukania pliku w Pobranych.">📤 Wyślij kopię</button>
+      <button onclick="otworzKopieModal()" title="Zapisz kopię, wczytaj kopię, ustawienia kopii — wszystko w jednym oknie.">📦 Kopia zapasowa</button>
       <input type="file" id="fileImport" accept=".json" style="display:none" onchange="importJSON(event)">
-      <button onclick="document.getElementById('fileImportEnc').click()" title="Wczytaj kopię zaszyfrowaną hasłem">🔓 Wczytaj szyfrowaną</button>
-      <button onclick="pokazKopieZFolderu()" title="Kopie .json leżące w folderze kopii, najnowsze na górze — klik wczytuje. Po pobraniu załącznika z maila nie trzeba szukać pliku w oknie systemowym.">📂 Kopie w folderze</button>
       <input type="file" id="fileImportEnc" accept=".enc.json,.json" style="display:none" onchange="importEncrypted(event)">
       <button onclick="exportCSV()">📥 Eksport CSV (obecność)</button>
       <button id="btnInstall" class="primary" style="display:none" onclick="installPWA()" title="Zainstaluj jako aplikację na telefonie">📲 Zainstaluj na telefonie</button>
@@ -1769,13 +1763,59 @@
 
 <!-- Modal: kopie leżące w folderze kopii (21.09) — po pobraniu załącznika z maila plik trzeba było
      odszukać w oknie systemowym wśród wszystkiego, co leży w Pobranych. Tu tylko kopie, z datami. -->
-<div class="modal-bg" id="kopieFolderModal" onclick="if(event.target===this) zamknijKopieFolder()">
+<!-- Modal: Kopia zapasowa (22.09) — JEDNA droga zamiast ośmiu przycisków w pasku Uczniowie.
+     Powód (Artur): „gdy otwierasz a tam kafelki, które są dla ciebie enigmą, to bardzo odpycha".
+     Zasada nazewnicza: nazwa mówi, CO SIĘ STANIE dla nauczyciela, nie jak to działa w środku —
+     „Wczytaj stary JSON" → „Wczytaj kopię sprzed września 2026", „Kopia 2" → „Zapasowy folder".
+     Konfiguracja (foldery, hasło, PIN, stary import) siedzi w zwiniętych Ustawieniach: przestaje
+     udawać czynność. Dwie dotychczasowe drogi do wczytania (okno systemowe / lista z folderu)
+     łączą się w jedną z furtką „Wybierz plik ręcznie" — żadna nie znika.
+     Lista kopii wczytuje się DOPIERO po kliknięciu „Wczytaj kopię" (decyzja Artura 22.09): Chrome
+     pyta wtedy o dostęp do folderu, a to pytanie ma wychodzić z wyraźnej intencji — nie z samego
+     otwarcia okna, gdy ktoś wszedł tylko zmienić PIN. -->
+<div class="modal-bg" id="kopiaModal" onclick="if(event.target===this) zamknijKopieModal()">
   <div class="modal" style="max-width: 560px;">
-    <h3 style="margin-bottom: 6px;">Kopie w folderze</h3>
-    <div id="kopieFolderInfo" style="font-size: 13px; line-height: 1.5; color: var(--ink-muted); margin-bottom: 12px;"></div>
-    <div id="kopieFolderLista" style="display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow: auto;"></div>
-    <div style="display: flex; justify-content: flex-end; margin-top: 14px;">
-      <button onclick="zamknijKopieFolder()" style="padding: 10px 20px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; font-family: inherit; font-size: 14px; cursor: pointer;">Zamknij</button>
+    <h3 style="margin-bottom: 6px;">📦 Kopia zapasowa</h3>
+    <div style="font-size: 13px; line-height: 1.5; color: var(--ink-muted); margin-bottom: 14px;">
+      Kopie są zaszyfrowane hasłem dziennika. Bez hasła nikt ich nie otworzy — dlatego wolno je wysyłać mailem.
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div>
+        <!-- .primary dziala tylko w .toolbar — w oknie kolor akcentu trzeba nadac wprost, inaczej
+             czynnosc codzienna wyglada tak samo blado jak dwie rzadkie pod nia. -->
+        <button id="btnKopiaWyslij" onclick="kopiaWyslij()" style="width: 100%; padding: 12px 14px; font-family: inherit; font-size: 14.5px; cursor: pointer; background: var(--accent); color: var(--paper); border: 1px solid var(--accent); border-radius: 6px;">📤 Wyślij kopię na telefon</button>
+        <div style="font-size: 12px; color: var(--ink-muted); margin-top: 4px; line-height: 1.4;">przez Gmaila, Dysk albo WhatsAppa — bez szukania pliku w Pobranych</div>
+      </div>
+      <div>
+        <button onclick="kopiaZapisz()" style="width: 100%; padding: 11px 14px; text-align: left; font-family: inherit; font-size: 14px; cursor: pointer; background: var(--paper); border: 1px solid var(--line); border-radius: 6px;">💾 Zapisz kopię na tym komputerze</button>
+        <div id="kopiaZapiszGdzie" style="font-size: 12px; color: var(--ink-muted); margin-top: 4px; line-height: 1.4;">trafi do folderu: Pobrane</div>
+      </div>
+      <div>
+        <button onclick="kopiaWczytajRozwin()" style="width: 100%; padding: 11px 14px; text-align: left; font-family: inherit; font-size: 14px; cursor: pointer; background: var(--paper); border: 1px solid var(--line); border-radius: 6px;">📂 Wczytaj kopię</button>
+        <div style="font-size: 12px; color: var(--ink-muted); margin-top: 4px; line-height: 1.4;">z kopii, które leżą w folderze — albo z pliku wskazanego ręcznie</div>
+      </div>
+    </div>
+
+    <div id="kopiaListaBox" style="display: none; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px;">
+      <div id="kopieFolderInfo" style="font-size: 13px; line-height: 1.5; color: var(--ink-muted); margin-bottom: 10px;"></div>
+      <div id="kopieFolderLista" style="display: flex; flex-direction: column; gap: 6px; max-height: 40vh; overflow: auto;"></div>
+      <button onclick="zamknijKopieModal(); document.getElementById('fileImportEnc').click()" style="margin-top: 10px; background: none; border: none; padding: 4px 0; font-family: inherit; font-size: 13px; color: var(--ink-muted); text-decoration: underline; cursor: pointer;">📂 Wybierz plik ręcznie</button>
+    </div>
+
+    <details style="margin-top: 16px;">
+      <summary style="cursor: pointer; font-size: 13.5px;">⚙ Ustawienia kopii</summary>
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+        <button id="btnFolderKopii" onclick="wybierzFolderKopii(event)" style="width: 100%; padding: 11px 14px; text-align: left; font-family: inherit; font-size: 14px; cursor: pointer; background: var(--paper); border: 1px solid var(--line); border-radius: 6px;" title="Folder, do którego mają trafiać kopie (zamiast Pobranych). Shift+klik = wróć do Pobranych.">Folder kopii: Pobrane</button>
+        <button id="btnFolderKopii2" onclick="wybierzFolderKopii(event, 2)" style="width: 100%; padding: 11px 14px; text-align: left; font-family: inherit; font-size: 14px; cursor: pointer; background: var(--paper); border: 1px solid var(--line); border-radius: 6px;" title="Każda kopia idzie też tam (np. Dysk Google na komputerze). Shift+klik = wyłącz.">Zapasowy folder: brak</button>
+        <button onclick="zamknijKopieModal(); zmienHaslo()" style="width: 100%; padding: 11px 14px; text-align: left; font-family: inherit; font-size: 14px; cursor: pointer; background: var(--paper); border: 1px solid var(--line); border-radius: 6px;" title="Wymaga obecnego hasła. Apka nie pokazuje hasła — zapomniane = dane nie do odzyskania poza kopiami.">🔑 Zmień hasło dziennika</button>
+        <button onclick="zamknijKopieModal(); zamekUI_pinZmien()" style="width: 100%; padding: 11px 14px; text-align: left; font-family: inherit; font-size: 14px; cursor: pointer; background: var(--paper); border: 1px solid var(--line); border-radius: 6px;" title="PIN 4 cyfry do szybkiego odblokowania po bezczynności na lekcji">🔢 PIN do szybkiego wejścia</button>
+        <button onclick="zamknijKopieModal(); document.getElementById('fileImport').click()" style="width: 100%; padding: 11px 14px; text-align: left; font-family: inherit; font-size: 14px; cursor: pointer; background: var(--paper); border: 1px solid var(--line); border-radius: 6px;" title="Nieszyfrowana kopia z czasów, gdy dziennik jeszcze nie szyfrował">📂 Wczytaj kopię sprzed września 2026</button>
+      </div>
+    </details>
+
+    <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+      <button onclick="zamknijKopieModal()" style="padding: 10px 20px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; font-family: inherit; font-size: 14px; cursor: pointer;">Zamknij</button>
     </div>
   </div>
 </div>
@@ -4687,9 +4727,14 @@ function folderKopiiZapisz(h, slot) {
 }
 function odswiezFolderKopii() {
   const b = document.getElementById('btnFolderKopii');
-  if (b) b.textContent = '📁 Kopie: ' + (_folderKopiiNazwa || 'Pobrane');
+  if (b) b.textContent = '📁 Folder kopii: ' + (_folderKopiiNazwa || 'Pobrane');
   const b2 = document.getElementById('btnFolderKopii2');
-  if (b2) b2.textContent = '📁 Kopia 2: ' + (_folderKopii2Nazwa || 'brak');
+  if (b2) b2.textContent = '📁 Zapasowy folder: ' + (_folderKopii2Nazwa || 'brak');
+  const g = document.getElementById('kopiaZapiszGdzie');
+  if (g) g.textContent = 'trafi do folderu: ' + (_folderKopiiNazwa || 'Pobrane');
+  // Na telefonie kopia jedzie w drugą stronę — etykieta ma mówić prawdę o kierunku.
+  const w = document.getElementById('btnKopiaWyslij');
+  if (w) w.textContent = '📤 Wyślij kopię na ' + (matchMedia('(pointer: coarse)').matches ? 'laptop' : 'telefon');
 }
 async function wybierzFolderKopii(ev, slot) {
   const k2 = slot === 2;
@@ -4734,7 +4779,7 @@ async function writeBackupFile(tag) {
   try {
     const text = await encryptSnapshot(pwd);
     const fname = 'dziennik-wf_' + tag + '_SZYFROWANA_' + fileStamp() + '.enc.json';
-    zapamietajWlasnaKopie(fname);   // żeby lista „Kopie w folderze" umiała odróżnić własną od przyniesionej z telefonu
+    zapamietajWlasnaKopie(fname);   // żeby lista kopii w oknie „Kopia zapasowa" umiała odróżnić własną od przyniesionej z telefonu
     const gdzie = await zapiszDoFolderuKopii(text, fname);
     const gdzie2 = await zapiszDoFolderuKopii(text, fname, 2);
     if (_folderKopii2Nazwa && !gdzie2) showToast('Drugi folder kopii niedostępny — kopia poszła tylko do pierwszego.', 'warn');
@@ -4908,6 +4953,50 @@ function exportEncrypted() {
   });
 }
 
+// Wyślij kopię — kopia wychodzi Z APKI, bez wędrówki „zapisz plik → znajdź w Pobranych → załącz".
+// navigator.share({files}) to systemowe okno udostępniania: na Androidzie standard PWA, w Chrome na
+// laptopie też działa (zmierzone 22.09: canShare({files}) === true w kanale chrome; headless Chromium
+// tego API nie ma — stąd fallback niżej, a nie „przycisk milczy").
+// Plik jest ten sam co zapisywana kopia: AES-GCM, hasło dziennika. Wysyłka mailem jest bezpieczna
+// właśnie dlatego, że ładunek jest zaszyfrowany — nie ruszamy tego.
+async function wyslijKopie() {
+  if (!cryptoAvailable()) {
+    showToast('Bez szyfrowania nie wysyłamy kopii — zapisuję ją lokalnie.', 'warn');
+    return exportEncrypted();
+  }
+  const pwd = await ensureBackupPassword();
+  if (!pwd) return false;
+  let text, fname;
+  try {
+    text = await encryptSnapshot(pwd);
+    fname = 'dziennik-wf_WYSLANA_SZYFROWANA_' + fileStamp() + '.enc.json';
+  } catch (e) {
+    showToast('Błąd szyfrowania kopii: ' + e.message, 'error');
+    return false;
+  }
+  const plik = new File([text], fname, { type: 'application/json' });
+  if (!(navigator.canShare && navigator.canShare({ files: [plik] }))) {
+    // Starsza przeglądarka albo pulpit bez udostępniania: robimy to, co dotąd, i mówimy o tym głośno.
+    showToast('Ta przeglądarka nie umie wysyłać plików — kopia zapisana jak zwykle, załącz ją do maila ręcznie.', 'warn');
+    return writeBackupFile('RECZNA');
+  }
+  try {
+    await navigator.share({
+      files: [plik],
+      title: 'Kopia dziennika WF',
+      text: 'Kopia zaszyfrowana hasłem dziennika. Bez hasła nikt jej nie otworzy.'
+    });
+  } catch (e) {
+    // Zamknięcie okna udostępniania to nie błąd — nie strasz dymkiem.
+    if (e && (e.name === 'AbortError' || e.name === 'NotAllowedError')) return false;
+    showToast('Nie udało się wysłać kopii: ' + e.message + ' — zapisuję ją lokalnie.', 'warn');
+    return writeBackupFile('RECZNA');
+  }
+  zapamietajWlasnaKopie(fname);   // ta sama kopia pobrana tu z maila ma być rozpoznana jako własna
+  showToast('Kopia wysłana. Na drugim urządzeniu: Kopia zapasowa → Wczytaj kopię.', 'success');
+  return true;
+}
+
 function importEncrypted(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -4922,7 +5011,7 @@ function importEncrypted(event) {
   event.target.value = '';
 }
 
-// Jedna droga dla obu wejść (okno wyboru pliku i lista „Kopie w folderze"): hasło → odszyfruj → scal.
+// Jedna droga dla obu wejść (lista kopii w oknie „Kopia zapasowa" i „Wybierz plik ręcznie"): hasło → odszyfruj → scal.
 function wczytajSzyfrowanyTekst(fileText, nazwaPliku) {
   showPasswordPrompt('Hasło tej kopii',
     'Podaj hasło, którym ten plik został zaszyfrowany.' + (nazwaPliku ? '\nPlik: ' + nazwaPliku : ''),
@@ -4964,17 +5053,39 @@ function zapamietajWlasnaKopie(fname) {
 }
 
 let _kopieFolderPliki = [];
-function zamknijKopieFolder() { document.getElementById('kopieFolderModal').classList.remove('active'); }
 
+// Okno „Kopia zapasowa" — jedyne wejście w kopie z paska Uczniowie (poza codziennym „Wyślij kopię").
+function otworzKopieModal() {
+  document.getElementById('kopiaListaBox').style.display = 'none';   // lista dopiero na żądanie (pytanie Chrome o folder)
+  odswiezFolderKopii();
+  document.getElementById('kopiaModal').classList.add('active');
+}
+function zamknijKopieModal() { document.getElementById('kopiaModal').classList.remove('active'); }
+
+async function kopiaWyslij() { zamknijKopieModal(); return wyslijKopie(); }
+async function kopiaZapisz() { zamknijKopieModal(); return exportEncrypted(); }
+
+// Rozwinięcie listy = moment, w którym wolno zapytać o dostęp do folderu.
+async function kopiaWczytajRozwin() {
+  document.getElementById('kopiaListaBox').style.display = '';
+  await pokazKopieZFolderu();
+}
+
+// Wypełnia listę kopii wewnątrz okna. Brak folderu / brak zgody NIE jest ślepym zaułkiem:
+// mówimy o tym w miejscu listy, a „Wybierz plik ręcznie" pod spodem zostaje drogą wyjścia.
 async function pokazKopieZFolderu() {
-  if (!cryptoAvailable()) { showToast('Odczyt szyfrowanej kopii wymaga otwarcia przez https://.', 'error'); return; }
+  const info = document.getElementById('kopieFolderInfo');
+  const lista = document.getElementById('kopieFolderLista');
+  lista.innerHTML = '';
+  _kopieFolderPliki = [];
+  const stop = (t) => { info.textContent = t; };
+  if (!cryptoAvailable()) { stop('Odczyt szyfrowanej kopii wymaga otwarcia dziennika przez https://.'); return; }
   const h = await folderKopiiCzytaj(1);
-  if (!h) { showToast('Najpierw wskaż folder kopii przyciskiem „📁 Kopie” (np. Pobrane).', 'warn'); return; }
+  if (!h) { stop('Nie masz wskazanego folderu kopii — kopie idą do Pobranych. Wskaż folder w „Ustawieniach kopii" niżej albo wybierz plik ręcznie.'); return; }
   let perm = await h.queryPermission({ mode: 'read' });
   if (perm !== 'granted') perm = await h.requestPermission({ mode: 'read' });
-  if (perm !== 'granted') { showToast('Przeglądarka nie dała dostępu do folderu „' + h.name + '”.', 'warn'); return; }
+  if (perm !== 'granted') { stop('Przeglądarka nie dała dostępu do folderu „' + h.name + '”. Możesz wybrać plik ręcznie.'); return; }
 
-  _kopieFolderPliki = [];
   try {
     for await (const wpis of h.values()) {
       if (wpis.kind !== 'file' || !/\.json$/i.test(wpis.name)) continue;
@@ -4982,15 +5093,12 @@ async function pokazKopieZFolderu() {
       _kopieFolderPliki.push({ name: wpis.name, mtime: f.lastModified, size: f.size, file: f });
     }
   } catch (e) {
-    showToast('Nie udało się odczytać folderu: ' + e.message, 'error');
+    stop('Nie udało się odczytać folderu: ' + e.message);
     return;
   }
   _kopieFolderPliki.sort((a, b) => b.mtime - a.mtime);
   _kopieFolderPliki = _kopieFolderPliki.slice(0, 12);
 
-  const info = document.getElementById('kopieFolderInfo');
-  const lista = document.getElementById('kopieFolderLista');
-  lista.innerHTML = '';
   if (!_kopieFolderPliki.length) {
     info.textContent = 'Folder „' + h.name + '” nie ma żadnego pliku .json. Kopię z telefonu najpierw pobierz z maila do tego folderu.';
   } else {
@@ -5012,13 +5120,12 @@ async function pokazKopieZFolderu() {
       lista.appendChild(b);
     });
   }
-  document.getElementById('kopieFolderModal').classList.add('active');
 }
 
 async function wczytajKopieZFolderu(i) {
   const p = _kopieFolderPliki[i];
   if (!p) return;
-  zamknijKopieFolder();
+  zamknijKopieModal();
   let text;
   try { text = await p.file.text(); }
   catch (e) { showToast('Nie udało się odczytać pliku: ' + e.message, 'error'); return; }
@@ -6722,7 +6829,7 @@ document.addEventListener('keydown', function (e) {
     else if (open.id === 'columnModal') closeColumnModal();
     else if (open.id === 'classPromptModal') classPromptCancel();
     else if (open.id === 'pwdPromptModal') pwdPromptCancel();
-    else if (open.id === 'kopieFolderModal') zamknijKopieFolder();
+    else if (open.id === 'kopiaModal') zamknijKopieModal();
     return;
   }
 

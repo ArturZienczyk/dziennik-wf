@@ -31,6 +31,15 @@ def zamknij_modale(page):
     page.wait_for_timeout(120)
 
 
+def otworz_liste(page):
+    """Lista kopii zyje w oknie „Kopia zapasowa" i wczytuje sie DOPIERO po kliknieciu
+    „Wczytaj kopie" — pytanie Chrome o folder ma wychodzic z wyraznej intencji."""
+    page.click('#tab-uczniowie button:has-text("Kopia zapasowa")')
+    page.wait_for_timeout(150)
+    page.click('#kopiaModal button:has-text("Wczytaj kopię")')
+    page.wait_for_timeout(400)
+
+
 def check(name, cond, detail=""):
     print(
         "[%s] %s %s"
@@ -121,13 +130,11 @@ with sync_playwright() as pw:
 
     zamknij_modale(page)
     page.click("text=👥 Uczniowie")
-    page.click("text=📂 Kopie w folderze")
-    page.wait_for_timeout(400)
+    otworz_liste(page)
     check(
-        "modal otwarty",
-        page.eval_on_selector(
-            "#kopieFolderModal", "e => e.classList.contains('active')"
-        ),
+        "okno kopii otwarte, lista rozwinieta",
+        page.eval_on_selector("#kopiaModal", "e => e.classList.contains('active')")
+        and page.eval_on_selector("#kopiaListaBox", "e => e.style.display !== 'none'"),
     )
     nazwy = page.eval_on_selector_all(
         "#kopieFolderLista button", "bs => bs.map(b => b.children[0].textContent)"
@@ -154,8 +161,7 @@ with sync_playwright() as pw:
     page.wait_for_timeout(200)
     page.click("#pwdPromptCancel") if page.query_selector("#pwdPromptCancel") else None
     zamknij_modale(page)
-    page.click("text=📂 Kopie w folderze")
-    page.wait_for_timeout(400)
+    otworz_liste(page)
     daty2 = page.eval_on_selector_all(
         "#kopieFolderLista button", "bs => bs.map(b => b.children[1].textContent)"
     )
@@ -167,8 +173,7 @@ with sync_playwright() as pw:
         daty2,
     )
     zamknij_modale(page)
-    page.click("text=📂 Kopie w folderze")
-    page.wait_for_timeout(400)
+    otworz_liste(page)
 
     # klik w kopie z telefonu -> haslo -> potwierdzenie -> scalenie
     page.click("#kopieFolderLista button >> nth=0")
@@ -209,8 +214,7 @@ with sync_playwright() as pw:
     )
     zamknij_modale(page)
     page.click("text=👥 Uczniowie")
-    page.click("text=📂 Kopie w folderze")
-    page.wait_for_timeout(400)
+    otworz_liste(page)
     page.click("#kopieFolderLista button >> nth=0")
     page.wait_for_timeout(300)
     page.fill("#pwdPromptInput", "zle-haslo")
@@ -226,12 +230,11 @@ with sync_playwright() as pw:
     page.evaluate("() => { _folderKopii = null; }")
     zamknij_modale(page)
     page.click("text=👥 Uczniowie")
-    page.click("text=📂 Kopie w folderze")
-    page.wait_for_timeout(400)
+    otworz_liste(page)
     check(
-        "bez folderu mowi co zrobic",
-        "wskaż folder" in (page.text_content("#toast") or ""),
-        page.text_content("#toast"),
+        "bez folderu mowi co zrobic W MIEJSCU LISTY (nie dymkiem, ktory zniknie)",
+        "Wskaż folder" in (page.text_content("#kopieFolderInfo") or ""),
+        page.text_content("#kopieFolderInfo"),
     )
 
     check("brak bledow JS", errors == [], errors)
