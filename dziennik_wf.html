@@ -1436,7 +1436,7 @@
     <div class="toolbar">
       <button class="primary" onclick="addStudent()">+ Dodaj ucznia</button>
       <input type="file" id="fileImport" accept=".json" style="display:none" onchange="importJSON(event)">
-      <input type="file" id="fileImportEnc" accept=".enc.json,.json" style="display:none" onchange="importEncrypted(event)">
+      <input type="file" id="fileImportEnc" accept=".enc.json,.json,.enc.txt,.txt" style="display:none" onchange="importEncrypted(event)">
       <button onclick="exportCSV()">📥 Eksport CSV (obecność)</button>
       <button id="btnInstall" class="primary" style="display:none" onclick="installPWA()" title="Zainstaluj jako aplikację na telefonie">📲 Zainstaluj na telefonie</button>
     </div>
@@ -5028,12 +5028,15 @@ async function wyslijKopie() {
   let text, fname;
   try {
     text = await encryptSnapshot(pwd);
-    fname = 'dziennik-wf_WYSLANA_SZYFROWANA_' + fileStamp() + '.enc.json';
+    // .txt, nie .json: Chrome na Windows NIE udostępnia plików .json (Android: ta sama lista typów, niezmierzone) — canShare mówi „tak",
+    // a share() odrzuca w 1 ms NotAllowedError (zmierzone 22.09 w kanale chrome; .txt otwiera okno).
+    // Treść ta sama — zaszyfrowany JSON; wczytywanie przyjmuje obie końcówki.
+    fname = 'dziennik-wf_WYSLANA_SZYFROWANA_' + fileStamp() + '.enc.txt';
   } catch (e) {
     showToast('Błąd szyfrowania kopii: ' + e.message, 'error');
     return false;
   }
-  const plik = new File([text], fname, { type: 'application/json' });
+  const plik = new File([text], fname, { type: 'text/plain' });
   if (!(navigator.canShare && navigator.canShare({ files: [plik] }))) {
     // Starsza przeglądarka albo pulpit bez udostępniania: robimy to, co dotąd, i mówimy o tym głośno.
     showToast('Ta przeglądarka nie umie wysyłać plików — kopia zapisana jak zwykle, załącz ją do maila ręcznie.', 'warn');
@@ -5046,8 +5049,9 @@ async function wyslijKopie() {
       text: 'Kopia zaszyfrowana hasłem dziennika. Bez hasła nikt jej nie otworzy.'
     });
   } catch (e) {
-    // Zamknięcie okna udostępniania to nie błąd — nie strasz dymkiem.
-    if (e && (e.name === 'AbortError' || e.name === 'NotAllowedError')) return false;
+    // Zamknięcie okna udostępniania to nie błąd — nie strasz dymkiem. NotAllowedError to już
+    // odmowa przeglądarki (tak milczał przycisk przy .json) — idzie do zapisu z dymkiem niżej.
+    if (e && e.name === 'AbortError') return false;
     showToast('Nie udało się wysłać kopii: ' + e.message + ' — zapisuję ją lokalnie.', 'warn');
     return writeBackupFile('RECZNA');
   }
@@ -5189,7 +5193,7 @@ async function pokazKopieZFolderu() {
 
   try {
     for await (const wpis of h.values()) {
-      if (wpis.kind !== 'file' || !/\.json$/i.test(wpis.name)) continue;
+      if (wpis.kind !== 'file' || !/\.(json|enc\.txt)$/i.test(wpis.name)) continue;   // .enc.txt = kopia wysłana (Chrome nie udostępnia .json)
       const f = await wpis.getFile();
       _kopieFolderPliki.push({ name: wpis.name, mtime: f.lastModified, size: f.size, file: f });
     }

@@ -226,8 +226,15 @@ with sync_playwright() as pw:
     if wys:
         check(
             "nazwa wyslanego pliku mowi, ze jest szyfrowany",
-            "SZYFROWANA" in wys["name"] and wys["name"].endswith(".enc.json"),
+            "SZYFROWANA" in wys["name"] and wys["name"].endswith(".enc.txt"),
             wys["name"],
+        )
+        # Chrome nie udostepnia .json (canShare=true, share() -> NotAllowedError w 1 ms;
+        # przycisk milczal, 22.09). Stub tego nie odtworzy — pilnujemy koncowki i typu.
+        check(
+            "wysylany plik to .txt / text/plain (Chrome odrzuca .json)",
+            wys["type"] == "text/plain",
+            wys["type"],
         )
         check(
             "wyslany plik NIE ZAWIERA nazwiska dziecka",
