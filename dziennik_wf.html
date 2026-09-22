@@ -6476,6 +6476,21 @@ function zamekOtworz() {
   zamekInert(false);
   if (!zamek.wystartowal) { zamek.wystartowal = true; startPoOdblokowaniu(); }
   zamekAktywnosc();
+  kopiaUdostepnionaOdbierz();   // dopiero po odblokowaniu: scalanie potrzebuje wczytanych danych
+}
+// Kopia udostępniona z WhatsAppa (Web Share Target, 23.09): sw.js odłożył plik do cache i otworzył
+// dziennik. Odbieramy go raz (kasujemy z cache przed pytaniem o hasło — anulowanie = udostępnij
+// jeszcze raz) i idziemy tą samą drogą co „Wczytaj kopię dziennika": hasło → odszyfruj → scal.
+async function kopiaUdostepnionaOdbierz() {
+  if (!('caches' in window)) return;
+  let c, r;
+  try { c = await caches.open('dziennik-wf-udostepniona'); r = await c.match('./udostepniona-kopia'); } catch (e) { return; }
+  if (/[?&]udostepniona-kopia/.test(location.search)) history.replaceState(null, '', location.pathname);
+  if (!r) return;
+  const nazwa = decodeURIComponent(r.headers.get('X-Nazwa') || '');
+  const tekst = await r.text();
+  try { await c.delete('./udostepniona-kopia'); } catch (e) {}
+  wczytajSzyfrowanyTekst(tekst, nazwa);
 }
 // Raz na sesję, tylko po odblokowaniu z ekranu (nie z API testów): zaproponuj PIN.
 function zamekZaproponujPin() {

@@ -16,7 +16,7 @@
 // v6: uklad - pasek gorny przyklejony, sciagi zwijane, tabela wysoko.
 // v7: zarys kolumn w Obecnosci/Statystykach/Pomiarach.
 // v8: naglowek tabeli przyklejony pod paskiem gornym.
-const CACHE_VERSION = 'dziennik-wf-v47';
+const CACHE_VERSION = 'dziennik-wf-v48';
 const SHELL = [
   './dziennik_wf.html',
   './start.html',
@@ -34,9 +34,31 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE_VERSION).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE_VERSION && k !== UDOSTEPNIONA).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
+});
+
+// Kopia udostępniona z WhatsAppa (Web Share Target, 23.09): „Udostępnij → Dziennik WF" wysyła tu
+// POST z plikiem. Odkładamy go do osobnego cache (przeżywa podbicie CACHE_VERSION) i otwieramy
+// dziennik — ten po odblokowaniu odbiera plik tą samą drogą co „Wczytaj" (hasło → scal).
+// Wcześniej: WhatsApp → zapisz do Pobranych → znajdź w wyborze pliku (Android nie widzi WhatsAppa).
+const UDOSTEPNIONA = 'dziennik-wf-udostepniona';
+self.addEventListener('fetch', (e) => {
+  const url = new URL(e.request.url);
+  if (e.request.method !== 'POST' || !url.searchParams.has('udostepniona-kopia')) return;
+  e.respondWith((async () => {
+    try {
+      const fd = await e.request.formData();
+      const f = fd.getAll('kopia').find(x => x && typeof x.text === 'function');
+      if (f) {
+        const c = await caches.open(UDOSTEPNIONA);
+        await c.put('./udostepniona-kopia', new Response(await f.text(),
+          { headers: { 'X-Nazwa': encodeURIComponent(f.name || '') } }));
+      }
+    } catch (err) { /* uszkodzony formularz: dziennik i tak się otworzy, tylko bez kopii */ }
+    return Response.redirect(new URL('./dziennik_wf.html?udostepniona-kopia=1', self.registration.scope).href, 303);
+  })());
 });
 
 self.addEventListener('fetch', (e) => {

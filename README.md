@@ -191,6 +191,20 @@ zmierzone 22.09 (`canShare({files}) === true`). Przeglądarka bez tego API → k
 dotąd, a dymek mówi, co się stało (przycisk nigdy nie milczy). Zamknięcie okna udostępniania nie
 robi kopii awaryjnej — to nie błąd.
 
+**Plik `.enc.txt`, nie `.json` (2026-09-23).** Chrome na Windows ma `canShare({files}) === true` dla
+`.json`, ale `share()` odrzuca go w 1 ms `NotAllowedError` — przycisk milczał. Wysyłana kopia to
+`.enc.txt` / `text/plain` (w środku ten sam zaszyfrowany JSON); wczytywanie przyjmuje obie końcówki.
+Na laptopie Artura okno Windows oferuje tylko **WhatsApp** (brak Gmaila).
+
+**Udostępnij → Dziennik WF (2026-09-23).** Na telefonie Android nie widzi plików WhatsAppa w wyborze
+pliku (trzeba było zapisywać do Pobranych). `manifest.webmanifest` ma `share_target`: w WhatsAppie
+przytrzymaj plik kopii → Udostępnij → **Dziennik WF**. `sw.js` odkłada plik do cache
+`dziennik-wf-udostepniona` (przeżywa podbicie wersji) i otwiera dziennik; po odblokowaniu
+`kopiaUdostepnionaOdbierz()` idzie drogą „Wczytaj" (hasło kopii → scal) i kasuje plik z cache.
+Działa tylko w dzienniku **zainstalowanym** na ekranie głównym; Chrome odświeża zainstalowaną aplikację
+w swoim rytmie — nowa pozycja w menu może pojawić się dopiero po jakimś czasie. Bramka:
+`test_udostepniona_kopia.py` (menu Androida / WhatsApp — tylko na telefonie).
+
 **Folder kopii (2026-09-17).** Przycisk **📁 Folder kopii: Pobrane** (📦 Kopia zapasowa →
 Ustawienia kopii) — raz wskazujesz
 folder (np. `Dziennik WF kopie` na pulpicie) i od tej pory każda kopia, automatyczna i ręczna, zapisuje
