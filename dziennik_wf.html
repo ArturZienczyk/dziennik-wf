@@ -334,6 +334,18 @@
      zloto jest jedynym kolorem palety NIE uzywanym na stany frekwencji, wiec wyroznia przerwe, nie mylac jej
      z obecnoscia/nieobecnoscia. */
   .kol.przerwa { flex: 0 0 26px; width: 26px; min-width: 26px; max-width: 26px; align-self: stretch; padding: 6px 0; display: flex; align-items: center; justify-content: center; border: 1px dashed var(--gold); border-radius: 8px; background: repeating-linear-gradient(135deg, rgba(176,143,78,.14) 0 5px, rgba(176,143,78,.42) 5px 6px); cursor: default; }
+  /* Puls dyzuru (2026-09-22, prosba: „zeby przypominalo, ze jest dyzur"). Tylko slupek DZISIEJSZY —
+     w historii miganie niczego nie przypomina, a konkuruje wzrokowo z tabela obecnosci, ktora sie wpisuje.
+     Cykl 2.4 s i zmiana samej sily zlota (nie znikanie) — strobo przy 45 min patrzenia meczy;
+     kto ma wylaczony ruch w systemie, dostaje mocne zloto na stale zamiast animacji. */
+  @keyframes przerwaPuls {
+    0%, 100% { border-color: var(--gold); background-color: transparent; box-shadow: none; }
+    50%      { border-color: #7A6129; background-color: rgba(176,143,78,.45); box-shadow: 0 0 0 3px rgba(176,143,78,.30); }
+  }
+  .kol.przerwa.dzis { animation: przerwaPuls 2.4s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    .kol.przerwa.dzis { animation: none; border-color: #7A6129; background-color: rgba(176,143,78,.45); box-shadow: 0 0 0 3px rgba(176,143,78,.30); }
+  }
   .kol.przerwa .txt { writing-mode: vertical-rl; text-orientation: mixed; font-size: 11px; line-height: 1; letter-spacing: .04em; font-weight: 500; color: #7A6129; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-height: 100%; }
   /* Para "kafelek + slupek" w jednym pudelku: przy zawijaniu paska slupek nie moze zostac sam na poczatku
      wiersza - stracilby sens "pomiedzy". Sklejanie robi renderDzien() po wstawieniu kafelkow. */
@@ -3328,8 +3340,10 @@ function dyzuryDnia(iso) {
   out.sort((a, b) => a.po - b.po || a.miejsce.localeCompare(b.miejsce));
   return out;
 }
-function slupekPrzerwy(d) {
-  return `<div class="kol przerwa" data-po="${d.po}" data-miejsce="${escapeHtml(d.miejsce)}" title="przerwa po lekcji ${d.po} — dyżur: ${escapeHtml(d.miejsce)}"><span class="txt">${escapeHtml(d.miejsce)}</span></div>`;
+// `dzisiaj` (2026-09-22): puls slupka tylko dla biezacego dnia. Miganie ma PRZYPOMINAC o dyzurze,
+// a przypominac jest co tylko dzis — w historii to sama irytacja przy wpisywaniu obecnosci.
+function slupekPrzerwy(d, dzisiaj) {
+  return `<div class="kol przerwa${dzisiaj ? ' dzis' : ''}" data-po="${d.po}" data-miejsce="${escapeHtml(d.miejsce)}" title="przerwa po lekcji ${d.po} — dyżur: ${escapeHtml(d.miejsce)}"><span class="txt">${escapeHtml(d.miejsce)}</span></div>`;
 }
 // Przełącznik Dzień / Tydzień (preferencja UI, nie dane — localStorage, nie kopia)
 function ustawWidok(w) {
@@ -3407,7 +3421,7 @@ function renderDzien() {
   let iDyz = 0;
   lekcje.forEach(({ cls, nr, nazwa }) => {
     // słupek przerwy wchodzi przed pierwszą lekcją o wyższym numerze (lekcja bez numeru = koniec dnia)
-    while (iDyz < dyz.length && nr !== null && dyz[iDyz].po < nr) cel.insertAdjacentHTML('beforeend', slupekPrzerwy(dyz[iDyz++]));
+    while (iDyz < dyz.length && nr !== null && dyz[iDyz].po < nr) cel.insertAdjacentHTML('beforeend', slupekPrzerwy(dyz[iDyz++], iso === dzis));
     if (!cls) {
       cel.insertAdjacentHTML('beforeend', `<div class="kol inne" data-inne="${escapeHtml(nazwa)}" title="inne zajęcia — bez frekwencji w tym dzienniku"><div class="kol-head"><span class="nr">${nr === null ? '' : 'L' + nr}</span><span class="kl">${escapeHtml(nazwa)}</span><span class="sum">bez frekwencji</span></div></div>`);
       return;
@@ -3416,7 +3430,7 @@ function renderDzien() {
     if (cls.id === cur.id && k === kOtw) { otwartaZPlanu = true; cel.insertAdjacentHTML('beforeend', guzikOtwartej(cur, kOtw, head)); return; }
     cel.insertAdjacentHTML('beforeend', kolumnaPodgladu(cls, iso, nr, k, dzis));
   });
-  while (iDyz < dyz.length) przed.insertAdjacentHTML('beforeend', slupekPrzerwy(dyz[iDyz++]));   // dyżur po ostatniej lekcji
+  while (iDyz < dyz.length) przed.insertAdjacentHTML('beforeend', slupekPrzerwy(dyz[iDyz++], iso === dzis));   // dyżur po ostatniej lekcji
   // Zastępstwa na okienkach tego dnia + kafelek „+ zastępstwo” (dni z planem, nie wolne)
   Object.keys(state.zastepstwaOkienka || {}).filter(k => kluczData(k) === iso).sort((a, b) => (kluczNr(a) || 0) - (kluczNr(b) || 0)).forEach(k => {
     const z = state.zastepstwaOkienka[k];

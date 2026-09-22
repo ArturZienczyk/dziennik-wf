@@ -13,6 +13,7 @@ import http.server
 import socketserver
 import sys
 import threading
+from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -267,6 +268,30 @@ with sync_playwright() as pw:
     page.wait_for_timeout(300)
     page.screenshot(path=str(SHOTS / "dyzury_dzien.png"), full_page=False)
     page.locator("#dzienKolumny").screenshot(path=str(SHOTS / "dyzury_pasek.png"))
+
+    # Puls dyzuru (2026-09-22): slupek miga TYLKO dzis. DZIS w tescie to 2026-09-18 — data z przeszlosci
+    # wzgledem kazdego biegu, wiec brak klasy 'dzis' tutaj jest stabilny niezaleznie od dnia uruchomienia.
+    check(
+        "dzien miniony: slupek bez klasy 'dzis' (nic nie miga w historii)",
+        page.locator("#kolPrzed .kol.przerwa").count() > 0
+        and page.locator("#kolPrzed .kol.przerwa.dzis").count() == 0,
+    )
+    # ...a na dzisiejszej dacie miga. Dyzur dopisujemy na DZISIEJSZY dzien tygodnia, liczony z daty biegu.
+    dzis_iso = date.today().isoformat()
+    dzis_dzien = str(date.today().weekday())  # pon=0, jak siatka planu
+    page.evaluate(
+        "(a) => { const p = zaleglePlany()[0]; p.dyzury['parter'][a.d] = [1];"
+        " p.klasy['7b'][a.d] = [1, 3]; save(); state.currentDate = a.iso; refreshAll(); }",
+        {"d": dzis_dzien, "iso": dzis_iso},
+    )
+    page.wait_for_timeout(300)
+    check(
+        "dzien dzisiejszy: slupek dostaje klase 'dzis' (puls przypomina o dyzurze)",
+        page.locator("#kolPrzed .kol.przerwa.dzis").count() == 1,
+        page.evaluate(
+            "() => [...document.querySelectorAll('#kolPrzed .kol.przerwa')].map(e => e.className)"
+        ),
+    )
 
     check("bez bledow JS", not errors, errors[:3])
     browser.close()
