@@ -529,6 +529,18 @@ Komenda nie dubluje `send` — woła jego `fetch_attachments`; filtr `--only` i 
 przy okazji (`D:/Projects/tools/send.py`). Próba na żywo 21.09: z 5 ostatnich maili wzięła kopię
 z telefonu, pominęła LinkedIn i ChatGPT.
 
+**Drugi kierunek — `kopia --na-telefon` (22.09)** — bierze **najnowszą szyfrowaną** kopię z folderu
+kopii i wysyła ją mailem na gmail; na pulpicie klikany skrót **„Kopia dziennika na telefon.cmd"**
+(para do „Kopie dziennika z maila.cmd"). Powód: ten kierunek jako jedyny nie miał narzędzia i kończył
+się prośbą do agenta „znajdź najnowszy plik i wyślij" (22.09 dokładnie tak zeszło). Dwie bramki, bo
+oba błędy są ciche: **kopia jawna nigdy nie wychodzi mailem** (jest pomijana i wypisana, nie
+przemilczana — mailem jadą dane dzieci), a **kopia starsza niż 3 h dostaje głośne ostrzeżenie**, bo
+znaczy, że po jej zapisaniu była praca, której telefon nie dostanie (22.09 najnowsza kopia pochodziła
+sprzed wdrożenia dyżurów). Najnowszość liczona z `mtime`, nie z nazwy pliku. Kolejność jest
+nieusuwalna: **najpierw** „Zapisz kopię (szyfrowana)" w dzienniku, **potem** skrót — skrypt nie ma
+dostępu do danych w przeglądarce i sam kopii nie zrobi. Bramka: `py -3.12
+D:/Projects/tools/test_kopia_na_telefon.py` (10 sprawdzeń, zero wysyłki).
+
 **Czego nie ma:** automatu (Drive API w apce) — decyzja: dopiero gdy ręczny transfer po
 tygodniu okaże się uciążliwy; Wi-Fi/serwer lokalny (szkolna sieć izoluje urządzenia). Ostatni krok
 ręczny zostaje świadomie: wczytanie kopii w apce wymaga hasła, którego żaden skrypt nie zna.
