@@ -1775,12 +1775,18 @@
      otwarcia okna, gdy ktoś wszedł tylko zmienić PIN. -->
 <div class="modal-bg" id="kopiaModal" onclick="if(event.target===this) zamknijKopieModal()">
   <div class="modal" style="max-width: 560px;">
-    <h3 style="margin-bottom: 6px;">📦 Kopia zapasowa</h3>
+    <!-- „x" przy tytule (K1/H3, 22.09): z rozwinieta lista i ustawieniami okno jest dluzsze niz
+         ekran telefonu, a jedyne wyjscie stalo na samym dole. Escape zostaje, ale telefon go nie ma. -->
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;">
+      <h3 style="margin-bottom: 6px;">📦 Kopia zapasowa</h3>
+      <button onclick="zamknijKopieModal()" aria-label="Zamknij okno kopii" title="Zamknij"
+              style="background: none; border: none; font-size: 22px; line-height: 1; padding: 0 2px; color: var(--ink-muted); cursor: pointer;">×</button>
+    </div>
     <div style="font-size: 13px; line-height: 1.5; color: var(--ink-muted); margin-bottom: 14px;">
       Kopie są zaszyfrowane hasłem dziennika. Bez hasła nikt ich nie otworzy — dlatego wolno je wysyłać mailem.
     </div>
 
-    <div style="display: flex; flex-direction: column; gap: 12px;">
+    <div id="kopiaCzynnosci" style="display: flex; flex-direction: column; gap: 12px;">
       <div>
         <!-- .primary dziala tylko w .toolbar — w oknie kolor akcentu trzeba nadac wprost, inaczej
              czynnosc codzienna wyglada tak samo blado jak dwie rzadkie pod nia. -->
@@ -1793,7 +1799,7 @@
       </div>
       <div>
         <button onclick="kopiaWczytajRozwin()" style="width: 100%; padding: 11px 14px; text-align: left; font-family: inherit; font-size: 14px; cursor: pointer; background: var(--paper); border: 1px solid var(--line); border-radius: 6px;">📂 Wczytaj kopię</button>
-        <div style="font-size: 12px; color: var(--ink-muted); margin-top: 4px; line-height: 1.4;">z kopii, które leżą w folderze — albo z pliku wskazanego ręcznie</div>
+        <div style="font-size: 12px; color: var(--ink-muted); margin-top: 4px; line-height: 1.4;">z kopii, które leżą w folderze — albo z pliku wskazanego ręcznie.<br>Kopia z telefonu: przyszła mailem → zapisz załącznik do folderu kopii → wybierz ją z listy.</div>
       </div>
     </div>
 
@@ -1807,7 +1813,9 @@
       <summary style="cursor: pointer; font-size: 13.5px;">⚙ Ustawienia kopii</summary>
       <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
         <button id="btnFolderKopii" onclick="wybierzFolderKopii(event)" style="width: 100%; padding: 11px 14px; text-align: left; font-family: inherit; font-size: 14px; cursor: pointer; background: var(--paper); border: 1px solid var(--line); border-radius: 6px;" title="Folder, do którego mają trafiać kopie (zamiast Pobranych). Shift+klik = wróć do Pobranych.">Folder kopii: Pobrane</button>
+        <div style="font-size: 12px; color: var(--ink-muted); margin: -4px 0 2px 2px;">gdzie lądują wszystkie kopie tego dziennika</div>
         <button id="btnFolderKopii2" onclick="wybierzFolderKopii(event, 2)" style="width: 100%; padding: 11px 14px; text-align: left; font-family: inherit; font-size: 14px; cursor: pointer; background: var(--paper); border: 1px solid var(--line); border-radius: 6px;" title="Każda kopia idzie też tam (np. Dysk Google na komputerze). Shift+klik = wyłącz.">Zapasowy folder: brak</button>
+        <div style="font-size: 12px; color: var(--ink-muted); margin: -4px 0 2px 2px;">drugie miejsce na wypadek awarii dysku — dodatek, nie wymóg</div>
         <button onclick="zamknijKopieModal(); zmienHaslo()" style="width: 100%; padding: 11px 14px; text-align: left; font-family: inherit; font-size: 14px; cursor: pointer; background: var(--paper); border: 1px solid var(--line); border-radius: 6px;" title="Wymaga obecnego hasła. Apka nie pokazuje hasła — zapomniane = dane nie do odzyskania poza kopiami.">🔑 Zmień hasło dziennika</button>
         <button onclick="zamknijKopieModal(); zamekUI_pinZmien()" style="width: 100%; padding: 11px 14px; text-align: left; font-family: inherit; font-size: 14px; cursor: pointer; background: var(--paper); border: 1px solid var(--line); border-radius: 6px;" title="PIN 4 cyfry do szybkiego odblokowania po bezczynności na lekcji">🔢 PIN do szybkiego wejścia</button>
         <button onclick="zamknijKopieModal(); document.getElementById('fileImport').click()" style="width: 100%; padding: 11px 14px; text-align: left; font-family: inherit; font-size: 14px; cursor: pointer; background: var(--paper); border: 1px solid var(--line); border-radius: 6px;" title="Nieszyfrowana kopia z czasów, gdy dziennik jeszcze nie szyfrował">📂 Wczytaj kopię sprzed września 2026</button>
@@ -5054,6 +5062,42 @@ function zapamietajWlasnaKopie(fname) {
 
 let _kopieFolderPliki = [];
 
+// Wiersz listy kopii po ludzku (panel krytykow 22.09: K1/H2 + K2 information scent + wlasne oko —
+// trzy niezalezne trafienia w to samo). Gruba etykieta byla SUROWA NAZWA PLIKU
+// („dziennik-wf_AUTO-codzienna_SZYFROWANA_2026-09-22_07-12.enc.json"), a data — czyli jedyna rzecz,
+// po ktorej wybiera sie kopie — stala drobnym drukiem pod spodem. Teraz odwrotnie.
+// Czas bierzemy z mtime pliku, NIE z nazwy: nazwa moze byc cudza, data modyfikacji jest zawsze.
+const RODZAJE_KOPII = [
+  [/_AUTO-codzienna_/i, 'Kopia automatyczna'],
+  [/_WYSLANA_/i,        'Kopia wysłana stąd'],
+  [/_RECZNA_/i,         'Kopia zapisana ręcznie'],
+  [/_PRZED-/i,          'Kopia sprzed ryzykownej zmiany'],
+  [/_PELNA-KOPIA_/i,    'Pełna kopia'],
+];
+function rodzajKopii(nazwa) {
+  const n = String(nazwa || '');
+  for (const [re, opis] of RODZAJE_KOPII) if (re.test(n)) return opis;
+  return 'Kopia';     // plik o nieznanej nazwie tez ma byc do wybrania, nie do odgadniecia
+}
+// „dziś 07:12" / „wczoraj 19:30" / „21.09.2026, 07:40" — nauczyciel wybiera po TYM, nie po nazwie.
+function kiedyKopii(mtime) {
+  const d = new Date(mtime);
+  if (isNaN(d.getTime())) return 'data nieznana';
+  const g = d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+  const dzis = new Date(); dzis.setHours(0, 0, 0, 0);
+  const doba = 86400000;
+  const roznica = Math.floor((dzis - new Date(d).setHours(0, 0, 0, 0)) / doba);
+  if (roznica === 0) return 'dziś ' + g;
+  if (roznica === 1) return 'wczoraj ' + g;
+  return d.toLocaleDateString('pl-PL') + ', ' + g;
+}
+// Pochodzenie przy KAZDYM wierszu (K4 22.09): dotad oznaczone byly tylko kopie wlasne, a kopia
+// z telefonu nie miala nic — jej pochodzenie trzeba bylo wywnioskowac przez negacje z naglowka.
+// Etykieta mowi o REJESTRZE (czy ta nazwa byla tu zapisywana), nie o pochodzeniu: z braku wpisu
+// nie wynika, ze plik przyszedl z zewnatrz (wyczyszczony localStorage), a wiersz nie moze sobie
+// przeczyc — „Kopia wyslana stad" + „przyniesiona z zewnatrz" to bylby balagan w jednej linii.
+function skadKopia(wlasna) { return wlasna ? 'zapisana tutaj' : 'nie zapisywana tutaj (zwykle: z telefonu)'; }
+
 // Okno „Kopia zapasowa" — jedyne wejście w kopie z paska Uczniowie (poza codziennym „Wyślij kopię").
 function otworzKopieModal() {
   document.getElementById('kopiaListaBox').style.display = 'none';   // lista dopiero na żądanie (pytanie Chrome o folder)
@@ -5102,20 +5146,22 @@ async function pokazKopieZFolderu() {
   if (!_kopieFolderPliki.length) {
     info.textContent = 'Folder „' + h.name + '” nie ma żadnego pliku .json. Kopię z telefonu najpierw pobierz z maila do tego folderu.';
   } else {
-    info.textContent = 'Folder „' + h.name + '”, najnowsze na górze. Kopie zapisane przez to urządzenie są oznaczone — nieoznaczona to ta przyniesiona z telefonu.';
+    info.textContent = 'Folder „' + h.name + '”, najnowsze na górze. Przy każdej kopii pisze, skąd pochodzi.';
     const wlasne = wlasneKopie();
     _kopieFolderPliki.forEach((p, i) => {
       p.wlasna = wlasne.indexOf(p.name) >= 0;
       const b = document.createElement('button');
       b.style.cssText = 'padding: 10px 12px; text-align: left; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; font-family: inherit; font-size: 13px; cursor: pointer; line-height: 1.5;';
       const nazwa = document.createElement('div');
-      nazwa.style.cssText = 'font-weight: 500; word-break: break-all;';
-      nazwa.textContent = p.name;                       // textContent, nie innerHTML — nazwa pliku jest cudzym tekstem
+      nazwa.style.cssText = 'font-weight: 600;';
+      nazwa.textContent = rodzajKopii(p.name) + ' — ' + kiedyKopii(p.mtime);
       const opis = document.createElement('div');
       opis.style.cssText = 'color: var(--ink-muted); font-size: 12px;';
-      opis.textContent = new Date(p.mtime).toLocaleString('pl-PL') + ' · ' + Math.round(p.size / 1024) + ' kB'
-        + (p.wlasna ? ' · zapisana tutaj' : '');
-      b.appendChild(nazwa); b.appendChild(opis);
+      opis.textContent = skadKopia(p.wlasna) + ' · ' + Math.round(p.size / 1024) + ' kB';
+      const plik = document.createElement('div');   // nazwa pliku zostaje — przy szukaniu jej na dysku
+      plik.style.cssText = 'color: var(--ink-muted); font-size: 11px; word-break: break-all; margin-top: 2px;';
+      plik.textContent = p.name;                    // textContent, nie innerHTML — nazwa pliku jest cudzym tekstem
+      b.appendChild(nazwa); b.appendChild(opis); b.appendChild(plik);
       b.onclick = () => wczytajKopieZFolderu(i);
       lista.appendChild(b);
     });

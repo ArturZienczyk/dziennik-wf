@@ -141,7 +141,17 @@ with sync_playwright() as pw:
     )
     check("lista pomija pliki spoza .json", "notatka.txt" not in nazwy, nazwy)
     check("dwie kopie na liscie", len(nazwy) == 2, nazwy)
-    check("najnowsza na gorze", nazwy and "TELEFON" in nazwy[0], nazwy)
+    # Od 22.09 gruba linia wiersza to opis po ludzku („Kopia automatyczna — dzis 07:12"),
+    # a surowa nazwa pliku zeszla do trzeciej linii — tam sprawdzam kolejnosc.
+    pliki = page.eval_on_selector_all(
+        "#kopieFolderLista button", "bs => bs.map(b => b.children[2].textContent)"
+    )
+    check("najnowsza na gorze", pliki and "TELEFON" in pliki[0], pliki)
+    check(
+        "gruba linia wiersza mowi po ludzku, nie nazwa pliku",
+        nazwy and ".json" not in nazwy[0] and "Kopia" in nazwy[0],
+        nazwy,
+    )
     daty = page.eval_on_selector_all(
         "#kopieFolderLista button", "bs => bs.map(b => b.children[1].textContent)"
     )

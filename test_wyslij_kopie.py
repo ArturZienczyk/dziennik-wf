@@ -90,13 +90,64 @@ with sync_playwright() as pw:
     check("Ustawienia kopii sa zwiniete — konfiguracja nie udaje czynnosci",
           page.eval_on_selector("#kopiaModal details", "e => !e.open"))
     czynnosci = page.eval_on_selector_all(
-        "#kopiaModal > .modal > div:nth-of-type(2) button",
+        "#kopiaCzynnosci button",
         "bs => bs.map(b => b.textContent.trim())")
     check("okno oferuje trzy czynnosci nazwane czasownikiem", len(czynnosci) == 3, czynnosci)
     check("kazda czynnosc zaczyna sie od tego, co sie stanie",
           all(any(w in t for w in ("Wyślij", "Zapisz", "Wczytaj")) for t in czynnosci), czynnosci)
     page.click('#kopiaModal button:has-text("Zamknij")')
     page.wait_for_timeout(200)
+
+    # ---------- 0b. PARSER opisu kopii: typowy / brzegowy / wrogi ----------
+    # Wiersz listy kopii przestal byc surowa nazwa pliku (panel krytykow 22.09). Nowy parser
+    # dostaje trzy klasy wejscia PRZED pierwszym uzyciem: nazwa z apki, nazwa obca/pusta,
+    # nazwa wroga (cudzyslowy, backslash, znacznik HTML, dlugosc).
+    typowe = page.evaluate("""() => [
+        rodzajKopii('dziennik-wf_AUTO-codzienna_SZYFROWANA_2026-09-22_07-12.enc.json'),
+        rodzajKopii('dziennik-wf_WYSLANA_SZYFROWANA_2026-09-21_19-30.enc.json'),
+        rodzajKopii('dziennik-wf_RECZNA_SZYFROWANA_2026-09-21_08-00.enc.json'),
+        rodzajKopii('dziennik-wf_PRZED-IMPORT-ENC_SZYFROWANA_2026-09-20_10-00.enc.json')
+    ]""")
+    check("parser (typowy): kazdy rodzaj kopii z apki ma nazwe po ludzku",
+          typowe == ["Kopia automatyczna", "Kopia wysłana stąd", "Kopia zapisana ręcznie",
+                     "Kopia sprzed ryzykownej zmiany"], typowe)
+
+    brzegowe = page.evaluate("""() => [
+        rodzajKopii(''), rodzajKopii(null), rodzajKopii(undefined),
+        rodzajKopii('cokolwiek.json'), rodzajKopii('x'.repeat(5000))
+    ]""")
+    check("parser (brzegowy): pusta / nieznana / bardzo dluga nazwa nie wywraca sie, daje 'Kopia'",
+          brzegowe == ["Kopia"] * 5, brzegowe)
+
+    wrogie = page.evaluate("""() => {
+        const bs = String.fromCharCode(92), tab = String.fromCharCode(9), nl = String.fromCharCode(10);
+        const zle = ['plik \u201eAUTO-codzienna\u201d .json', 'a' + bs + 'b_WYSLANA_c.json',
+                     '<script>alert(1)</script>_RECZNA_.json',
+                     'kopia' + tab + 'z' + nl + 'bialymi_AUTO-codzienna_.json'];
+        return zle.map(n => rodzajKopii(n));
+    }""")
+    check("parser (wrogi): cudzyslowy, backslash, znacznik HTML i biale znaki nie wysadzaja parsera",
+          all(isinstance(x, str) and x for x in wrogie), wrogie)
+
+    wstrzykniecie = page.evaluate("""() => {
+        const d = document.createElement('div');
+        d.textContent = rodzajKopii('<img src=x onerror=alert(1)>_AUTO-codzienna_.json');
+        return d.innerHTML.indexOf('<img') === -1;
+    }""")
+    check("parser (wrogi): nazwa pliku nie moze wstrzyknac HTML w wiersz listy", wstrzykniecie)
+
+    czasy = page.evaluate("""() => {
+        const teraz = Date.now();
+        return [kiedyKopii(teraz), kiedyKopii(teraz - 86400000 * 1),
+                kiedyKopii(Date.parse('2026-01-02T08:30:00')), kiedyKopii(NaN)];
+    }""")
+    check("czas kopii: dzis / wczoraj / data / smiec sa rozroznione i zadne nie jest puste",
+          czasy[0].startswith("dziś") and czasy[1].startswith("wczoraj")
+          and "2026" in czasy[2] and czasy[3] == "data nieznana", czasy)
+
+    skad = page.evaluate("() => [skadKopia(true), skadKopia(false)]")
+    check("pochodzenie opisane przy KAZDEJ kopii, nie tylko przy wlasnej (K4 22.09)",
+          "tutaj" in skad[0] and "nie zapisywana tutaj" in skad[1], skad)
 
     # ---------- 1. Droga glowna: navigator.share dostaje ZASZYFROWANY plik ----------
     page.evaluate(STUB)
