@@ -221,6 +221,20 @@ with sync_playwright() as pw:
         page.evaluate("() => JSON.stringify((zaleglePlany()[0].dyzury || {}).parter)"),
     )
 
+    # zle wpisany dyzur da sie cofnac tym samym ruchem, ktorym sie go wpisalo (pytanie usera 09-22):
+    # drugi klik w te sama cyfre zdejmuje ja, a dzien bez zadnego numeru znika z planu, nie zostaje pusty.
+    page.click('.s-nr .siatka-nr[data-nr="2"]')
+    page.wait_for_timeout(300)
+    check(
+        "Plan: drugi klik w te sama cyfre zdejmuje dyzur (czwartek pusty)",
+        page.evaluate(
+            "() => ((zaleglePlany()[0].dyzury || {}).parter || {})['3'] === undefined"
+        ),
+        page.evaluate("() => JSON.stringify((zaleglePlany()[0].dyzury || {}).parter)"),
+    )
+    page.click('.s-nr .siatka-nr[data-nr="2"]')  # wracamy do stanu sprzed sprawdzenia
+    page.wait_for_timeout(300)
+
     page.locator('.plan-karta:has-text("Dyżury na przerwach")').screenshot(
         path=str(SHOTS / "dyzury_plan.png")
     )

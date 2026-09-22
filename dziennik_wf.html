@@ -2800,7 +2800,7 @@ function renderPlanUstawienia() {
   const dyzury = (p && p.dyzury) || {};
   const miejsca = Object.keys(dyzury).sort();
   h += '<div class="plan-karta"><h3>Dyżury na przerwach</h3>' +
-    '<p class="opis">Stały grafik tygodniowy. Klik komórki (miejsce × dzień) otwiera numery lekcji — klikasz lekcję, <b>po której</b> masz dyżur. W Obecności wchodzi jako wąski słupek między kafelkami lekcji, z napisem pionowym; bez frekwencji, nie da się go otworzyć.</p>';
+    '<p class="opis">Stały grafik tygodniowy. Klik komórki (miejsce × dzień) otwiera numery lekcji — klikasz lekcję, <b>po której</b> masz dyżur; <b>drugi klik w tę samą cyfrę ją zdejmuje</b>, a × przy nazwie kasuje całe miejsce. W Obecności wchodzi jako wąski słupek między kafelkami lekcji, z napisem pionowym; bez frekwencji, nie da się go otworzyć.</p>';
   if (miejsca.length) {
     h += '<table>' + naglowek('miejsce', '');
     miejsca.forEach(miejsce => {
