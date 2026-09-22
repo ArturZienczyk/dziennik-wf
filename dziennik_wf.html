@@ -2280,7 +2280,12 @@ function importZastosuj(data) {
     const w = scalKopie(data);
     activateClass(state.currentClassId); uiSelectedSchool = null; save(); refreshAll();
     const lista = w.nadpisane.slice(0, 40).map(n => '• ' + n.klasa + ': ' + n.co + ' — było ' + n.bylo + ', jest ' + n.jest).join('\n');
-    showConfirm('Scalono kopię',
+    // Artur 23.09: w „Pobranych" kilka kopii o nieczytelnych nazwach, wczytał starą i dostał same zera
+    // bez słowa wyjaśnienia. Data zrobienia leży w pliku (snapshotData.exported) — mówimy ją wprost.
+    const nicNowego = !w.dodane && !w.nadpisane.length && !w.klasyDodane;
+    showConfirm(nicNowego ? 'Scalono kopię — nic nowego' : 'Scalono kopię',
+      'Kopia zrobiona: ' + (data.exported ? kiedyKopii(data.exported) : 'data nieznana (stara kopia)') + '.\n\n' +
+      (nicNowego ? 'Wszystko z tej kopii już tu jest — nic się nie zmieniło. Jeśli czekasz na świeże wpisy z drugiego urządzenia, to najpewniej STARSZA kopia: wyślij nową i wybierz plik z dzisiejszą godziną w nazwie.\n\n' : '') +
       'Dołożono ' + w.dodane + ' wpisów' + (w.klasyDodane ? ', nowych klas: ' + w.klasyDodane : '') +
       ', nadpisano nowszymi: ' + w.nadpisane.length + ', starszych z pliku pominięto: ' + w.pominiete + '.' +
       (lista ? '\n\nNadpisane (nowszy wpis z kopii wygrał):\n' + lista + (w.nadpisane.length > 40 ? '\n…' : '') : ''), null);

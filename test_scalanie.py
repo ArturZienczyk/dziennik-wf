@@ -269,13 +269,12 @@ with sync_playwright() as pw:
     page.wait_for_timeout(200)
     check(
         "klasa z pliku dochodzi, lokalna 7b zostaje (bez trybu podmiany)",
-        sorted(page.evaluate("() => state.classes.map(c => c.name)")) == ["1a", "7b", "8c"],
+        sorted(page.evaluate("() => state.classes.map(c => c.name)"))
+        == ["1a", "7b", "8c"],
     )
 
     # 7. Okno importu: tekst o scalaniu, BEZ checkboxa; po scaleniu okno informacyjne
-    page.evaluate(
-        "() => showConfirm('Wczytaj dane', IMPORT_TEKST, () => {})"
-    )
+    page.evaluate("() => showConfirm('Wczytaj dane', IMPORT_TEKST, () => {})")
     check(
         "okno importu bez checkboxa „zastąp wszystko”",
         not page.locator("#confirmOpcja").is_visible()
@@ -302,6 +301,23 @@ with sync_playwright() as pw:
         == ["1a", "7b", "8c"],
     )
 
+    # 7a. Ta sama kopia drugi raz = same zera (Artur 23.09 wczytal stara kopie z „Pobranych" i nie
+    # wiedzial dlaczego). Okno ma mowic: kiedy kopia zrobiona + „nic nowego, to starsza kopia".
+    wlasna = page.evaluate("() => JSON.parse(JSON.stringify(snapshotData()))")
+    page.evaluate("(d) => importZastosuj(d)", wlasna)
+    page.wait_for_timeout(300)
+    okno = page.inner_text("#confirmTitle") + " " + page.inner_text("#confirmMessage")
+    check(
+        "same zera: tytul mowi „nic nowego”",
+        "nic nowego" in page.inner_text("#confirmTitle"),
+        okno[:200],
+    )
+    check(
+        "okno podaje, kiedy kopia zrobiona", "Kopia zrobiona: dziś" in okno, okno[:200]
+    )
+    check("same zera: podpowiedz o starszej kopii", "STARSZA" in okno, okno[:300])
+    page.evaluate("() => confirmOk()")
+
     # 7b. Kopia szyfrowana niesie plan (empiria 18.09: telefon nie dostał planu, bo snapshot go nie miał)
     kopia = page.evaluate(
         """async () => { const txt = await encryptSnapshot('haslo-kopii'); const d = await decryptBackup(txt, 'haslo-kopii');
@@ -314,7 +330,10 @@ with sync_playwright() as pw:
     )
 
     # 8. Drugi folder kopii: przycisk i atrapa zapisu do obu
-    check("przycisk zapasowego folderu jest", "Zapasowy folder" in page.inner_text("#btnFolderKopii2"))
+    check(
+        "przycisk zapasowego folderu jest",
+        "Zapasowy folder" in page.inner_text("#btnFolderKopii2"),
+    )
     page.evaluate("""async () => {
       window._zapisy = [];
       const atrapa = nazwa => ({ name: nazwa, queryPermission: async () => 'granted',
