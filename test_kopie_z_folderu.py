@@ -32,11 +32,9 @@ def zamknij_modale(page):
 
 
 def otworz_liste(page):
-    """Lista kopii zyje w oknie „Kopia zapasowa" i wczytuje sie DOPIERO po kliknieciu
-    „Wczytaj kopie" — pytanie Chrome o folder ma wychodzic z wyraznej intencji."""
-    page.click('#tab-uczniowie button:has-text("Kopia zapasowa")')
-    page.wait_for_timeout(150)
-    page.click('#kopiaModal button:has-text("Wczytaj kopię")')
+    """Lista kopii wczytuje sie DOPIERO po kliknieciu „Wczytaj kopię dziennika" w bloku kopii —
+    pytanie Chrome o folder ma wychodzic z wyraznej intencji."""
+    page.click("#pasekWczytaj")
     page.wait_for_timeout(400)
 
 

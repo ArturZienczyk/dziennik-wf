@@ -65,9 +65,9 @@ with sync_playwright() as pw:
     page.evaluate(SEED)
     page.click('button.tab:has-text("Uczniowie")')
     page.wait_for_timeout(200)
-    # Od 22.09 foldery kopii mieszkaja w oknie „Kopia zapasowa" -> „Ustawienia kopii".
+    # Od 22.09 (blok kopii) foldery mieszkaja pod „⚙ hasło, PIN, foldery kopii" w bloku kopii.
     # Otwieram je raz i zostawiam otwarte: klikanie folderu okna nie zamyka.
-    page.click('#tab-uczniowie button:has-text("Kopia zapasowa")')
+    page.click("#kopiaStan a")
     page.wait_for_timeout(200)
     page.evaluate("() => { document.querySelector('#kopiaModal details').open = true; }")
 

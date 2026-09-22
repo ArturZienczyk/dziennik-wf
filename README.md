@@ -13,7 +13,7 @@ na żaden serwer.
 pulpicie (`kopia`, `kopia --na-telefon`) i bramki testowe, a realną barierą w tych skrótach nie
 jest zresztą Python, tylko **hasło aplikacji Gmaila w zmiennej środowiskowej** — każdy musiałby
 wygenerować własne. Dostajesz plik, otwierasz, działa; kopie wysyłasz z samej apki przyciskiem
-**📤 Wyślij kopię**.
+**📤 Wyślij kopię dziennika** (blok „Kopia dziennika" w zakładce Uczniowie).
 
 ## Dane i backup
 
@@ -21,8 +21,8 @@ wygenerować własne. Dostajesz plik, otwierasz, działa; kopie wysyłasz z same
   per komputer — **wyłącznie jako szyfrogram** (hasło dziennika; patrz „Zamek”). Drugi magazyn jest po to, by wpisy nie ginęły, gdy wspólny limit
   plików otwieranych z dysku się zapełni (patrz „Pełna pamięć przeglądarki").
 - Kopia zapasowa: **zawsze zaszyfrowana hasłem** — auto raz dziennie przy zapisie
-  lekcji, przed każdą operacją kasującą i ręcznie: **📦 Kopia zapasowa → „Zapisz kopię
-  na tym komputerze"** (albo **📤 Wyślij kopię**, gdy ma od razu pojechać na drugie urządzenie).
+  lekcji, przed każdą operacją kasującą i ręcznie: **💾 Zrób kopię dziennika teraz** w bloku „Kopia dziennika"
+  (albo **📤 Wyślij kopię dziennika**, gdy ma od razu pojechać na drugie urządzenie).
   Szczegóły: „Kopie zapasowe — zawsze zaszyfrowane" niżej.
 - Backupy trzymaj w `backups/` — folder jest w `.gitignore` (imiona/oceny dzieci
   NIGDY nie idą do git ani na Drive bez szyfrowania — zakaz CLAUDE.md projektu).
@@ -154,6 +154,22 @@ co"*. Zostały **dwa**: **📤 Wyślij kopię** (czynność codzienna, jeden kli
 telefonie: „na laptop"), *Zapisz kopię na tym komputerze*, *Wczytaj kopię* — a pod nimi zwinięte
 **Ustawienia kopii**: folder kopii, zapasowy folder, hasło, PIN, wczytanie kopii sprzed września
 2026. Konfiguracja przestała udawać czynność.
+
+**Blok „Kopia dziennika" w dwóch krokach (2026-09-22 wieczór, zastępuje powyższe dwa przyciski).**
+Dwa przyciski okazały się enigmą — słowami Artura: *„wyślij kopię — nie wiadomo, jaką kopię, czego i
+gdzie się tworzy; kopia zapasowa — po co mi?"*. Jego model to **dwa kroki o jednej rzeczy**:
+(1) kopia dziennika — automatyczna albo ręczna, najnowsza **widoczna** (godzina + rodzaj);
+(2) ta kopia jedzie na drugie urządzenie albo z niego przychodzi. Blok w zakładce Uczniowie:
+*Najnowsza: dziś 14:32 · automatyczna* · **💾 Zrób kopię dziennika teraz** · **📤 Wyślij kopię dziennika
+na telefon** (świeża, w chwili kliknięcia) · **📂 Wczytaj kopię dziennika z telefonu** (scala) — na
+telefonie „na laptop / z laptopa", bo z telefonem chodzi się na lekcję. Stopka: automat raz dziennie +
+link **⚙ hasło, PIN, foldery kopii** (okno w trybie „ustawienia"). Okno kopii nie powtarza już czynności
+z bloku: z „Wczytaj" pokazuje samą listę, z „⚙" same ustawienia. Na telefonie „Wczytaj" otwiera od razu
+wybór pliku (Android nie pokazuje folderów). Czas najnowszej kopii: `localStorage`
+`dziennik_wf_ostatnia_kopia` (per urządzenie, jak sama kopia). Skrót z pulpitu „Kopia dziennika na
+telefon.cmd" przestał być potrzebny — wysyłka jest w apce; „Kopie dziennika z maila.cmd" zostaje
+(pobranie z Gmaila w apce wymagałoby logowania Google). Zapadka: `test_wyslij_kopie.py` — każda
+czynność w bloku mówi „kopię dziennika", kopie nie wracają do paska, okno nie dubluje bloku.
 
 Zasada nazewnicza (to jest właściwy produkt tej zmiany, nie sam przycisk): **nazwa mówi, co się
 stanie dla nauczyciela, nie jak to działa w środku.** Stąd „Wczytaj stary JSON" → „Wczytaj kopię
@@ -537,8 +553,8 @@ Pod spodem: `cls._t[ścieżka] = ms` obok danych (format komórek nietknięty). 
 `m|uczeń` pomiary · `s|uczeń` uczeń · `k` meta klasy.
 
 **Rytm dnia (jedno kliknięcie na urządzenie):** laptop zapisuje kopię sam (auto raz dziennie),
-a ręcznie idzie **📤 Wyślij kopię** → wybierasz Gmaila → koniec. Na drugim urządzeniu: **📦 Kopia
-zapasowa → Wczytaj kopię** → hasło → scalenie. Droga mailem została opisana niżej (`kopia`,
+a ręcznie idzie **📤 Wyślij kopię dziennika** → wybierasz Gmaila → koniec. Na drugim urządzeniu: **📂 Wczytaj
+kopię dziennika** → hasło → scalenie. Droga mailem została opisana niżej (`kopia`,
 `kopia --na-telefon`) i zostaje jako automat Artura; dla kogoś z zewnątrz wystarcza sama apka.
 
 **Dwa foldery kopii:** „📁 Folder kopii" (główny) i **„📁 Zapasowy folder"** — każda kopia

@@ -82,14 +82,13 @@ def _klik(selektor, czekaj=400):
 
 def _wczytaj_z_folderu(page):
     page.evaluate(ATRAPA_FOLDERU)
-    page.click('#kopiaModal button:has-text("Wczytaj kopię")')
+    page.click("#pasekWczytaj")
     page.wait_for_timeout(700)
 
 
 def _rozwin_ustawienia(page):
-    page.evaluate(
-        "() => { document.querySelector('#kopiaModal details').open = true; }"
-    )
+    page.evaluate("() => zamknijKopieModal()")
+    page.click("#kopiaStan a")
     page.wait_for_timeout(300)
 
 
@@ -97,7 +96,7 @@ def _rozwin_ustawienia(page):
 
 TRASY = {
     "droga_kopii": Trasa(
-        opis="Droga kopii zapasowej: pasek zakładki Uczniowie -> okno kopii -> lista kopii w folderze -> ustawienia",
+        opis="Droga kopii dziennika: blok kopii w zakładce Uczniowie -> wczytanie z listy w folderze -> ustawienia (⚙)",
         cele=[
             "Jesteś nauczycielem po lekcji na telefonie. Chcesz, żeby dzisiejsze wpisy trafiły na laptopa.",
             "Jesteś przy laptopie. Chcesz wczytać najnowszą kopię, którą przysłałeś sobie z telefonu.",
@@ -112,19 +111,14 @@ TRASY = {
             ),
             Krok(
                 "okno",
-                "Kliknął „Kopia zapasowa”.",
-                _klik('#tab-uczniowie button:has-text("Kopia zapasowa")'),
-            ),
-            Krok(
-                "lista",
-                "Kliknął „Wczytaj kopię” (folder kopii już wybrany wcześniej).",
+                "Kliknął „Wczytaj kopię dziennika z telefonu” (folder kopii już wybrany wcześniej).",
                 _wczytaj_z_folderu,
             ),
-            Krok("ustawienia", "Rozwinął „Ustawienia kopii”.", _rozwin_ustawienia),
+            Krok("ustawienia", "Zamknął okno i kliknął „⚙ hasło, PIN, foldery kopii”.", _rozwin_ustawienia),
         ],
         uwagi=[
-            "Folder kopii w kroku 3 to atrapa podstawiona przez skrypt (headless nie wybierze folderu). "
-            "Zmiana nazwy folderu między krokiem 2 a 3 to artefakt trasy, nie zachowanie apki.",
+            "Folder kopii w kroku 2 to atrapa podstawiona przez skrypt (headless nie wybierze folderu). "
+            "Nazwa folderu w kroku 2 to artefakt trasy, nie zachowanie apki.",
         ],
     ),
 }

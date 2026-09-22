@@ -63,17 +63,22 @@ with sync_playwright() as pw:
         st,
     )
 
-    for tab, sel in [
-        ("Pomiary", "#tab-pomiary table"),
-        ("Oceny", "#tab-oceny table"),
-        ("Uczniowie", "#tab-uczniowie table"),
+    # Uczniowie: granica 620, nie 450 — decyzja Artura 22.09. Nad lista stoi blok „Kopia dziennika"
+    # (kopia robiona codziennie, takze z telefonu po lekcji, ma byc pod reka bez przewijania);
+    # cena swiadoma: na 768 px widac ~3 nazwiska przed przewinieciem. Rosnie dalej = regresja.
+    for tab, sel, granica in [
+        ("Pomiary", "#tab-pomiary table", 450),
+        ("Oceny", "#tab-oceny table", 450),
+        ("Uczniowie", "#tab-uczniowie table", 620),
     ]:
         page.click('button.tab:has-text("%s")' % tab)
         page.wait_for_timeout(300)
         page.click("details.pomoc > summary >> visible=true")
         page.wait_for_timeout(200)
         y = page.evaluate(TOP, sel)
-        check("%s ze sciaga zwinieta: tabela od < 450 px" % tab, y < 450, y)
+        check(
+            "%s ze sciaga zwinieta: tabela od < %d px" % (tab, granica), y < granica, y
+        )
 
     page.evaluate("() => window.scrollTo(0, 2000)")
     page.wait_for_timeout(200)
@@ -100,7 +105,11 @@ with sync_playwright() as pw:
     y_belka = page.evaluate(
         "() => Math.round(document.querySelector('#tab-obecnosc .date-row.dzien-row').getBoundingClientRect().bottom)"
     )
-    check("belka dnia przyklejona tuz pod paskiem gornym", y_belka >= h_top, (y_belka, h_top))
+    check(
+        "belka dnia przyklejona tuz pod paskiem gornym",
+        y_belka >= h_top,
+        (y_belka, h_top),
+    )
     y_th = page.evaluate(TOP, "#attendanceTable thead th")
     check(
         "naglowek tabeli przyklejony tuz pod belka dnia po przewinieciu",

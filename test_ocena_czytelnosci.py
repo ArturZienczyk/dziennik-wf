@@ -51,7 +51,7 @@ from fixture_stan import otworz, serwer
 with serwer(PORT) as p, sync_playwright() as pw:
     browser, ctx, page, errors = otworz(pw, p, viewport={"width": 390, "height": 900}, telefon=True)
     check("telefon: pointer coarse", page.evaluate("matchMedia('(pointer: coarse)').matches"))
-    etykieta = page.evaluate("document.getElementById('btnKopiaWyslij').textContent")
+    etykieta = page.evaluate("document.getElementById('pasekWyslij').textContent")
     check("telefon: kopia jedzie na laptop", "laptop" in etykieta, etykieta)
     browser.close()
 

@@ -130,6 +130,18 @@
   code { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 0.9em; }
 
   /* Toolbar */
+  /* Blok „Kopia dziennika" (22.09): krok 1 (kopia) | krok 2 (wyślij / wczytaj); na telefonie jeden pod drugim */
+  .kopia-blok { display: grid; grid-template-columns: minmax(220px, 1fr) 2fr; gap: 10px 24px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }
+  .kopia-krok { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+  .kopia-naglowek { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-muted); font-weight: 500; }
+  .kopia-stan { font-size: 14px; }
+  .kopia-blok button { padding: 8px 14px; font-family: inherit; font-size: 14px; cursor: pointer;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 6px; color: var(--ink); text-align: left; }
+  .kopia-blok button.kopia-glowny { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+  .kopia-pod { font-size: 12px; color: var(--ink-muted); line-height: 1.4; margin: -2px 0 4px 2px; }
+  .kopia-stopka { grid-column: 1 / -1; font-size: 12.5px; color: var(--ink-muted); border-top: 1px solid var(--line-soft, var(--line)); padding-top: 8px; }
+  @media (max-width: 640px) { .kopia-blok { grid-template-columns: 1fr; } }
   .toolbar {
     display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
     background: var(--paper); border: 1px solid var(--line); border-radius: 8px;
@@ -1423,12 +1435,28 @@
     <div id="classBar"></div>
     <div class="toolbar">
       <button class="primary" onclick="addStudent()">+ Dodaj ucznia</button>
-      <button class="primary" onclick="wyslijKopie()" title="Zaszyfrowana kopia prosto z dziennika do Gmaila, Dysku, WhatsAppa — bez szukania pliku w Pobranych.">📤 Wyślij kopię</button>
-      <button onclick="otworzKopieModal()" title="Zapisz kopię, wczytaj kopię, ustawienia kopii — wszystko w jednym oknie.">📦 Kopia zapasowa</button>
       <input type="file" id="fileImport" accept=".json" style="display:none" onchange="importJSON(event)">
       <input type="file" id="fileImportEnc" accept=".enc.json,.json" style="display:none" onchange="importEncrypted(event)">
       <button onclick="exportCSV()">📥 Eksport CSV (obecność)</button>
       <button id="btnInstall" class="primary" style="display:none" onclick="installPWA()" title="Zainstaluj jako aplikację na telefonie">📲 Zainstaluj na telefonie</button>
+    </div>
+
+    <!-- Blok „Kopia dziennika" (Artur 22.09): dwa kroki o JEDNEJ rzeczy. Krok 1 — kopia (automat albo
+         ręczna), najnowsza widoczna z godziną. Krok 2 — ta kopia jedzie na drugie urządzenie albo z niego
+         przychodzi. Wcześniej „Wyślij kopię" / „Kopia zapasowa" nie mówiły czego ani dokąd. -->
+    <div class="kopia-blok" id="kopiaBlok">
+      <div class="kopia-krok">
+        <div class="kopia-naglowek">Kopia dziennika</div>
+        <div class="kopia-stan">Najnowsza: <b id="kopiaNajnowsza">—</b></div>
+        <button onclick="exportEncrypted()" title="Zaszyfrowana kopia całego dziennika (obecności, oceny, pomiary) na tym urządzeniu">💾 Zrób kopię dziennika teraz</button>
+      </div>
+      <div class="kopia-krok">
+        <button class="kopia-glowny" id="pasekWyslij" onclick="wyslijKopie()">📤 Wyślij kopię dziennika na telefon</button>
+        <div class="kopia-pod">zrobi się świeża, ze wszystkim, co jest teraz w dzienniku — przez Gmaila albo WhatsAppa</div>
+        <button id="pasekWczytaj" onclick="pasekWczytaj()">📂 Wczytaj kopię dziennika z telefonu</button>
+        <div class="kopia-pod">wpisy się scalą: brakujące dojdą, przy różnicy wygrywa nowszy, nic nie zginie</div>
+      </div>
+      <div class="kopia-stopka" id="kopiaStan"></div>
     </div>
 
     <div class="quick-add">
@@ -1778,7 +1806,7 @@
     <!-- „x" przy tytule (K1/H3, 22.09): z rozwinieta lista i ustawieniami okno jest dluzsze niz
          ekran telefonu, a jedyne wyjscie stalo na samym dole. Escape zostaje, ale telefon go nie ma. -->
     <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;">
-      <h3 style="margin-bottom: 6px;">📦 Kopia zapasowa</h3>
+      <h3 id="kopiaTytul" style="margin-bottom: 6px;">📦 Kopie dziennika</h3>
       <button onclick="zamknijKopieModal()" aria-label="Zamknij okno kopii" title="Zamknij"
               style="background: none; border: none; font-size: 22px; line-height: 1; padding: 0 2px; color: var(--ink-muted); cursor: pointer;">×</button>
     </div>
@@ -1786,22 +1814,6 @@
       Kopie są zaszyfrowane hasłem dziennika. Bez hasła nikt ich nie otworzy — dlatego wolno je wysyłać mailem.
     </div>
 
-    <div id="kopiaCzynnosci" style="display: flex; flex-direction: column; gap: 12px;">
-      <div>
-        <!-- .primary dziala tylko w .toolbar — w oknie kolor akcentu trzeba nadac wprost, inaczej
-             czynnosc codzienna wyglada tak samo blado jak dwie rzadkie pod nia. -->
-        <button id="btnKopiaWyslij" onclick="kopiaWyslij()" style="width: 100%; padding: 12px 14px; font-family: inherit; font-size: 14.5px; cursor: pointer; background: var(--accent); color: var(--paper); border: 1px solid var(--accent); border-radius: 6px;">📤 Wyślij kopię na telefon</button>
-        <div style="font-size: 12px; color: var(--ink-muted); margin-top: 4px; line-height: 1.4;">przez Gmaila, Dysk albo WhatsAppa — bez szukania pliku w Pobranych</div>
-      </div>
-      <div>
-        <button onclick="kopiaZapisz()" style="width: 100%; padding: 11px 14px; text-align: left; font-family: inherit; font-size: 14px; cursor: pointer; background: var(--paper); border: 1px solid var(--line); border-radius: 6px;">💾 Zapisz kopię na tym komputerze</button>
-        <div id="kopiaZapiszGdzie" style="font-size: 12px; color: var(--ink-muted); margin-top: 4px; line-height: 1.4;">trafi do folderu: Pobrane</div>
-      </div>
-      <div>
-        <button onclick="kopiaWczytajRozwin()" style="width: 100%; padding: 11px 14px; text-align: left; font-family: inherit; font-size: 14px; cursor: pointer; background: var(--paper); border: 1px solid var(--line); border-radius: 6px;">📂 Wczytaj kopię</button>
-        <div style="font-size: 12px; color: var(--ink-muted); margin-top: 4px; line-height: 1.4;">z kopii, które leżą w folderze — albo z pliku wskazanego ręcznie.<br>Kopia z telefonu: przyszła mailem → zapisz załącznik do folderu kopii → wybierz ją z listy.</div>
-      </div>
-    </div>
 
     <div id="kopiaListaBox" style="display: none; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px;">
       <div id="kopieFolderInfo" style="font-size: 13px; line-height: 1.5; color: var(--ink-muted); margin-bottom: 10px;"></div>
@@ -4165,6 +4177,7 @@ function setStatus(status) {
 // UCZNIOWIE
 // =====================================================
 function renderStudents() {
+  pasekKopii();
   const tbody = document.getElementById('studentsBody');
   tbody.innerHTML = '';
   const today = new Date().toISOString().slice(0, 10);
@@ -4733,16 +4746,34 @@ function folderKopiiZapisz(h, slot) {
     q.onsuccess = () => res(true); q.onerror = () => res(false);
   })).catch(() => false);
 }
+// Pasek Uczniowie (22.09): nazwy mówią CO i DOKĄD, bo „Wyślij kopię" / „Kopia zapasowa" nie mówiły
+// czego ani gdzie. Kierunek z urządzenia: z telefonem chodzi się na lekcję, więc tam „na laptop".
+function pasekKopii() {
+  const tel = matchMedia('(pointer: coarse)').matches;
+  const drugie = tel ? 'laptop' : 'telefon';
+  const w = document.getElementById('pasekWyslij');
+  if (w) w.textContent = '📤 Wyślij kopię dziennika na ' + drugie;
+  const r = document.getElementById('pasekWczytaj');
+  if (r) r.textContent = '📂 Wczytaj kopię dziennika z ' + (tel ? 'laptopa' : 'telefonu');
+  const n = document.getElementById('kopiaNajnowsza');
+  if (n) n.textContent = ostatniaKopiaOpis();
+  const s = document.getElementById('kopiaStan');
+  if (!s) return;
+  s.innerHTML = 'Kopia robi się też sama, raz dziennie, przy pierwszym otwarciu dziennika' +
+    ' · <a href="#" onclick="event.preventDefault(); otworzKopieModal(\'ustawienia\')" style="color: var(--ink-muted)">⚙ hasło, PIN, foldery kopii</a>';
+}
+// Na telefonie nie ma listy z folderu (Chrome na Androidzie nie wskazuje folderów) — od razu wybór pliku.
+function pasekWczytaj() {
+  if (!window.showDirectoryPicker) { document.getElementById('fileImportEnc').click(); return; }
+  otworzKopieModal('wczytaj');
+  kopiaWczytajRozwin();
+}
 function odswiezFolderKopii() {
   const b = document.getElementById('btnFolderKopii');
   if (b) b.textContent = '📁 Folder kopii: ' + (_folderKopiiNazwa || 'Pobrane');
   const b2 = document.getElementById('btnFolderKopii2');
   if (b2) b2.textContent = '📁 Zapasowy folder: ' + (_folderKopii2Nazwa || 'brak');
-  const g = document.getElementById('kopiaZapiszGdzie');
-  if (g) g.textContent = 'trafi do folderu: ' + (_folderKopiiNazwa || 'Pobrane');
-  // Na telefonie kopia jedzie w drugą stronę — etykieta ma mówić prawdę o kierunku.
-  const w = document.getElementById('btnKopiaWyslij');
-  if (w) w.textContent = '📤 Wyślij kopię na ' + (matchMedia('(pointer: coarse)').matches ? 'laptop' : 'telefon');
+  pasekKopii();
 }
 async function wybierzFolderKopii(ev, slot) {
   const k2 = slot === 2;
@@ -4775,6 +4806,25 @@ async function zapiszDoFolderuKopii(text, filename, slot) {
     return '';
   }
 }
+// Krok 1 bloku kopii (Artur 22.09): „najnowsza kopia i to widać" — kiedy i jaka. Per urządzenie,
+// jak sama kopia; brak wpisu = „jeszcze żadnej tutaj".
+const OSTATNIA_KOPIA_KEY = 'dziennik_wf_ostatnia_kopia';
+function ostatniaKopiaZapisz(tag) {
+  try { localStorage.setItem(OSTATNIA_KOPIA_KEY, JSON.stringify({ t: Date.now(), tag })); } catch (e) {}
+  if (typeof pasekKopii === 'function') pasekKopii();
+}
+function ostatniaKopiaOpis() {
+  let k = null;
+  try { k = JSON.parse(localStorage.getItem(OSTATNIA_KOPIA_KEY) || 'null'); } catch (e) {}
+  if (!k || !k.t) return 'jeszcze żadnej na tym urządzeniu';
+  const d = new Date(k.t), dzis = new Date();
+  const hh = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  const kiedy = d.toDateString() === dzis.toDateString() ? 'dziś ' + hh
+    : String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + ' ' + hh;
+  const jaka = /^AUTO/.test(k.tag) ? 'automatyczna' : k.tag === 'RECZNA' ? 'ręczna'
+    : k.tag === 'WYSLANA' ? 'wysłana' : 'przed zmianą danych';
+  return kiedy + ' · ' + jaka;
+}
 async function writeBackupFile(tag) {
   if (!cryptoAvailable()) {
     // Przeglądarka bez Web Crypto: lepiej kopia jawna niż żadna, ale głośno o tym mówimy.
@@ -4791,6 +4841,7 @@ async function writeBackupFile(tag) {
     const gdzie = await zapiszDoFolderuKopii(text, fname);
     const gdzie2 = await zapiszDoFolderuKopii(text, fname, 2);
     if (_folderKopii2Nazwa && !gdzie2) showToast('Drugi folder kopii niedostępny — kopia poszła tylko do pierwszego.', 'warn');
+    ostatniaKopiaZapisz(tag);
     if (gdzie) { showToast('Kopia zapisana: ' + gdzie + (gdzie2 ? ' + ' + gdzie2 : '') + ' \\ ' + fname, 'success'); return true; }
     _triggerDownloadText(text, fname);
     if (_folderKopiiNazwa) showToast('Folder kopii niedostępny — kopia poszła do Pobranych (' + fname + ').', 'warn');
@@ -4814,7 +4865,7 @@ async function autoBackupDaily() {
   const today = new Date().toISOString().slice(0, 10);
   if (localStorage.getItem(AUTOBACKUP_KEY) === today) return; // już dziś był
   const ok = await writeBackupFile('AUTO-codzienna');
-  if (ok) localStorage.setItem(AUTOBACKUP_KEY, today);   // bez hasła spróbujemy jeszcze raz jutro
+  if (ok) { localStorage.setItem(AUTOBACKUP_KEY, today); pasekKopii(); }   // bez hasła spróbujemy jeszcze raz jutro
 }
 
 // Backup PRZED operacją niszczącą (wyczyść wszystko / nadpisanie importem).
@@ -5001,7 +5052,8 @@ async function wyslijKopie() {
     return writeBackupFile('RECZNA');
   }
   zapamietajWlasnaKopie(fname);   // ta sama kopia pobrana tu z maila ma być rozpoznana jako własna
-  showToast('Kopia wysłana. Na drugim urządzeniu: Kopia zapasowa → Wczytaj kopię.', 'success');
+  ostatniaKopiaZapisz('WYSLANA');
+  showToast('Dziennik wysłany. Na drugim urządzeniu: Uczniowie → 📥 Wczytaj dziennik.', 'success');
   return true;
 }
 
@@ -5098,16 +5150,21 @@ function kiedyKopii(mtime) {
 // przeczyc — „Kopia wyslana stad" + „przyniesiona z zewnatrz" to bylby balagan w jednej linii.
 function skadKopia(wlasna) { return wlasna ? 'zapisana tutaj' : 'nie zapisywana tutaj (zwykle: z telefonu)'; }
 
-// Okno „Kopia zapasowa" — jedyne wejście w kopie z paska Uczniowie (poza codziennym „Wyślij kopię").
-function otworzKopieModal() {
+// Okno kopii w dwóch trybach (22.09): z „Wczytaj dziennik" — sama lista plików, z „⚙" — same ustawienia.
+// Czynności (wyślij / zapisz / wczytaj) stoją w pasku; powtórzone w oknie wracały jako szum.
+function otworzKopieModal(tryb) {
+  const ust = tryb === 'ustawienia';
+  document.getElementById('kopiaTytul').textContent = ust ? '⚙ Hasło, PIN i foldery kopii' : '📂 Wczytaj dziennik';
   document.getElementById('kopiaListaBox').style.display = 'none';   // lista dopiero na żądanie (pytanie Chrome o folder)
+  const d = document.querySelector('#kopiaModal details');
+  d.style.display = ust ? '' : 'none';
+  d.open = ust;
+  d.querySelector('summary').style.display = ust ? 'none' : '';   // tytuł okna już mówi „ustawienia"
   odswiezFolderKopii();
   document.getElementById('kopiaModal').classList.add('active');
 }
 function zamknijKopieModal() { document.getElementById('kopiaModal').classList.remove('active'); }
 
-async function kopiaWyslij() { zamknijKopieModal(); return wyslijKopie(); }
-async function kopiaZapisz() { zamknijKopieModal(); return exportEncrypted(); }
 
 // Rozwinięcie listy = moment, w którym wolno zapytać o dostęp do folderu.
 async function kopiaWczytajRozwin() {
@@ -5125,7 +5182,7 @@ async function pokazKopieZFolderu() {
   const stop = (t) => { info.textContent = t; };
   if (!cryptoAvailable()) { stop('Odczyt szyfrowanej kopii wymaga otwarcia dziennika przez https://.'); return; }
   const h = await folderKopiiCzytaj(1);
-  if (!h) { stop('Nie masz wskazanego folderu kopii — kopie idą do Pobranych. Wskaż folder w „Ustawieniach kopii" niżej albo wybierz plik ręcznie.'); return; }
+  if (!h) { stop('Nie masz wskazanego folderu kopii — kopie idą do Pobranych. Wybierz plik ręcznie. Wskaż folder kopii (w bloku kopii: „⚙ hasło, PIN, foldery kopii"), a lista pokaże się tu sama.'); return; }
   let perm = await h.queryPermission({ mode: 'read' });
   if (perm !== 'granted') perm = await h.requestPermission({ mode: 'read' });
   if (perm !== 'granted') { stop('Przeglądarka nie dała dostępu do folderu „' + h.name + '”. Możesz wybrać plik ręcznie.'); return; }

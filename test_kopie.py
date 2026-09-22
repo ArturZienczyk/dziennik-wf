@@ -35,8 +35,12 @@ def check(name, cond, detail=""):
 
 
 def przez_okno_kopii(page, tekst):
-    """Od 22.09 kopie i hasla siedza w oknie „Kopia zapasowa" — jedna droga zamiast osmiu przyciskow."""
-    page.click('#tab-uczniowie button:has-text("Kopia zapasowa")')
+    """Od 22.09 (blok kopii): „Zrób kopię dziennika teraz" stoi w bloku, hasło i PIN pod „⚙" w bloku."""
+    if tekst.startswith("Zrób kopię"):
+        page.click('#kopiaBlok button:has-text("%s")' % tekst)
+        page.wait_for_timeout(200)
+        return
+    page.click("#kopiaStan a")
     page.wait_for_timeout(200)
     # „Ustawienia kopii" sa zwiniete swiadomie (konfiguracja nie udaje czynnosci) — rozwijam jak user
     page.evaluate("() => { const d = document.querySelector('#kopiaModal details'); if (d) d.open = true; }")
@@ -162,7 +166,7 @@ with sync_playwright() as pw:
     page.click('button:has-text("Uczniowie")')
     page.wait_for_timeout(200)
     with page.expect_download(timeout=15000) as dl2_info:
-        przez_okno_kopii(page, "Zapisz kopię na tym komputerze")
+        przez_okno_kopii(page, "Zrób kopię dziennika teraz")
     dl2 = dl2_info.value
     ręczna = SHOTS / "reczna_kopia.enc.json"
     dl2.save_as(str(ręczna))
@@ -234,7 +238,7 @@ with sync_playwright() as pw:
         ),
     )
     with page.expect_download(timeout=15000) as dl3_info:
-        przez_okno_kopii(page, "Zapisz kopię na tym komputerze")
+        przez_okno_kopii(page, "Zrób kopię dziennika teraz")
     dl3 = dl3_info.value
     raw3 = SHOTS / "kopia_po_zmianie.enc.json"
     dl3.save_as(str(raw3))
