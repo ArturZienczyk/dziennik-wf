@@ -130,11 +130,19 @@ with sync_playwright() as pw:
     check(
         "guzik otwartej (7b) stoi trzeci, w miejscu z planu",
         "guzik-otw"
-        in (page.get_attribute("#kolPrzed .kol:not(.okienko-zast):nth-child(3)", "class") or ""),
+        in (
+            page.get_attribute(
+                "#kolPrzed .kol:not(.okienko-zast):nth-child(3)", "class"
+            )
+            or ""
+        ),
     )
     check(
         "guzik inne (EZ 4a) kreskowany, bez tabeli",
-        page.locator("#kolPrzed .kol:not(.okienko-zast).inne[data-inne='EZ 4a']").count() == 1
+        page.locator(
+            "#kolPrzed .kol:not(.okienko-zast).inne[data-inne='EZ 4a']"
+        ).count()
+        == 1
         and page.locator("#kolPrzed .kol:not(.okienko-zast).inne table").count() == 0,
     )
     check(
@@ -179,12 +187,19 @@ with sync_playwright() as pw:
     check(
         "podgląd 2 inf ma klasę jest",
         "jest"
-        in (page.get_attribute("#kolPrzed .kol:not(.okienko-zast)[data-cls='%s']" % cid2, "class") or ""),
+        in (
+            page.get_attribute(
+                "#kolPrzed .kol:not(.okienko-zast)[data-cls='%s']" % cid2, "class"
+            )
+            or ""
+        ),
     )
     check(
         "guzik 2 inf: 3 ćw. · 1 nć",
         "3 ćw. · 1 nć"
-        in page.text_content("#kolPrzed .kol:not(.okienko-zast)[data-cls='%s'] .sum" % cid2),
+        in page.text_content(
+            "#kolPrzed .kol:not(.okienko-zast)[data-cls='%s'] .sum" % cid2
+        ),
     )
     check(
         "stopka otwartej: „do VULCANa” (ZSS)",
@@ -199,7 +214,9 @@ with sync_playwright() as pw:
 
     # klik nagłówka podglądu 8c → otwiera lekcję (podgląd, nie edycja w kolumnie)
     cid8 = page.evaluate("() => state.classes[1].id")
-    page.click("#kolPrzed .kol:not(.okienko-zast).podglad[data-cls='%s'] .kol-head" % cid8)
+    page.click(
+        "#kolPrzed .kol:not(.okienko-zast).podglad[data-cls='%s'] .kol-head" % cid8
+    )
     page.wait_for_timeout(300)
     check(
         "klik nagłówka 8c: klasa bieżąca = 8c",
@@ -214,7 +231,12 @@ with sync_playwright() as pw:
         "po kliku 8c: nadal 5 guzików, otwarta = piąty",
         page.locator("#kolPrzed .kol:not(.okienko-zast)").count() == 5
         and "guzik-otw"
-        in (page.get_attribute("#kolPrzed .kol:not(.okienko-zast):nth-child(5)", "class") or ""),
+        in (
+            page.get_attribute(
+                "#kolPrzed .kol:not(.okienko-zast):nth-child(5)", "class"
+            )
+            or ""
+        ),
     )
     check(
         "tabela nadal jedna (klawiatura ma jedno miejsce wpisu)",
@@ -256,7 +278,9 @@ with sync_playwright() as pw:
     page.wait_for_timeout(300)
 
     # sobota: bez guzika i tabeli, komunikat + „otwórz lekcję mimo to"
-    page.evaluate("() => { state.currentDate = '2026-09-19'; state.currentNr = null; renderAttendance(); }")
+    page.evaluate(
+        "() => { state.currentDate = '2026-09-19'; state.currentNr = null; renderAttendance(); }"
+    )
     page.screenshot(path=str(SHOTS / "cv2_sobota_1400.png"))
     page.wait_for_timeout(200)
     check(
@@ -267,7 +291,11 @@ with sync_playwright() as pw:
     )
     page.click("#kolPrzed .kol:not(.okienko-zast).wolny button")
     page.wait_for_timeout(200)
-    check("sobota: „otwórz lekcję mimo to” pokazuje tabelę i guzik", page.evaluate(VIS, "#kolOtwarta") and page.locator("#kolPrzed .kol:not(.okienko-zast).guzik-otw").count() == 1)
+    check(
+        "sobota: „otwórz lekcję mimo to” pokazuje tabelę i guzik",
+        page.evaluate(VIS, "#kolOtwarta")
+        and page.locator("#kolPrzed .kol:not(.okienko-zast).guzik-otw").count() == 1,
+    )
     page.evaluate("(d) => wybierzLekcje(state.classes[1].id, d, 5)", DZIS)
     page.wait_for_timeout(300)
 
@@ -336,7 +364,10 @@ with sync_playwright() as pw:
     page.click("#widokPrzel button[data-w=tydzien]")
     page.wait_for_timeout(300)
     check("Tydzień: pasek tygodnia widoczny", page.evaluate(VIS, "#planTydzien"))
-    check("Tydzień: podglądy schowane", not page.evaluate(VIS, "#kolPrzed .kol:not(.okienko-zast)"))
+    check(
+        "Tydzień: podglądy schowane",
+        not page.evaluate(VIS, "#kolPrzed .kol:not(.okienko-zast)"),
+    )
     check(
         "Tydzień: liczniki w tabeli widoczne",
         page.evaluate(VIS, "#attendanceTable th.stat"),
@@ -498,10 +529,63 @@ with sync_playwright() as pw:
     check(
         "390 px: guziki zawijają się, bez przewijania poziomego", sw <= cw + 1, (sw, cw)
     )
-    tops = page.evaluate(
-        "() => [...document.querySelectorAll('#kolPrzed .kol:not(.okienko-zast)')].map(e => Math.round(e.getBoundingClientRect().top))"
+    # Lista dnia (29.09): zwinięta = tylko otwarta lekcja + „▾ dzień”; rozwinięta = dzień pionowo z godzinami
+    WIDOCZNE = "() => [...document.querySelectorAll('#kolPrzed .kol')].filter(e => e.offsetParent !== null).length"
+    check(
+        "390 px zwinięta: widać tylko otwartą lekcję + guzik „dzień”",
+        page.evaluate(WIDOCZNE) == 1 and page.evaluate(VIS, "#kolPrzed .dzien-zwin"),
+        page.evaluate(WIDOCZNE),
     )
-    check("390 px: guziki w ≥2 wierszach", len(set(tops)) >= 2, tops)
+    check(
+        "390 px: otwarta L3 z godziną 9:50–10:35",
+        page.text_content("#kolPrzed .guzik-otw .czas") == "9:50–10:35",
+    )
+    page.click("#kolPrzed .dzien-zwin")
+    page.wait_for_timeout(150)
+    check(
+        "390 px rozwinięta: cały dzień (5 lekcji + zastępstwo) w pionie",
+        page.evaluate(WIDOCZNE) >= 6
+        and len(
+            set(
+                page.evaluate(
+                    "() => [...document.querySelectorAll('#kolPrzed .kol')].filter(e => e.offsetParent !== null).map(e => Math.round(e.getBoundingClientRect().left))"
+                )
+            )
+        )
+        == 1,
+    )
+    check(
+        "390 px rozwinięta: L1 ma godzinę 8:00–8:45",
+        page.evaluate(
+            "() => [...document.querySelectorAll('#kolPrzed .czas')].map(e => e.textContent)"
+        )[:1]
+        == ["8:00–8:45"],
+    )
+    # okienko: 8c przestawione z L5 na L7 → między L4 (EZ) a L7 okienka L5 i L6
+    page.evaluate(
+        "() => { state.planWf.plany[0].klasy['8c']['4'] = [7]; renderDzien(); }"
+    )
+    check(
+        "390 px rozwinięta: okienka L5, L6 między lekcjami",
+        page.evaluate(
+            "() => [...document.querySelectorAll('#kolPrzed .kol.wolna-lekcja')].filter(e => e.offsetParent !== null).map(e => e.dataset.nr)"
+        )
+        == ["5", "6"],
+    )
+    page.evaluate(
+        "() => { state.planWf.plany[0].klasy['8c']['4'] = [5]; renderDzien(); }"
+    )
+    page.click("#kolPrzed .kol.podglad .kol-head >> nth=0")
+    page.wait_for_timeout(250)
+    check(
+        "390 px: klik lekcji w liście otwiera ją i zwija listę",
+        not page.evaluate(
+            "() => document.getElementById('kolPrzed').classList.contains('rozwin')"
+        )
+        and page.evaluate(WIDOCZNE) == 1,
+    )
+    page.evaluate("(d) => wybierzLekcje(state.classes[0].id, d, 3)", DZIS)
+    page.wait_for_timeout(200)
     check(
         "390 px: tabela otwartej na całą szerokość",
         page.evaluate(

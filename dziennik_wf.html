@@ -307,6 +307,8 @@
   .zast-tag { display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #7A6320; border: 1px solid #C9B98A; border-radius: 4px; padding: 0 5px; margin-right: 5px; background: var(--paper); vertical-align: 1px; }
   .kol-head .kl .plan-klasa { font-size: 12px; color: var(--ink-muted); font-weight: 400; text-decoration: line-through; margin-left: 6px; }
   .kol.okienko-zast { border: 1px dashed var(--line); background: transparent; flex-grow: 0; }
+  /* Lista dnia z godzinami i okienkami żyje tylko na telefonie (@media max-width 700px); tu schowana. */
+  .dzien-zwin, .kol.wolna-lekcja, .kol-head .czas { display: none; }
   .kol.okienko-zast .kol-head { background: transparent; }
   .kol.okienko-zast .kol-head .kl { font-size: 14px; color: var(--ink-muted); }
   .kol.okienko-zast button { font: inherit; font-size: 12px; padding: 3px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); cursor: pointer; }
@@ -1171,6 +1173,36 @@
     .dzien-kolumny { gap: 8px; }
     .dzien-kolumny .kol { min-width: 0; }
     .dzien-kolumny .kol-head { padding: 6px 10px 7px; }
+    /* Dzień na telefonie jako zwijana lista (29.09, wybór Artura po przypadku 8 godzin na ekranie 608 px).
+       Zwinięty: jeden wiersz = otwarta lekcja + „▾ dzień · N" — tabela zawsze wysoko, przy 2 i przy 8 lekcjach.
+       Rozwinięty: dzień pionowo, godzina od–do w każdym wierszu, okienka i dyżury na swoim miejscu.
+       Klik lekcji w liście otwiera ją i zwija listę (renderDzien porównuje klucz otwartej). */
+    .dzien-kolumny { gap: 6px; }
+    #kolPrzed { display: flex; flex: 1 0 100%; flex-direction: column; gap: 4px; min-width: 0; }
+    #kolPrzed .kol-para { display: contents; }
+    #kolPrzed .kol { flex: 0 0 auto; max-width: none; min-width: 0; }
+    #kolPrzed:not(.rozwin) { flex-direction: row; align-items: stretch; }
+    #kolPrzed:not(.rozwin) .kol:not(.guzik-otw) { display: none; }
+    #kolPrzed:not(.rozwin) .guzik-otw { flex: 1 1 auto; }
+    #kolPrzed.rozwin .dzien-zwin { order: -1; align-self: flex-end; }
+    .dzien-zwin { display: inline-flex; align-items: center; white-space: nowrap; font: inherit; font-size: 13px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink); cursor: pointer; }
+    .dzien-kolumny .kol-head { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr); column-gap: 6px; row-gap: 0; align-items: baseline; padding: 6px 10px; }
+    .kol-head .czas { display: inline; min-width: 76px; grid-column: 1; grid-row: 1; font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .kol-head .nr { grid-column: 2; grid-row: 1; min-width: 20px; white-space: nowrap; }
+    .kol-head .otw { display: none; }
+    .kol-head .kl { grid-column: 3; grid-row: 1; font-size: 15px; }
+    .kol-head .sum { grid-column: 4; grid-row: 1; font-size: 11px; text-align: right; }
+    .kol-head .niebylo-info { grid-column: 1 / -1; }
+    .kol.wolna-lekcja { display: block; border: 1px dashed var(--line); background: transparent; }
+    .kol.wolna-lekcja .kol-head { background: transparent; }
+    .kol.wolna-lekcja .kl { font-family: inherit; font-size: 13px; font-style: italic; color: var(--ink-muted); }
+    #kolPrzed .kol.przerwa { flex: 0 0 auto; width: auto; max-width: none; justify-content: flex-start; align-self: stretch; height: auto; min-height: 0; padding: 1px 0 1px 88px; border: none; background: transparent; box-shadow: none; animation: none; }
+    #kolPrzed .kol.przerwa .txt { writing-mode: horizontal-tb; font-size: 11px; max-height: none; }
+    #kolPrzed .kol.przerwa .txt::before { content: '┆ dyżur: '; }
+    #kolPrzed .kol.przerwa.dzis .txt { font-weight: 700; }
+    .kol.okienko-zast .kol-head { display: flex; justify-content: flex-end; padding: 4px 8px; }
+    .kol.okienko-zast .kol-head .nr, .kol.okienko-zast .kol-head .kl { display: none; }
+    .dzien-row .data { font-size: 15px; }
     .reg-grid { grid-template-columns: 1fr; }
     .table-wrap, .oceny-wrap { -webkit-overflow-scrolling: touch; max-height: calc(100vh - var(--topbar-h, 0px) - var(--datarow-h, 0px) - 16px); overflow: auto; }
     table.attendance thead th, table.dziennik thead th { position: sticky; top: 0; z-index: 4; background: var(--line-soft); box-shadow: 0 2px 0 var(--ink); }
@@ -1308,6 +1340,8 @@
   <div id="tab-obecnosc" class="tab-content active">
 
     <div class="date-row dzien-row">
+      <!-- ◀ dziś ▶ PIERWSZE w belce (29.09): stojąc za datą skakały — „poniedziałek" dłuższy niż „środa" przesuwał je w bok i między wierszami -->
+      <span class="nav"><button type="button" onclick="dateOffset(-1)" title="poprzedni dzień">◀</button><button type="button" onclick="setToday()">dziś</button><button type="button" onclick="dateOffset(1)" title="następny dzień">▶</button></span>
       <span class="data" id="dzienData"></span>
       <input type="date" id="lessonDate" onchange="changeDate()" title="wybierz inny dzień">
       <span id="lessonNrZapas" style="display:none;gap:6px;align-items:center;">
@@ -1315,7 +1349,6 @@
       <select id="lessonNr" onchange="ustawNrLekcji(this.value)" style="padding:6px 8px;font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:6px;"><option value="">—</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option></select>
       </span>
       <span id="lessonNrHint" style="display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap;"></span>
-      <span class="nav"><button type="button" onclick="dateOffset(-1)" title="poprzedni dzień">◀</button><button type="button" onclick="setToday()">dziś</button><button type="button" onclick="dateOffset(1)" title="następny dzień">▶</button></span>
       <span class="lesson-count" id="lessonCount"></span>
       <button type="button" class="dzien-usun" onclick="deleteLesson()" title="usuń wszystkie wpisy obecności tej lekcji">🗑 usuń wpisy</button>
       <span class="przel" id="widokPrzel"><button type="button" data-w="dzien" onclick="ustawWidok('dzien')">Dzień</button><button type="button" data-w="tydzien" onclick="ustawWidok('tydzien')">Tydzień</button></span>
@@ -3082,12 +3115,13 @@ function zaleglePlanZastosuj(plan) {
     stary.klasy = Object.assign({}, stary.klasy || {}, plan.klasy);
     if (plan.inne) stary.inne = Object.assign({}, stary.inne || {}, plan.inne);
     if (plan.dyzury) stary.dyzury = Object.assign({}, stary.dyzury || {}, plan.dyzury);
+    if (plan.dzwonki) stary.dzwonki = plan.dzwonki;
     stary.wolne = Array.from(new Set((stary.wolne || []).concat(plan.wolne || []))).sort();
     if (plan.do) stary.do = plan.do;
     stary.wygenerowano = plan.wygenerowano || stary.wygenerowano || '';
     stary.zrodlo = plan.zrodlo || stary.zrodlo || '';
   } else {
-    state.planWf.plany.push({ od: plan.od, do: plan.do || '', klasy: plan.klasy, inne: plan.inne || {}, dyzury: plan.dyzury || {}, wolne: plan.wolne || [], wygenerowano: plan.wygenerowano || '', zrodlo: plan.zrodlo || '' });
+    state.planWf.plany.push({ od: plan.od, do: plan.do || '', klasy: plan.klasy, inne: plan.inne || {}, dyzury: plan.dyzury || {}, dzwonki: plan.dzwonki || null, wolne: plan.wolne || [], wygenerowano: plan.wygenerowano || '', zrodlo: plan.zrodlo || '' });
   }
   state.planWf.plany.sort((a, b) => a.od < b.od ? -1 : 1);
   save();
@@ -3492,8 +3526,15 @@ function renderDzien() {
   wrap.classList.toggle('bez-lekcji', bezLekcji);
   let cel = przed, otwartaZPlanu = false;
   const dyz = bezLekcji ? [] : dyzuryDnia(iso);
-  let iDyz = 0;
+  let iDyz = 0, poprzNr = null;
+  const nrZastOkienek = new Set(Object.keys(state.zastepstwaOkienka || {}).filter(k => kluczData(k) === iso).map(kluczNr));
   lekcje.forEach(({ cls, nr, nazwa }) => {
+    // okienka między lekcjami (widać je tylko w liście dnia na telefonie); dyżur po lekcji n-1 stoi przed okienkiem n
+    if (nr !== null && poprzNr !== null) for (let n = poprzNr + 1; n < nr; n++) {
+      while (iDyz < dyz.length && dyz[iDyz].po < n) cel.insertAdjacentHTML('beforeend', slupekPrzerwy(dyz[iDyz++], iso === dzis));
+      if (!nrZastOkienek.has(n)) cel.insertAdjacentHTML('beforeend', `<div class="kol wolna-lekcja" data-nr="${n}"><div class="kol-head"><span class="nr">L${n}</span><span class="kl">okienko</span></div></div>`);
+    }
+    if (nr !== null) poprzNr = poprzNr === null ? nr : Math.max(poprzNr, nr);
     // słupek przerwy wchodzi przed pierwszą lekcją o wyższym numerze (lekcja bez numeru = koniec dnia)
     while (iDyz < dyz.length && nr !== null && dyz[iDyz].po < nr) cel.insertAdjacentHTML('beforeend', slupekPrzerwy(dyz[iDyz++], iso === dzis));
     if (!cls) {
@@ -3524,7 +3565,33 @@ function renderDzien() {
     para.appendChild(lewy);
     para.appendChild(sl);
   });
+  // Godzina od–do przy każdym kafelku z numerem (widoczna tylko w liście dnia na telefonie)
+  przed.querySelectorAll('.kol-head').forEach(h => {
+    const m = /^L(\d+)$/.exec(((h.querySelector('.nr') || {}).textContent || '').trim());
+    const c = m ? czasLekcji(iso, +m[1]) : '';
+    if (c) h.insertAdjacentHTML('afterbegin', `<span class="czas">${c}</span>`);
+  });
+  // Zwijanie listy dnia (telefon): rozwinięta zostaje, dopóki otwarta lekcja ta sama — klik innej zwija.
+  if (_dzienRozwin && _dzienRozwin !== cur.id + '|' + kOtw) _dzienRozwin = null;
+  przed.classList.toggle('rozwin', !!_dzienRozwin);
+  const nLekcji = lekcje.filter(l => l.nr !== null || l.cls).length;
+  if (przed.querySelector('.kol:not(.guzik-otw)')) przed.insertAdjacentHTML('beforeend', `<button type="button" class="dzien-zwin" onclick="dzienZwin()" title="${_dzienRozwin ? 'zwiń listę dnia' : 'pokaż cały dzień: godziny, okienka, dyżury'}">${_dzienRozwin ? '▴ zwiń' : '▾ dzień' + (nLekcji ? ' · ' + nLekcji : '')}</button>`);
   void po;
+}
+// Lista dnia na telefonie: klucz „klasa|klucz lekcji" otwartej, przy którym ją rozwinięto (null = zwinięta). Tylko UI.
+// Klasa w kluczu konieczna: dwie klasy z jedną lekcją dnia mają ten sam klucz lekcji (sama data).
+var _dzienRozwin = null;
+function dzienZwin() {
+  _dzienRozwin = _dzienRozwin ? null : (getCurrentClass() || {}).id + '|' + attKey();
+  renderDzien();
+}
+// Dzwonki ZSS Wodna z EduPage (edupage-2026-09-04.json) — zapas, gdy plan nie niesie pola `dzwonki`
+// (plan wpisany ręcznie w zakładce Plan albo plan-wf.json sprzed 29.09).
+var DZWONKI_ZAPAS = { 0: ['07:00', '07:45'], 1: ['08:00', '08:45'], 2: ['08:55', '09:40'], 3: ['09:50', '10:35'], 4: ['10:50', '11:35'], 5: ['11:45', '12:30'], 6: ['12:45', '13:30'], 7: ['13:35', '14:20'], 8: ['14:35', '15:20'], 9: ['16:00', '16:45'] };
+function czasLekcji(iso, nr) {
+  const p = zaleglePlany().find(p => p.dzwonki && planObejmuje(p, iso));
+  const d = ((p && p.dzwonki) || DZWONKI_ZAPAS)[nr];
+  return d ? d[0].replace(/^0/, '') + '–' + d[1].replace(/^0/, '') : '';
 }
 // Guzik otwartej lekcji w pasku dnia: kopia nagłówka otwartej (#kolOtwartaHead zostaje źródłem
 // tekstu dla testów i widoku Tydzień, w widoku dnia jest schowany CSS-em).
