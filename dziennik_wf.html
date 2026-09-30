@@ -749,6 +749,11 @@
   .karta .dwie { display:grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   .stats-name-btn { background:none; border:0; padding:0; font:inherit; color: var(--accent); cursor:pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
   .stats-name-btn:hover { color: var(--accent-warm); }
+  /* Plakietka miejsca z rotacji hali (30.09). Hala = cicha (norma), K/T/pół sektora = wyraźne (wyjście z hali). */
+  .kol-head .miejsce { display: inline-block; margin-left: 6px; font-family: 'IBM Plex Sans', sans-serif; font-size: 11.5px; font-weight: 600; line-height: 1.3; padding: 1px 8px; border-radius: 999px; white-space: nowrap; background: var(--accent-soft); color: var(--accent); vertical-align: 2px; }
+  /* siatka nagłówka ma kolumny auto: plakietka w swoim wierszu na całą szerokość, inaczej poszerza kolumnę 1 i wypycha „otwórz” */
+  .kol-head .miejsce { display: block; grid-column: 1 / 3; grid-row: 4; justify-self: start; min-width: 0; max-width: 100%; margin: 4px 0 0; overflow: hidden; text-overflow: ellipsis; }
+  .kol-head .miejsce.m-S { background: transparent; color: var(--ink-muted); border: 1px solid var(--line); font-weight: 500; }
   @media (max-width: 700px) { .karta .dwie { grid-template-columns: 1fr; } .modal.karta { padding: 18px; } }
   @media print {
     body.karta-print > :not(#kartaUcznia) { display: none !important; }
@@ -1191,6 +1196,7 @@
     .kol-head .nr { grid-column: 2; grid-row: 1; min-width: 20px; white-space: nowrap; }
     .kol-head .otw { display: none; }
     .kol-head .kl { grid-column: 3; grid-row: 1; font-size: 15px; }
+    .kol-head .miejsce { grid-column: 3 / -1; grid-row: 2; justify-self: start; margin: 3px 0 0; }
     .kol-head .sum { grid-column: 4; grid-row: 1; font-size: 11px; text-align: right; }
     .kol-head .niebylo-info { grid-column: 1 / -1; }
     .kol.wolna-lekcja { display: block; border: 1px dashed var(--line); background: transparent; }
@@ -3116,12 +3122,13 @@ function zaleglePlanZastosuj(plan) {
     if (plan.inne) stary.inne = Object.assign({}, stary.inne || {}, plan.inne);
     if (plan.dyzury) stary.dyzury = Object.assign({}, stary.dyzury || {}, plan.dyzury);
     if (plan.dzwonki) stary.dzwonki = plan.dzwonki;
+    if (plan.rotacja) stary.rotacja = plan.rotacja;
     stary.wolne = Array.from(new Set((stary.wolne || []).concat(plan.wolne || []))).sort();
     if (plan.do) stary.do = plan.do;
     stary.wygenerowano = plan.wygenerowano || stary.wygenerowano || '';
     stary.zrodlo = plan.zrodlo || stary.zrodlo || '';
   } else {
-    state.planWf.plany.push({ od: plan.od, do: plan.do || '', klasy: plan.klasy, inne: plan.inne || {}, dyzury: plan.dyzury || {}, dzwonki: plan.dzwonki || null, wolne: plan.wolne || [], wygenerowano: plan.wygenerowano || '', zrodlo: plan.zrodlo || '' });
+    state.planWf.plany.push({ od: plan.od, do: plan.do || '', klasy: plan.klasy, inne: plan.inne || {}, dyzury: plan.dyzury || {}, dzwonki: plan.dzwonki || null, rotacja: plan.rotacja || null, wolne: plan.wolne || [], wygenerowano: plan.wygenerowano || '', zrodlo: plan.zrodlo || '' });
   }
   state.planWf.plany.sort((a, b) => a.od < b.od ? -1 : 1);
   save();
@@ -3570,6 +3577,9 @@ function renderDzien() {
     const m = /^L(\d+)$/.exec(((h.querySelector('.nr') || {}).textContent || '').trim());
     const c = m ? czasLekcji(iso, +m[1]) : '';
     if (c) h.insertAdjacentHTML('afterbegin', `<span class="czas">${c}</span>`);
+    const mj = m ? miejsceLekcji(iso, +m[1]) : null;
+    const kl = h.querySelector('.kl');
+    if (mj && kl && !h.querySelector('.miejsce')) kl.insertAdjacentHTML('afterend', `<span class="miejsce m-${mj.kod}" title="miejsce z rotacji hali">${mj.napis}</span>`);
   });
   // Zwijanie listy dnia (telefon): rozwinięta zostaje, dopóki otwarta lekcja ta sama — klik innej zwija.
   if (_dzienRozwin && _dzienRozwin !== cur.id + '|' + kOtw) _dzienRozwin = null;
@@ -3592,6 +3602,25 @@ function czasLekcji(iso, nr) {
   const p = zaleglePlany().find(p => p.dzwonki && planObejmuje(p, iso));
   const d = ((p && p.dzwonki) || DZWONKI_ZAPAS)[nr];
   return d ? d[0].replace(/^0/, '') + '–' + d[1].replace(/^0/, '') : '';
+}
+// Miejsce na hali z rotacji 4-tygodniowej (30.09): plan-wf.json → pole `rotacja` z rotacja_hali.py.
+// Tydzień cyklu liczony od `start` co tydzień kalendarza (tryb 'kal'); 'nauka' pomija tygodnie w całości wolne.
+var MIEJSCE_NAPIS = { S: 'hala', S2: '½ sektora', K: 'kondycyjna', T: 'tenisowa' };
+function miejsceLekcji(iso, nr) {
+  const p = zaleglePlany().find(p => p.rotacja && planObejmuje(p, iso));
+  if (!p || nr === null) return null;
+  const r = p.rotacja, d = new Date(iso + 'T00:00:00'), dow = (d.getDay() + 6) % 7;
+  const pon = new Date(d); pon.setDate(d.getDate() - dow);
+  const s = new Date(r.start + 'T00:00:00');
+  if (pon < s || !r.tygodnie || !r.tygodnie.length) return null;
+  let n;
+  if (r.tryb === 'nauka') {
+    const wolne = new Set(p.wolne || []), isoD = x => x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
+    const nauka = m0 => { for (let i = 0; i < 5; i++) { const x = new Date(m0); x.setDate(m0.getDate() + i); if (!wolne.has(isoD(x))) return true; } return false; };
+    n = 0; for (const x = new Date(s); x < pon; x.setDate(x.getDate() + 7)) if (nauka(x)) n++;
+  } else n = Math.round((pon - s) / 864e5 / 7);
+  const kod = ((r.tygodnie[n % r.tygodnie.length] || {})[dow] || {})[nr];
+  return kod ? { kod, napis: MIEJSCE_NAPIS[kod] || kod } : null;
 }
 // Guzik otwartej lekcji w pasku dnia: kopia nagłówka otwartej (#kolOtwartaHead zostaje źródłem
 // tekstu dla testów i widoku Tydzień, w widoku dnia jest schowany CSS-em).
