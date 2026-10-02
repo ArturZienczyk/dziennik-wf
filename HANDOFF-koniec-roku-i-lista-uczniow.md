@@ -40,6 +40,19 @@ Cztery sprawy pod jednym zgłoszeniem:
 - **P5.** Kiedy to jest potrzebne pierwszy raz? Koniec roku to czerwiec 2027 — czy wcześniej
   (np. uczeń przeniesiony w październiku)?
 
+### Odpowiedzi Artura (2026-10-02, słowa w skrócie)
+- **P1.** „ale kopię będzie można odtworzyć?" — odpowiedź zależna od tego, czy stary rok da się odtworzyć
+  z kopii. Stan dziś: wczytanie kopii **scala** albo, z checkboxem „Zastąp wszystko", podmienia całość
+  (README §Synchronizacja). Jak to zagra z kopią sprzed zmiany roku — niesprawdzone, bo zmiany roku
+  jeszcze nie ma. **Otwarte.**
+- **P2.** Tak — ta sama klasa idzie w górę z prawie tym samym składem.
+- **P3.** Wyszarzony (z historią).
+- **P4.** Przesuwanie na wypadek pomyłki w kolejności — żeby nie kasować listy do miejsca pomyłki,
+  tylko przesunąć wiersz. (Czyli ręczne przesuwanie, nie sortowanie.)
+- **P5.** Teraz tylko w piaskownicy; naprawdę potrzebne w czerwcu 2027.
+- **P6.** Wszystkie trzy zakresy: pojedyncza lekcja, cały dzień, kilka dni.
+- **P7.** Kafelek lekcji w przyszłym dniu (Obecność → strzałka na przyszły dzień → klik w kafelek).
+
 ## Czego NIE wiemy / ryzyka do sprawdzenia przed projektem
 - Czy PZO/statystyki ZSS wymagają zachowania frekwencji ucznia, który zmienił klasę.
 - Jak scalanie kopii telefon ↔ laptop zachowa się, gdy na jednym urządzeniu klasa zostanie
@@ -78,7 +91,32 @@ plik z apką obok**, nie tylko krok 6. Kandydat na strażnika: test, że każda 
 w `start.html` istnieje w `dziennik_wf.html` (dziś takiej bramki nie ma, stąd rozjazd) — **rozważany,
 nie zatwierdzony**.
 
+## Stan 2026-10-02 (koniec sesji)
+Kolejność ułożona wg „kiedy potrzebne", Artur: „tak" na start od punktu 1.
+1. **„Nie będzie" z wyprzedzeniem (P6/P7) — ZROBIONE W ROBOCZYM, czeka na oko Artura.**
+   - Kod: `dziennik_wf_roboczy.html` (**gitignored — zmiana żyje tylko na dysku**; prod `dziennik_wf.html`
+     nietknięty). Funkcje: `nieByloZakres`, `nieByloZakresWidok`, zakres w `nieByloOk`/`nieByloOkno`,
+     przycisk `.niebylo-postaw` w `kolumnaPodgladu` i w nagłówku otwartej lekcji; „jednak będzie" dla dnia ≥ dziś.
+   - Piaskownica zbudowana (`zrob_piaskownice.py`), skrót na pulpicie.
+   - Test: `test_niebylo_wyprzedzenie.py` (28/28 na roboczym; nie wpięty w `sprawdz_wszystko.py`/pre-push —
+     wpiąć przy wdrożeniu, uruchamiać z arg `dziennik_wf.html`).
+   - **Plansza uwag ze zrzutami (6 szt.):** `D:\Users\Desktop\Plansze\nauczyciel\2026-10-02_nie-bedzie-z-wyprzedzeniem`.
+     Otwarcie: `python D:\Projects\design\tools\plansza_uwag.py otworz "<folder>" --port 8780`
+     (własny port — patrz pułapka niżej). Artur jeszcze nic nie zaznaczył.
+   - Dalej: uwagi z planszy → poprawki w roboczym → „pasuje" → `python wdroz_roboczy.py --wdroz` → bramki
+     (`sprawdz_wszystko.py` przed push, bieg ~4 min) → commit. **Przed wdrożeniem sprawdź, czy prod nie dostał
+     zmian od 30.09** (roboczy był równy prod 02.10) — inaczej `wdroz_roboczy` je cofnie.
+2. Uczeń „odszedł" — wyszarzony z historią (P3). Nie zaczęte.
+3. Przesuwanie wiersza góra/dół (P4). Nie zaczęte.
+4. Nowy rok (P1/P2) — najpierw piaskownica; warunek projektu: co robi wczytanie kopii z poprzedniego roku
+   (ryzyko: scalanie po tych samych id wrzuca stare wpisy do nowej klasy). Nie zaczęte.
+
+**Pułapka (osobny projekt `design`, nie naprawiona):** `plansza_uwag.py` `serwuj()` — `ThreadingHTTPServer`
+ma `allow_reuse_address`, na Windowsie dwa serwery wiążą ten sam port (8765), pętla „następny port" nigdy
+nie rusza; przeglądarka trafia do cudzej planszy. Obejście: `--port`. Poprawka do zrobienia w tamtym projekcie.
+
 ## Resume
 „Robimy handoff »koniec roku i lista uczniów« z
-`D:\Projects\nauczyciel\wf\dziennik-wf\HANDOFF-koniec-roku-i-lista-uczniow.md`.
-Zacznij od pytań P1–P7 — najpierw moje odpowiedzi, potem propozycja. „Start w 5 minut" (dopisek 2) można zrobić od razu, bez pytań."
+`D:\Projects\nauczyciel\wf\dziennik-wf\HANDOFF-koniec-roku-i-lista-uczniow.md`, sekcja »Stan 2026-10-02«.
+Najpierw otwórz planszę (port 8780) i przeczytaj moje uwagi albo „pasuje" — potem wdrożenie punktu 1.
+Potem punkty 2–4."
