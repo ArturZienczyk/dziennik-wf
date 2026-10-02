@@ -95,7 +95,7 @@ nie zatwierdzony**.
 Kolejność ułożona wg „kiedy potrzebne", Artur: „tak" na start od punktu 1.
 1. **„Nie będzie" z wyprzedzeniem (P6/P7) — ZROBIONE W ROBOCZYM, czeka na oko Artura.**
    - Kod: `dziennik_wf_roboczy.html` (**gitignored — zmiana żyje tylko na dysku**; prod `dziennik_wf.html`
-     nietknięty). Funkcje: `nieByloZakres`, `nieByloZakresWidok`, zakres w `nieByloOk`/`nieByloOkno`,
+     nietknięty; kopia bezpieczeństwa `_wersje-poprzednie/dziennik_wf_roboczy_2026-10-02_nie-bedzie.html`). Funkcje: `nieByloZakres`, `nieByloZakresWidok`, zakres w `nieByloOk`/`nieByloOkno`,
      przycisk `.niebylo-postaw` w `kolumnaPodgladu` i w nagłówku otwartej lekcji; „jednak będzie" dla dnia ≥ dziś.
    - Piaskownica zbudowana (`zrob_piaskownice.py`), skrót na pulpicie.
    - Test: `test_niebylo_wyprzedzenie.py` (28/28 na roboczym; nie wpięty w `sprawdz_wszystko.py`/pre-push —
