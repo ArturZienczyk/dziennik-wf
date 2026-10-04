@@ -797,6 +797,25 @@
   .stats-zakres-opis { font-size: 13px; color: var(--ink-muted); }
   details.stats-lekcje > summary { cursor: pointer; font-family: inherit; font-weight: 600; font-size: 17px; margin: 18px 0 8px; }
   .karta-druk-opt { font-size: 12px; color: var(--ink-muted); display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; }
+  /* Raport całego dziennika (04.10): wszystkie klasy na A4 poziomo, tylko w druku. */
+  #raportCaly { display: none; }
+  @page raport { size: A4 landscape; margin: 9mm; }
+  @media print {
+    body.raport-print > :not(#raportCaly) { display: none !important; }
+    body.raport-print #raportCaly { display: block; page: raport; font-size: 9.5px; color: #000; }
+  }
+  #raportCaly .r-head { display: flex; justify-content: space-between; font-size: 11px; margin: 0 0 4px; }
+  #raportCaly .r-klasa { break-inside: avoid; margin: 0 0 7px; }
+  #raportCaly h3 { font-size: 11.5px; margin: 0 0 2px; }
+  #raportCaly h3 small { font-weight: 400; color: #444; }
+  #raportCaly table { border-collapse: collapse; width: 100%; }
+  #raportCaly th, #raportCaly td { border: 0.5px solid #999; padding: 0 4px; line-height: 1.25; height: auto; text-align: center; white-space: nowrap; }
+  #raportCaly th { background: #eee; font-weight: 600; }
+  #raportCaly td.l { text-align: left; }
+  #raportCaly td.oc { text-align: left; white-space: normal; color: #333; }
+  #raportCaly tr.zw td { color: #888; }
+  #raportCaly .ost { font-weight: 700; }
+  #raportCaly .r-legenda { font-size: 8.5px; color: #444; margin-top: 4px; }
 
   footer {
     margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line);
@@ -1722,6 +1741,7 @@
       </div>
       <span class="stats-zakres-opis" id="statsZakresOpis"></span>
       <button onclick="drukujStatystyki()" title="1 strona: podsumowanie + tabela klasy (bez listy lekcji)" style="margin-left:auto;">🖨 Drukuj / PDF</button>
+      <button onclick="drukujRaportCaly()" title="Wszystkie klasy naraz, zwięźle: % ćwiczył, Systematyczność, oceny, średnia. A4 poziomo.">📋 Raport całego dziennika</button>
     </div>
     <div class="summary-grid" id="summaryGrid"></div>
 
@@ -4502,6 +4522,70 @@ function drukujStatystyki() {
   window.print();
   setTimeout(off, 2000);
 }
+// Raport całego dziennika (04.10): wszystkie klasy naraz, wiersz na ucznia — % ćwiczył, okna
+// Systematyczności, oceny i średnia. Liczy z danych KAŻDEJ klasy, nie z otwartej: kolumny Syst.
+// w Ocenach przelicza się tylko dla otwartej klasy (syncSystematycznoscColumns), u pozostałych
+// mogą być nieświeże — dlatego okna liczymy tu od nowa, przez tę samą wagaLekcji().
+function raportKlasy(cls, zakres) {
+  const brk = (cls.semesterBreak || '').trim();
+  const z = brk ? zakres : 'rok';
+  const from = z === 'II' ? brk : null, to = z === 'I' ? brk : null;
+  const wZakresie = k => { const d = kluczData(k); return !(from && d < from) && !(to && d >= to); };
+  const lekcji = Object.keys(cls.attendance || {}).filter(wZakresie).length;
+  const okna = oknaSystematycznosci(cls);
+  const kol = (cls.gradeColumns || []).filter(c => !c.auto);
+  const grades = cls.grades || {};
+  let sumC = 0, sumB = 0;
+  const wiersze = (cls.students || []).filter(s => s.name).map((s, i) => {
+    const st = getStudentStatsKlasy(cls, s.id, from || undefined, to || undefined);
+    if (!s.longTermReleased) { sumC += st.C; sumB += st.baza; }
+    // średnia jak calculateStudentAverage: okna Syst. waga 1 + kolumny ręczne z wagą (0 = info)
+    let sv = 0, sw = 0;
+    const syst = okna.map(w => {
+      const p = getStudentStatsKlasy(cls, s.id, w.from || undefined, w.to || undefined).percent;
+      if (p === null) return '<td>—</td>';
+      const v = Math.round(p); sv += v; sw += 1;
+      return '<td>' + v + ' <b>' + gradeMenLabel(v) + '</b></td>';
+    }).join('');
+    const oceny = [];
+    kol.forEach(c => {
+      const v = (grades[c.id] || {})[s.id];
+      if (v === undefined || v === null) return;
+      const w = wagaKolumny(c);
+      if (w) { sv += v * w; sw += w; }
+      oceny.push(escapeHtml(c.shortName || '?') + ' ' + v + '→' + gradeMenLabel(v));
+    });
+    const avg = sw ? Math.round(sv / sw) : null;
+    const alarm = st.percent !== null && st.percent < 50;
+    return '<tr' + (s.longTermReleased ? ' class="zw"' : '') + '><td>' + (i + 1) + '</td><td class="l">' + escapeHtml(s.name) + (s.longTermReleased ? ' <i>(zw. dł.)</i>' : '') + '</td>'
+      + '<td>' + st.baza + '</td><td class="ost">' + (st.percent === null ? '—' : Math.round(st.percent) + '%') + '</td>'
+      + syst + '<td class="oc">' + (oceny.join(' · ') || '—') + '</td>'
+      + '<td class="ost">' + (avg === null ? '—' : avg + ' → ' + gradeMenLabel(avg)) + '</td><td>' + (alarm ? '⚠' : '') + '</td></tr>';
+  });
+  if (!wiersze.length) return '';
+  const sr = sumB ? Math.round(sumC / sumB * 100) + '%' : '—';
+  return '<div class="r-klasa"><h3>' + escapeHtml((cls.school ? cls.school + ' · ' : '') + cls.name) + ' <small>· ' + wiersze.length + ' uczn. · ' + lekcji + ' lekcji'
+    + (z === 'rok' ? '' : ' (' + z + ' półr.)') + (zakres !== 'rok' && !brk ? ' (bez granicy półrocza — cała historia)' : '') + ' · śr. klasy ' + sr + '</small></h3>'
+    + '<table><thead><tr><th>#</th><th>Uczeń</th><th title="lekcje w bazie procentu">baza</th><th>% ćw.</th>'
+    + okna.map(w => '<th>' + escapeHtml(w.shortName) + '</th>').join('') + '<th>Oceny (pkt→ocena)</th><th>Średnia</th><th>&lt;50%</th></tr></thead><tbody>'
+    + wiersze.join('') + '</tbody></table></div>';
+}
+function drukujRaportCaly() {
+  let zakres = state.statsZakres || 'rok';
+  const klasy = state.classes.slice().sort((a, b) => ((a.school || '') + ' ' + a.name).localeCompare((b.school || '') + ' ' + b.name, 'pl', { numeric: true }));
+  const bloki = klasy.map(c => raportKlasy(c, zakres)).join('');
+  if (!bloki) { showToast('Brak uczniów w żadnej klasie — nie ma czego raportować.', 'error'); return; }
+  const el = document.getElementById('raportCaly');
+  el.innerHTML = '<div class="r-head"><b>Dziennik WF — raport całego dziennika</b><span>stan na ' + kartaData(dzisISO()).slice(0, 10) + ' · % ćwiczył: '
+    + (zakres === 'I' ? 'I półrocze' : zakres === 'II' ? 'II półrocze' : 'cały rok') + '</span></div>' + bloki
+    + '<div class="r-legenda">% ćw. i baza — z zakresu wybranego w Statystykach (wg reguł z zakładki Reguły). Syst. — okna z granicy półrocza każdej klasy, liczba = % ćwiczył w oknie, pogrubiona = ocena. '
+    + 'Średnia = średnia ważona punktów jak w Ocenach (Syst. + oceny ręczne; kolumny „info" nie liczą się). ⚠ = poniżej 50% ćwiczył w zakresie — sprawdź klasyfikację (PZO: udział ≥ 50% zajęć). Uczniowie zwolnieni długoterminowo szarzy, poza średnią klasy.</div>';
+  document.body.classList.add('raport-print');
+  const off = () => document.body.classList.remove('raport-print');
+  window.addEventListener('afterprint', off, { once: true });
+  window.print();
+  setTimeout(off, 2000);
+}
 function renderStats() {
   const tbody = document.getElementById('statsBody');
   tbody.innerHTML = '';
@@ -7094,5 +7178,6 @@ document.addEventListener('keydown', function (e) {
   }
 }, true);
 </script>
+<div id="raportCaly"></div>
 </body>
 </html>
