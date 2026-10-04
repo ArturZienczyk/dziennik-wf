@@ -106,6 +106,13 @@ Kolejność ułożona wg „kiedy potrzebne", Artur: „tak" na start od punktu 
    - Dalej: uwagi z planszy → poprawki w roboczym → „pasuje" → `python wdroz_roboczy.py --wdroz` → bramki
      (`sprawdz_wszystko.py` przed push, bieg ~4 min) → commit. **Przed wdrożeniem sprawdź, czy prod nie dostał
      zmian od 30.09** (roboczy był równy prod 02.10) — inaczej `wdroz_roboczy` je cofnie.
+   - **Uwaga Artura po kliknięciu piaskownicy (2026-10-04, słowa):** „tam na pewno widziałem coś, co w sumie
+     jest niepotrzebne, ale jeden element, żeby przypisywać tylko do jednej klasy, to właściwie się nie zdarza".
+     Zgaduję (niepotwierdzone), że chodzi o zakres „klasa do dnia" w oknie „nie będzie" — zapytać, który
+     element, zanim cokolwiek się wytnie. Artur: „popracujemy, jak znajdę czas; na razie aplikacja
+     najważniejsze rzeczy ma" — niski priorytet.
+   - **Stan po 04.10:** prod dostał bezpośrednio raport całego dziennika (commit c55c11c, `sw.js` v52); ten sam
+     kod jest w roboczym, więc `wdroz_roboczy` go nie cofnie. Przy wdrożeniu „nie będzie" podbij `sw.js` do v53.
 2. Uczeń „odszedł" — wyszarzony z historią (P3). Nie zaczęte.
 3. Przesuwanie wiersza góra/dół (P4). Nie zaczęte.
 4. Nowy rok (P1/P2) — najpierw piaskownica; warunek projektu: co robi wczytanie kopii z poprzedniego roku
