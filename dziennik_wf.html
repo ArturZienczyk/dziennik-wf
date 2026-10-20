@@ -2125,6 +2125,7 @@ let state = {
   planWf: null,
   // zastepstwaOkienka (19.09): { 'YYYY-MM-DD#nr': {klasa, zaKogo} } — zastępstwo na okienku, nie należy do żadnej klasy
   zastepstwaOkienka: {},
+  zastepstwaOkienkaT: {},   // znaczniki czasu okienek (klucz → ms, także nagrobek po usunięciu) — do scalania kopii
   // ustawienia (2026-09-18): { szkoly: {nazwa: {edziennik:'vulcan'|'librus'}}, reguly: {bsBaza, ncBaza, spPol, nuBaza, progZielony, progCzerwony} }
   // Wspólne dla klas; w kopii obok planWf. Brak = domyślne (dotychczasowe liczenie, e-dziennik po nazwie szkoły).
   ustawienia: null,
@@ -2259,9 +2260,24 @@ function listkiKlasy(cls) {
   return L;
 }
 const _liscieBaza = {};   // cls.id → liście z ostatniego zapisu (baza do diffu)
-function stemplujBaza() { state.classes.forEach(c => { _liscieBaza[c.id] = listkiKlasy(c); }); }
+// Zastępstwa na okienkach leżą poza klasami — te same znaczniki (diff + nagrobek) w state.zastepstwaOkienkaT (21.10).
+let _okienkaBaza = null;
+function listkiOkienek() {
+  const L = {}, Z = state.zastepstwaOkienka || {};
+  Object.keys(Z).forEach(k => { if (Z[k]) L[k] = JSON.stringify(Z[k]); });
+  return L;
+}
+function stemplujBaza() { state.classes.forEach(c => { _liscieBaza[c.id] = listkiKlasy(c); }); _okienkaBaza = listkiOkienek(); }
 function stempluj(teraz) {
   teraz = teraz || Date.now();
+  const O = listkiOkienek(), OB = _okienkaBaza;
+  const ot = state.zastepstwaOkienkaT = state.zastepstwaOkienkaT || {};
+  if (!OB) Object.keys(O).forEach(k => { if (!ot[k]) ot[k] = teraz; });
+  else {
+    Object.keys(O).forEach(k => { if (OB[k] !== O[k]) ot[k] = teraz; });
+    Object.keys(OB).forEach(k => { if (!(k in O)) ot[k] = teraz; });   // nagrobek
+  }
+  _okienkaBaza = O;
   state.classes.forEach(cls => {
     const L = listkiKlasy(cls), B = _liscieBaza[cls.id];
     cls._t = cls._t || {};
@@ -2319,9 +2335,24 @@ function scalKopie(data) {
   });
   if (data.planWf && Array.isArray(data.planWf.plany)) data.planWf.plany.forEach(pl => { try { zaleglePlanZastosuj(pl); } catch (e) { /* stary plan bez od/klasy */ } });
   ustawieniaScal(data.ustawienia);
-  // zastępstwa na okienkach: bez znaczników per liść — z kopii dochodzą te, których lokalnie nie ma
+  // zastępstwa na okienkach: ta sama reguła co liście klas (21.10 — wcześniej tylko dopisywanie brakujących,
+  // więc poprawka i usunięcie nie przechodziły, a usunięte wracało z kopii drugiego urządzenia)
   state.zastepstwaOkienka = state.zastepstwaOkienka || {};
-  Object.keys(data.zastepstwaOkienka || {}).forEach(k => { if (!state.zastepstwaOkienka[k]) { state.zastepstwaOkienka[k] = data.zastepstwaOkienka[k]; w.dodane++; } });
+  state.zastepstwaOkienkaT = state.zastepstwaOkienkaT || {};
+  {
+    const L = listkiOkienek(), lt = state.zastepstwaOkienkaT, zt = data.zastepstwaOkienkaT || {}, Zo = data.zastepstwaOkienka || {}, Z = {};
+    Object.keys(Zo).forEach(k => { if (Zo[k]) Z[k] = JSON.stringify(Zo[k]); });
+    new Set(Object.keys(L).concat(Object.keys(Z), Object.keys(zt))).forEach(k => {
+      const tl = lt[k] || 0, tz = zt[k] || 0;
+      if (L[k] === Z[k]) { if (tz > tl) lt[k] = tz; return; }
+      if (!(tz > tl) && !(!(k in L) && !lt[k])) { w.pominiete++; w.pominieteSciezki.push('zo|' + k); return; }
+      const bylo = k in L ? JSON.parse(L[k]) : undefined, jest = k in Z ? JSON.parse(Z[k]) : undefined;
+      if (jest) state.zastepstwaOkienka[k] = jest; else delete state.zastepstwaOkienka[k];
+      lt[k] = tz;
+      const opis = z => z ? z.klasa + (z.zaKogo ? ' za ' + z.zaKogo : '') : '—';
+      if (k in L) w.nadpisane.push({ klasa: 'okienko', co: 'zastępstwo ' + k.replace('#', ' L'), bylo: opis(bylo), jest: opis(jest) }); else w.dodane++;
+    });
+  }
   if (!state.currentClassId || !state.classes.find(c => c.id === state.currentClassId)) state.currentClassId = data.currentClassId || state.classes[0].id;
   stemplujBaza();
   return w;
@@ -2535,6 +2566,7 @@ function save(natychmiast) {
     planWf: state.planWf,
     ustawienia: state.ustawienia,
     zastepstwaOkienka: state.zastepstwaOkienka,
+    zastepstwaOkienkaT: state.zastepstwaOkienkaT,
     pin: zamek.pin,
     savedAt: Date.now()          // rozstrzyga, który magazyn ma nowszą wersję
   };
@@ -4863,6 +4895,7 @@ function snapshotData() {
     planWf: state.planWf,        // plan (siatka, dni wolne, inne zajęcia) — bez tego telefon nie ma planu (empiria 18.09)
     ustawienia: state.ustawienia, // reguły liczenia + e-dziennik per szkoła
     zastepstwaOkienka: state.zastepstwaOkienka, // zastępstwa na okienkach (poza klasami)
+    zastepstwaOkienkaT: state.zastepstwaOkienkaT, // ich znaczniki czasu — bez nich poprawka/usunięcie nie przejdzie przy scalaniu
     exported: new Date().toISOString()
   };
 }
@@ -6548,6 +6581,7 @@ function zamekZastosujDane(data) {
     if (data.planWf) state.planWf = data.planWf;
     if (data.ustawienia) state.ustawienia = data.ustawienia;
     if (data.zastepstwaOkienka && typeof data.zastepstwaOkienka === 'object') state.zastepstwaOkienka = data.zastepstwaOkienka;
+    if (data.zastepstwaOkienkaT && typeof data.zastepstwaOkienkaT === 'object') state.zastepstwaOkienkaT = data.zastepstwaOkienkaT;
   } else if (data && data.students) {
     migrateFlat(data);            // nic nie ginie — stare dane → klasa "Bez przypisania"
   } else {

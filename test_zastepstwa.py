@@ -207,7 +207,7 @@ with sync_playwright() as pw:
     )
     # świeże urządzenie: liścia nigdy nie było (bez nagrobka) — lokalne skasowanie miałoby nowszy znacznik i słusznie wygrałoby
     page.evaluate(
-        "(a) => { const c = state.classes.find(x => x.id === a); delete c.zastepstwa[%r]; delete c._t['z|%s']; state.zastepstwaOkienka = {}; stemplujBaza(); }"
+        "(a) => { const c = state.classes.find(x => x.id === a); delete c.zastepstwa[%r]; delete c._t['z|%s']; state.zastepstwaOkienka = {}; state.zastepstwaOkienkaT = {}; stemplujBaza(); }"
         % (K8, K8),
         c8,
     )
