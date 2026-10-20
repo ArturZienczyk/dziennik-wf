@@ -1,6 +1,6 @@
 # Test „nie będzie” z wyprzedzeniem (2026-10-02): przycisk na kafelku bez wpisu (przyszły dzień = „nie będzie”,
 # miniony = „nie było”), zakres w oknie: ta lekcja / klasa do dnia / wszystkie moje lekcje do dnia; pomija
-# lekcje z wpisem i zastępstwem. Domyślnie testuje dziennik_wf_roboczy.html; po wdrożeniu: arg dziennik_wf.html.
+# lekcje z wpisem i zastępstwem. Wdrożone 21.10 — testuje dziennik_wf.html (arg: inny plik, np. roboczy).
 import sys
 import threading
 import functools
@@ -11,7 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "_zrzuty" / "niebylo-wyprzedzenie"
 OUT.mkdir(parents=True, exist_ok=True)
-PLIK = sys.argv[1] if len(sys.argv) > 1 else "dziennik_wf_roboczy.html"
+PLIK = sys.argv[1] if len(sys.argv) > 1 else "dziennik_wf.html"
 PORT = 8791
 handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(ROOT))
 socketserver.TCPServer.allow_reuse_address = True
@@ -22,6 +22,14 @@ ns = {}
 exec(src[src.index("PLAN = {") : src.index("with sync_playwright()")], ns)
 PLAN, FIXTURE = ns["PLAN"], ns["FIXTURE"]
 from playwright.sync_api import sync_playwright
+import datetime
+
+# Piątki liczone od dziś (21.10: wpisane na sztywno 09/16/23.10 przeszły w przeszłość i test zaczął
+# widzieć „nie było” zamiast „nie będzie”). P1 = najbliższy piątek po dziś, P2/P3 = kolejne.
+_d = datetime.date.today() + datetime.timedelta(days=1)
+while _d.weekday() != 4:
+    _d += datetime.timedelta(days=1)
+P1, P2, P3 = (str(_d + datetime.timedelta(days=7 * i)) for i in range(3))
 
 F = []
 
@@ -48,8 +56,8 @@ with sync_playwright() as pw:
         odw = lambda: pg.evaluate(
             "() => state.classes.map(c => c.name + ':' + Object.keys(c.odwolane||{}).sort().join(',')).join(' | ')"
         )
-        # przyszły piątek
-        pg.evaluate("() => { wybierzLekcje(state.classes[0].id, '2026-10-09', 3); }")
+        # przyszły piątek (P1)
+        pg.evaluate("(d) => { wybierzLekcje(state.classes[0].id, d, 3); }", P1)
         pg.wait_for_timeout(300)
         if tag == "tel":
             pg.evaluate("() => { if (typeof dzienZwin === 'function') dzienZwin(); }")
@@ -84,7 +92,7 @@ with sync_playwright() as pw:
             f"{tag}: 'do dnia' widoczne po wyborze klasy",
             pg.is_visible("#niebyloDoWrap"),
         )
-        pg.fill("#niebyloDo", "2026-10-16")
+        pg.fill("#niebyloDo", P2)
         pg.fill("#niebyloKomentarz", "wyjazd")
         pg.screenshot(path=str(OUT / f"{tag}_2_okno.png"))
         kl = pg.evaluate("() => _niebyloCtx.clsId")
@@ -95,7 +103,7 @@ with sync_playwright() as pw:
         print(o)
         check(
             f"{tag}: klasa {nm} oznaczona 2 piątki",
-            (nm + ":2026-10-09,2026-10-16") in o,
+            (nm + ":" + P1 + "," + P2) in o,
             o,
         )
         check(
@@ -104,25 +112,25 @@ with sync_playwright() as pw:
             o,
         )
         pg.screenshot(path=str(OUT / f"{tag}_3_po_zapisie.png"))
-        # cały dzień 23.10 — wszystkie moje lekcje
+        # cały dzień P3 — wszystkie moje lekcje
         pg.evaluate(
-            "() => { wybierzLekcje(state.classes[0].id, '2026-10-23', 3); nieByloOkno(state.classes[0].id, attKey()); }"
+            "(d) => { wybierzLekcje(state.classes[0].id, d, 3); nieByloOkno(state.classes[0].id, attKey()); }", P3
         )
         pg.wait_for_timeout(200)
         pg.check('input[name="niebyloZakres"][value="wszystkie"]')
         pg.click("#niebyloModal button:has-text('Zapisz')")
         pg.wait_for_timeout(300)
         n23 = pg.evaluate(
-            "() => state.classes.filter(c => (c.odwolane||{})['2026-10-23']).length"
+            "(d) => state.classes.filter(c => (c.odwolane||{})[d]).length", P3
         )
-        check(f"{tag}: cały dzień 23.10 = 4 klasy", n23 == 4, n23)
+        check(f"{tag}: cały dzień P3 = 4 klasy", n23 == 4, n23)
         toast = pg.evaluate(
             "() => (document.querySelector('.toast, #toast')||{}).textContent || ''"
         )
         print("toast:", toast)
         pg.screenshot(path=str(OUT / f"{tag}_4_caly_dzien.png"))
         # zmiana powodu: zakres ukryty, tytuł 'zmień'
-        pg.evaluate("() => nieByloOkno(state.classes[0].id, '2026-10-23')")
+        pg.evaluate("(d) => nieByloOkno(state.classes[0].id, d)", P3)
         pg.wait_for_timeout(100)
         check(
             f"{tag}: przy zmianie powodu zakres ukryty",

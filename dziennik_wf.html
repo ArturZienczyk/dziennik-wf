@@ -294,6 +294,9 @@
   .kol.niebylo .kol-head .sum .niebylo-zmien::before { content: '— '; color: var(--ink-muted); }
   .niebylo-cofnij { font-family: inherit; font-size: 11px; padding: 1px 7px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); cursor: pointer; margin-left: 4px; }
   .niebylo-cofnij:hover { border-color: var(--ink); }
+  /* 21.10: pigułka „nie było / nie będzie" w linii sumy nie może podnosić kafelka — strażnik „guziki
+     równej wysokości (±2 px)" w test_widok_dzienny; ujemny margines w pionie = nie powiększa linii */
+  .kol-head .sum .niebylo-postaw { vertical-align: middle; margin-top: -4px; margin-bottom: -4px; }
   /* „nie było: powód · komentarz” na kafelku = przycisk: klik zmienia powód/komentarz bez „jednak była” (user 19.09) */
   .niebylo-zmien { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
   .niebylo-zmien:hover { color: var(--ink); }
@@ -795,6 +798,9 @@
   .stats-zakres button.on { background: var(--ink); color: var(--paper); }
   .stats-zakres button:disabled { opacity: .4; cursor: default; }
   .stats-zakres-opis { font-size: 13px; color: var(--ink-muted); }
+  .stats-daty { display: inline-flex; gap: 8px; font-size: 13px; color: var(--ink-muted); }
+  .stats-daty[hidden] { display: none; }
+  .stats-daty input { padding: 4px 6px; border: 1px solid var(--line); border-radius: 5px; font-family: inherit; font-size: 13px; }
   details.stats-lekcje > summary { cursor: pointer; font-family: inherit; font-weight: 600; font-size: 17px; margin: 18px 0 8px; }
   .karta-druk-opt { font-size: 12px; color: var(--ink-muted); display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; }
   /* Raport całego dziennika (04.10): wszystkie klasy na A4 poziomo, tylko w druku. */
@@ -1738,7 +1744,12 @@
         <button type="button" data-z="rok" onclick="statsZakres('rok')">Cały rok</button>
         <button type="button" data-z="I" onclick="statsZakres('I')">I półrocze</button>
         <button type="button" data-z="II" onclick="statsZakres('II')">II półrocze</button>
+        <button type="button" data-z="daty" onclick="statsZakres('daty')" title="Dowolny zakres: od dnia do dnia (oba włącznie)">Daty</button>
       </div>
+      <span class="stats-daty" id="statsDaty" hidden>
+        <label>od <input type="date" id="statsOd" onchange="statsDaty()"></label>
+        <label>do <input type="date" id="statsDo" onchange="statsDaty()"></label>
+      </span>
       <span class="stats-zakres-opis" id="statsZakresOpis"></span>
       <button onclick="drukujStatystyki()" title="1 strona: podsumowanie + tabela klasy (bez listy lekcji)" style="margin-left:auto;">🖨 Drukuj / PDF</button>
       <button onclick="drukujRaportCaly()" title="Wszystkie klasy naraz, zwięźle: % ćwiczył, Systematyczność, oceny, średnia. A4 poziomo.">📋 Raport całego dziennika</button>
@@ -1909,6 +1920,13 @@
     <p id="niebyloOpis" style="font-size: 13px; color: var(--ink-muted); margin: 0 0 14px; line-height: 1.5;"></p>
     <label style="display:block; font-size:13px; margin-bottom:10px;">Powód <select id="niebyloPowod" style="margin-left:6px; font-family: inherit;"></select></label>
     <label style="display:block; font-size:13px; margin-bottom:18px;">Komentarz <span style="color:var(--ink-muted)">(opcjonalnie, np. „Kraków, 3 dni” albo „ja na szkoleniu”)</span><br><input type="text" id="niebyloKomentarz" maxlength="120" style="width:100%; box-sizing:border-box; margin-top:4px;" onkeydown="if(event.key==='Enter'){event.preventDefault();nieByloOk();}"></label>
+    <div id="niebyloZakres" style="font-size:13px; margin:-6px 0 18px; line-height:1.9;">
+      Które lekcje<br>
+      <label><input type="radio" name="niebyloZakres" value="ta" checked onchange="nieByloZakresWidok()"> tylko ta lekcja</label><br>
+      <label><input type="radio" name="niebyloZakres" value="klasa" onchange="nieByloZakresWidok()"> wszystkie lekcje klasy <span id="niebyloKlasa"></span></label><br>
+      <label><input type="radio" name="niebyloZakres" value="wszystkie" onchange="nieByloZakresWidok()"> wszystkie moje lekcje (np. szkolenie, rekolekcje)</label>
+      <label id="niebyloDoWrap" style="display:none;">do dnia <input type="date" id="niebyloDo" style="font-family: inherit;"> <span style="color:var(--ink-muted)">(ten sam dzień = tylko ten dzień)</span></label>
+    </div>
     <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
       <button id="niebyloJednak" onclick="nieByloJednakByla()" style="margin-right:auto; padding: 10px 14px; background: var(--paper); border: 1px solid #E5C5C0; color: var(--accent-warm); border-radius: 6px; font-family: inherit; font-size: 13px; cursor: pointer;">jednak była</button>
       <button onclick="nieByloAnuluj()" style="padding: 10px 20px; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; font-family: inherit; font-size: 14px; cursor: pointer;">Anuluj</button>
@@ -3045,8 +3063,17 @@ function nieByloOkno(clsId, klucz) {
   const r = nieByloRozbij(stare);
   _niebyloCtx = { clsId, klucz };
   const nr = kluczNr(klucz);
-  document.getElementById('niebyloTytul').textContent = stare ? 'Nie było — zmień powód' : 'Nie było lekcji';
-  document.getElementById('niebyloOpis').textContent = `${cls.name} · ${zalegleData(kluczData(klucz))}${nr === null ? '' : ' · L' + nr}. Lekcja nie liczy się do zaległych; „jednak była” przywraca ją do wpisu.`;
+  const przyszla = kluczData(klucz) >= dzisISO();
+  document.getElementById('niebyloTytul').textContent = stare ? (przyszla ? 'Nie będzie' : 'Nie było') + ' — zmień powód' : przyszla ? 'Nie będzie lekcji' : 'Nie było lekcji';
+  document.getElementById('niebyloJednak').textContent = przyszla ? 'jednak będzie' : 'jednak była';
+  // Zakres (02.10): z wyprzedzeniem — jedna lekcja, cały dzień albo kilka dni; przy zmianie powodu ukryty
+  document.getElementById('niebyloZakres').style.display = stare ? 'none' : '';
+  document.querySelector('input[name="niebyloZakres"][value="ta"]').checked = true;
+  document.getElementById('niebyloKlasa').textContent = cls.name;
+  const doEl = document.getElementById('niebyloDo');
+  doEl.min = doEl.value = kluczData(klucz);
+  nieByloZakresWidok();
+  document.getElementById('niebyloOpis').textContent = `${cls.name} · ${zalegleData(kluczData(klucz))}${nr === null ? '' : ' · L' + nr}. Lekcja nie liczy się do zaległych; „${przyszla ? 'jednak będzie' : 'jednak była'}” przywraca ją do wpisu.`;
   const sel = document.getElementById('niebyloPowod');
   const powody = ZALEGLE_POWODY.includes(r.powod) ? ZALEGLE_POWODY : ZALEGLE_POWODY.concat([r.powod]);
   sel.innerHTML = powody.map(x => `<option ${x === r.powod ? 'selected' : ''}>${escapeHtml(x)}</option>`).join('');
@@ -3061,9 +3088,45 @@ function nieByloOk() {
   const cls = state.classes.find(c => c.id === clsId);
   if (!cls) { nieByloAnuluj(); return; }
   cls.odwolane = cls.odwolane || {};
-  cls.odwolane[klucz] = nieByloZloz(document.getElementById('niebyloPowod').value, document.getElementById('niebyloKomentarz').value);
+  const wartosc = nieByloZloz(document.getElementById('niebyloPowod').value, document.getElementById('niebyloKomentarz').value);
+  const stare = !!cls.odwolane[klucz];
+  const zakres = (document.querySelector('input[name="niebyloZakres"]:checked') || {}).value || 'ta';
+  cls.odwolane[klucz] = wartosc;
+  let komunikat = '';
+  if (!stare && zakres !== 'ta') {
+    const r = nieByloZakres(clsId, kluczData(klucz), document.getElementById('niebyloDo').value, zakres === 'wszystkie', wartosc);
+    komunikat = (kluczData(klucz) >= dzisISO() ? '„Nie będzie”' : '„Nie było”') + ' wpisane: ' + (r.n + 1) + ' lekc.' +
+      (r.pominiete ? ' · pominięte ' + r.pominiete + ' z wpisem lub zastępstwem' : '') + (r.uciete ? ' · zakres ucięty do 31 dni' : '');
+  }
   nieByloAnuluj();
   save(); renderZalegle(); renderZalegleChip(); renderAttendance(); renderPlanUstawienia();
+  if (komunikat) showToast(komunikat, 'info');
+}
+function nieByloZakresWidok() {
+  const z = (document.querySelector('input[name="niebyloZakres"]:checked') || {}).value;
+  document.getElementById('niebyloDoWrap').style.display = z && z !== 'ta' ? 'block' : 'none';
+}
+// Lekcje z planu od `od` do `doDnia` (dni wolne pominięte): tej klasy albo wszystkie moje. Nie rusza
+// lekcji z wpisem frekwencji, zastępstwem ani już oznaczonych. Bezpiecznik: najwyżej 31 dni.
+function nieByloZakres(clsId, od, doDnia, wszystkie, wartosc) {
+  let n = 0, pominiete = 0, uciete = false;
+  const d = new Date(od + 'T12:00:00');
+  const koniec = doDnia && doDnia > od ? doDnia : od;
+  for (let i = 0; ; i++, d.setDate(d.getDate() + 1)) {
+    const iso = d.toISOString().slice(0, 10);
+    if (iso > koniec) break;
+    if (i >= 31) { uciete = true; break; }
+    const { wolny, lekcje } = lekcjeDniaWszystkie(iso);
+    if (wolny) continue;
+    lekcje.filter(l => l.cls && (wszystkie || l.cls.id === clsId)).forEach(({ cls, nr }) => {
+      const k = kluczZ(iso, nrDlaLekcji(cls, iso, nr));
+      cls.odwolane = cls.odwolane || {};
+      if (cls.odwolane[k]) return;
+      if ((cls.attendance || {})[k] || zastepstwoDane(cls.id, k)) { pominiete++; return; }
+      cls.odwolane[k] = wartosc; n++;
+    });
+  }
+  return { n, pominiete, uciete };
 }
 function nieByloJednakByla() { if (!_niebyloCtx) return; const { clsId, klucz } = _niebyloCtx; nieByloAnuluj(); zalegleCofnijNieBylo(clsId, klucz); }
 function nieByloAnuluj() { _niebyloCtx = null; document.getElementById('niebyloModal').classList.remove('active'); }
@@ -3574,8 +3637,9 @@ function renderDzien() {
   const wPlanie = lekcje.some(l => l.cls && l.cls.id === cur.id);
   head.innerHTML = `<span class="nr">${nrOtw !== null ? 'L' + nrOtw : (lekcje.length && !wPlanie) ? 'poza planem' : 'lekcja'}</span><span class="kl">${escapeHtml(cur.name)}${cur.plec ? ' <span class="plec">' + (cur.plec === 'dz' ? 'dz.' : 'chł.') + '</span>' : ''}</span>` +
     `<span class="sum">${pk === null ? '' : '<b>' + pk + '%</b> · '}${wpisani}/${active.length} wpisanych${cur.students.length > active.length ? ` · +${cur.students.length - active.length} zwol.` : ''}</span><span class="otw">otwarta</span>` +
-    ((cur.odwolane || {})[kOtw] ? `<span class="niebylo-info"><button type="button" class="niebylo-zmien" onclick="nieByloOkno('${cur.id}','${kOtw}')" title="zmień powód albo dopisz komentarz">nie było: ${escapeHtml(cur.odwolane[kOtw])}</button> <button type="button" class="niebylo-cofnij" onclick="zalegleCofnijNieBylo('${cur.id}','${kOtw}')" title="zdejmij „nie było”">jednak była</button></span>` : '');
+    ((cur.odwolane || {})[kOtw] ? `<span class="niebylo-info"><button type="button" class="niebylo-zmien" onclick="nieByloOkno('${cur.id}','${kOtw}')" title="zmień powód albo dopisz komentarz">nie było: ${escapeHtml(cur.odwolane[kOtw])}</button> <button type="button" class="niebylo-cofnij" onclick="zalegleCofnijNieBylo('${cur.id}','${kOtw}')" title="zdejmij „nie było”">${iso >= dzis ? 'jednak będzie' : 'jednak była'}</button></span>` : '');
   const zastOtw = zastepstwoDane(cur.id, kOtw);
+  if (!zastOtw && !(cur.odwolane || {})[kOtw] && !cur.attendance[kOtw]) head.insertAdjacentHTML('beforeend', `<span class="niebylo-info"><button type="button" class="niebylo-cofnij niebylo-postaw" onclick="event.stopPropagation(); nieByloOkno('${cur.id}','${kOtw}')" title="lekcja się nie odbędzie / nie odbyła — wpisz powód (też cały dzień albo kilka dni)">${iso >= dzis ? 'nie będzie' : 'nie było'}</button></span>`);
   if (zastOtw) head.insertAdjacentHTML('beforeend', `<span class="niebylo-info"><span class="zast-tag">zastępstwo</span>${escapeHtml(zastOtw.klasa)}${zastOtw.zaKogo ? ' za ' + escapeHtml(zastOtw.zaKogo) : ''} · bez frekwencji tu <button type="button" class="niebylo-cofnij" onclick="zastepstwoOkno('${cur.id}','${kOtw}')" title="zmień albo zdejmij zastępstwo">zmień</button></span>`);
   head.parentElement.classList.toggle('niebylo', !zastOtw && !!(cur.odwolane || {})[kOtw]);
   head.parentElement.classList.toggle('zastepstwo', !!zastOtw);
@@ -3690,13 +3754,14 @@ function kolumnaPodgladu(cls, iso, nr, k, dzis) {
   active.forEach(s => { const c = attRead(day[s.id]); if (c.s && counts[c.s] !== undefined) counts[c.s]++; });
   let sum;
   if (zast) sum = `<span class="zast-tag">zastępstwo</span>${zast.zaKogo ? 'za ' + escapeHtml(zast.zaKogo) : 'bez frekwencji tu'}`;
-  else if (niebylo) sum = `<button type="button" class="niebylo-zmien" onclick="event.stopPropagation(); nieByloOkno('${cls.id}','${k}')" title="nie było: ${escapeHtml(cls.odwolane[k])} — kliknij, żeby zmienić powód albo dopisać komentarz">${escapeHtml(String(cls.odwolane[k]).split(' · ')[0])}</button> <button type="button" class="niebylo-cofnij" onclick="event.stopPropagation(); zalegleCofnijNieBylo('${cls.id}','${k}')" title="zdejmij „nie było” — lekcja wraca do zaległych / do wpisu">jednak była</button>`;
+  else if (niebylo) sum = `<button type="button" class="niebylo-zmien" onclick="event.stopPropagation(); nieByloOkno('${cls.id}','${k}')" title="nie było: ${escapeHtml(cls.odwolane[k])} — kliknij, żeby zmienić powód albo dopisać komentarz">${escapeHtml(String(cls.odwolane[k]).split(' · ')[0])}</button> <button type="button" class="niebylo-cofnij" onclick="event.stopPropagation(); zalegleCofnijNieBylo('${cls.id}','${k}')" title="zdejmij „nie było” — lekcja wraca do zaległych / do wpisu">${iso >= dzis ? 'jednak będzie' : 'jednak była'}</button>`;
   else if (jest) {
     const w = ['nć', 'bs', 'nb', 'nu', 'zw', 'ns'].map((l, i) => { const key = ['NC', 'BS', 'NB', 'NU', 'ZW', 'NS'][i]; return counts[key] ? counts[key] + ' ' + l : ''; }).filter(Boolean).join(' · ');
     sum = counts.C + ' ćw.' + (w ? ' · ' + w : '');
   }
   else if (brak) sum = '<span style="color:var(--accent-warm)">brak wpisu</span>';
   else sum = 'do wpisu';
+  if (!jest && !zast && !niebylo) sum += ` <button type="button" class="niebylo-cofnij niebylo-postaw" onclick="event.stopPropagation(); nieByloOkno('${cls.id}','${k}')" title="lekcja się nie odbędzie / nie odbyła — wpisz powód (też cały dzień albo kilka dni)">${iso >= dzis ? 'nie będzie' : 'nie było'}</button>`;
   const zap = _zapisanoO[_zapisanoKlucz(cls, k)];
   if (jest && zap) sum += ' · zapisano ' + zap;
   const klasa = 'kol podglad' + (jest ? ' jest' : '') + (brak ? ' brak' : '') + (niebylo ? ' niebylo' : '') + (zast ? ' zastepstwo' : '');
@@ -4536,15 +4601,30 @@ function pomiarBlur(studentId, field, el) {
 // =====================================================
 // Zakres statystyk klasy (19.09): rok | I | II półrocze — granica z Reguł (getSemesterBreak).
 // Preferencja UI, nie dane (localStorage, nie kopia). Bez granicy: tylko „Cały rok".
+// „Daty" (21.10, Artur: raport z dowolnego okresu): od–do, oba dni włącznie; nie zależy od granicy
+// półrocza, więc działa też w klasie bez niej. Liczenie ma `to` wyłączne — stąd dzień po „do".
+function dzienPo(iso) { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function zakresDat(od, do_) { return { from: od || null, to: do_ ? dzienPo(do_) : null }; }
+function zakresDatOpis(od, do_) {
+  const f = x => kartaData(x).slice(0, 10);
+  return od && do_ ? 'od ' + f(od) + ' do ' + f(do_) : od ? 'od ' + f(od) : do_ ? 'do ' + f(do_) : 'cała historia (wpisz daty)';
+}
 function statsZakresAkt() {
   const brk = getSemesterBreak();
   let z = state.statsZakres || 'rok';
+  if (z === 'daty') { const r = zakresDat(state.statsOd, state.statsDo); return { z, brk, from: r.from, to: r.to }; }
   if (!brk && z !== 'rok') z = 'rok';
   return { z, brk, from: z === 'II' ? brk : null, to: z === 'I' ? brk : null };
 }
 function statsZakres(z) {
   state.statsZakres = z;
   try { localStorage.setItem('dziennik_stats_zakres', z); } catch (e) { /* prywatne okno */ }
+  renderStats();
+}
+function statsDaty() {
+  state.statsOd = document.getElementById('statsOd').value || '';
+  state.statsDo = document.getElementById('statsDo').value || '';
+  try { localStorage.setItem('dziennik_stats_od', state.statsOd); localStorage.setItem('dziennik_stats_do', state.statsDo); } catch (e) { /* prywatne okno */ }
   renderStats();
 }
 function drukujStatystyki() {
@@ -4560,8 +4640,9 @@ function drukujStatystyki() {
 // mogą być nieświeże — dlatego okna liczymy tu od nowa, przez tę samą wagaLekcji().
 function raportKlasy(cls, zakres) {
   const brk = (cls.semesterBreak || '').trim();
-  const z = brk ? zakres : 'rok';
-  const from = z === 'II' ? brk : null, to = z === 'I' ? brk : null;
+  const z = zakres === 'daty' ? 'daty' : brk ? zakres : 'rok';
+  const zd = zakresDat(state.statsOd, state.statsDo);
+  const from = z === 'daty' ? zd.from : z === 'II' ? brk : null, to = z === 'daty' ? zd.to : z === 'I' ? brk : null;
   const wZakresie = k => { const d = kluczData(k); return !(from && d < from) && !(to && d >= to); };
   const lekcji = Object.keys(cls.attendance || {}).filter(wZakresie).length;
   const okna = oknaSystematycznosci(cls);
@@ -4597,7 +4678,7 @@ function raportKlasy(cls, zakres) {
   if (!wiersze.length) return '';
   const sr = sumB ? Math.round(sumC / sumB * 100) + '%' : '—';
   return '<div class="r-klasa"><h3>' + escapeHtml((cls.school ? cls.school + ' · ' : '') + cls.name) + ' <small>· ' + wiersze.length + ' uczn. · ' + lekcji + ' lekcji'
-    + (z === 'rok' ? '' : ' (' + z + ' półr.)') + (zakres !== 'rok' && !brk ? ' (bez granicy półrocza — cała historia)' : '') + ' · śr. klasy ' + sr + '</small></h3>'
+    + (z === 'rok' || z === 'daty' ? '' : ' (' + z + ' półr.)') + (zakres !== 'rok' && zakres !== 'daty' && !brk ? ' (bez granicy półrocza — cała historia)' : '') + ' · śr. klasy ' + sr + '</small></h3>'
     + '<table><thead><tr><th>#</th><th>Uczeń</th><th title="lekcje w bazie procentu">baza</th><th>% ćw.</th>'
     + okna.map(w => '<th>' + escapeHtml(w.shortName) + '</th>').join('') + '<th>Oceny (pkt→ocena)</th><th>Średnia</th><th>&lt;50%</th></tr></thead><tbody>'
     + wiersze.join('') + '</tbody></table></div>';
@@ -4609,7 +4690,7 @@ function drukujRaportCaly() {
   if (!bloki) { showToast('Brak uczniów w żadnej klasie — nie ma czego raportować.', 'error'); return; }
   const el = document.getElementById('raportCaly');
   el.innerHTML = '<div class="r-head"><b>Dziennik WF — raport całego dziennika</b><span>stan na ' + kartaData(dzisISO()).slice(0, 10) + ' · % ćwiczył: '
-    + (zakres === 'I' ? 'I półrocze' : zakres === 'II' ? 'II półrocze' : 'cały rok') + '</span></div>' + bloki
+    + (zakres === 'I' ? 'I półrocze' : zakres === 'II' ? 'II półrocze' : zakres === 'daty' ? zakresDatOpis(state.statsOd, state.statsDo) : 'cały rok') + '</span></div>' + bloki
     + '<div class="r-legenda">% ćw. i baza — z zakresu wybranego w Statystykach (wg reguł z zakładki Reguły). Syst. — okna z granicy półrocza każdej klasy, liczba = % ćwiczył w oknie, pogrubiona = ocena. '
     + 'Średnia = średnia ważona punktów jak w Ocenach (Syst. + oceny ręczne; kolumny „info" nie liczą się). ⚠ = poniżej 50% ćwiczył w zakresie — sprawdź klasyfikację (PZO: udział ≥ 50% zajęć). Uczniowie zwolnieni długoterminowo szarzy, poza średnią klasy.</div>';
   document.body.classList.add('raport-print');
@@ -4622,10 +4703,13 @@ function renderStats() {
   const tbody = document.getElementById('statsBody');
   tbody.innerHTML = '';
   if (state.statsZakres === undefined) { try { state.statsZakres = localStorage.getItem('dziennik_stats_zakres') || 'rok'; } catch (e) { state.statsZakres = 'rok'; } }
+  if (state.statsOd === undefined) { try { state.statsOd = localStorage.getItem('dziennik_stats_od') || ''; state.statsDo = localStorage.getItem('dziennik_stats_do') || ''; } catch (e) { state.statsOd = state.statsDo = ''; } }
   const Z = statsZakresAkt();
-  document.querySelectorAll('#statsZakres button').forEach(b => { b.classList.toggle('on', b.dataset.z === Z.z); b.disabled = !Z.brk && b.dataset.z !== 'rok'; });
+  document.querySelectorAll('#statsZakres button').forEach(b => { b.classList.toggle('on', b.dataset.z === Z.z); b.disabled = !Z.brk && b.dataset.z !== 'rok' && b.dataset.z !== 'daty'; });
+  const datyEl = document.getElementById('statsDaty');
+  if (datyEl) { datyEl.hidden = Z.z !== 'daty'; document.getElementById('statsOd').value = state.statsOd || ''; document.getElementById('statsDo').value = state.statsDo || ''; }
   const opisEl = document.getElementById('statsZakresOpis');
-  if (opisEl) opisEl.textContent = !Z.brk ? 'Bez granicy półrocza (ustaw w Regułach) — cała historia.' :
+  if (opisEl) opisEl.textContent = Z.z === 'daty' ? (state.statsOd || state.statsDo ? 'Zakres ' + zakresDatOpis(state.statsOd, state.statsDo) + ' (oba dni włącznie)' : 'Wpisz daty — puste = cała historia.') : !Z.brk ? 'Bez granicy półrocza (ustaw w Regułach) — cała historia.' :
     Z.z === 'I' ? 'I półrocze: do ' + kartaData(Z.brk).slice(0, 10) : Z.z === 'II' ? 'II półrocze: od ' + kartaData(Z.brk).slice(0, 10) : 'Cały rok (granica ' + kartaData(Z.brk).slice(0, 10) + ')';
   const wZakresie = k => { const d = kluczData(k); return !(Z.from && d < Z.from) && !(Z.to && d >= Z.to); };
   let totalLessons = Object.keys(state.attendance).filter(wZakresie).length;
@@ -4690,7 +4774,7 @@ function renderStats() {
   grid.innerHTML = `
     <div class="summary-card"><div class="summary-label">Liczba uczniów aktywnych</div><div class="summary-value">${active.length}</div></div>
     <div class="summary-card"><div class="summary-label">Zwolnionych długoterminowo</div><div class="summary-value">${state.students.length - active.length}</div></div>
-    <div class="summary-card"><div class="summary-label">Zapisanych lekcji${Z.z === 'rok' ? '' : ' · ' + Z.z + ' półr.'}</div><div class="summary-value">${totalLessons}</div></div>
+    <div class="summary-card"><div class="summary-label">Zapisanych lekcji${Z.z === 'rok' ? '' : Z.z === 'daty' ? ' · wybrane daty' : ' · ' + Z.z + ' półr.'}</div><div class="summary-value">${totalLessons}</div></div>
     <div class="summary-card"><div class="summary-label">Średni % ćwiczył (klasa)</div><div class="summary-value">${avgPercent}</div></div>
     <div class="summary-card summary-zast" title="lekcje odbyte z inną klasą (moje lekcje i okienka), wszystkie klasy"><div class="summary-label">Zastępstw (wszystkie klasy)</div><div class="summary-value">${zastepstwaLicz()}</div></div>
   `;

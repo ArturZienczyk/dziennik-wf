@@ -75,11 +75,13 @@ with sync_playwright() as pw:
     )
     check(
         "Plan z pliku: siatka nadal bez kolumny „klasa w planie” (19.09: przeniesiona do Zaawansowane)",
-        "klasa w planie" not in page.inner_text("#planUstawienia table tr:first-child").lower(),
+        "klasa w planie"
+        not in page.inner_text("#planUstawienia table tr:first-child").lower(),
     )
     check(
         "Plan z pliku: dopasowanie nazw w Zaawansowane, jeden select na klasę",
-        page.locator("details.plan-zaaw .plan-dopasowanie select").count() == len(page.evaluate("() => state.classes")),
+        page.locator("details.plan-zaaw .plan-dopasowanie select").count()
+        == len(page.evaluate("() => state.classes")),
     )
     page.evaluate(
         "() => { delete planAktywny(false).wygenerowano; renderPlanUstawienia(); }"
@@ -97,12 +99,13 @@ with sync_playwright() as pw:
         kaf.count() > 0 and "wycieczka" in kaf.inner_text(),
         kaf.inner_text() if kaf.count() else "brak",
     )
-    page.locator(".niebylo-cofnij:visible").first.click()
+    # :not(.niebylo-postaw) — od 21.10 przycisk „nie było / nie będzie” na kafelkach bez wpisu ma tę samą klasę
+    page.locator(".niebylo-cofnij:not(.niebylo-postaw):visible").first.click()
     page.wait_for_timeout(300)
     check("„jednak była” zdejmuje flagę", odw() == "{}", odw())
     check(
-        "po cofnięciu kafelek bez „nie było”",
-        page.locator(".niebylo-info:visible").count() == 0,
+        "po cofnięciu kafelek bez „nie było” (zostaje tylko przycisk, żeby postawić je ponownie)",
+        page.locator(".niebylo-info:visible:not(:has(.niebylo-postaw))").count() == 0,
     )
 
     # 3. Wpis statusu zdejmuje „nie było” sam
@@ -125,7 +128,9 @@ with sync_playwright() as pw:
         "() => { const c = state.classes[1]; c.odwolane = c.odwolane || {}; c.odwolane['2026-09-04#5'] = 'zastępstwo / zmiana planu'; save(); refreshAll(); }"
     )
     page.wait_for_timeout(200)
-    pod = page.locator(".kol.podglad.niebylo .niebylo-cofnij:visible")
+    pod = page.locator(
+        ".kol.podglad.niebylo .niebylo-cofnij:not(.niebylo-postaw):visible"
+    )
     check("kafelek podglądu 8c: „jednak była” widoczne", pod.count() == 1, pod.count())
     pod.first.click()
     page.wait_for_timeout(300)
@@ -139,18 +144,34 @@ with sync_playwright() as pw:
     #    z uczniami → cztery karty (Siatka / Inne zajęcia / Dyżury na przerwach / Dni wolne) i chipy numerów
     page.click("button.tab:has-text('Plan')")
     page.wait_for_timeout(200)
-    check("Plan z klasami: cztery karty", page.locator("#planUstawienia .plan-karta").count() == 4)
-    check("numer lekcji jako chip", page.locator("#planUstawienia .siatka-kom .chip").count() >= 4)
-    check("„Zaawansowane” w stopce karty siatki", page.locator("#planUstawienia .plan-karta .stopka details.plan-zaaw").count() == 1)
-    page.evaluate("() => { state.classes = [makeClass('ZSS', '1x', [])]; renderPlanUstawienia(); }")
-    check("klasa bez uczniów: karta kroków, krok 1 odhaczony",
-          page.locator("#planUstawienia .plan-pusty li.ok").count() == 1
-          and page.inner_text("#planUstawienia .plan-pusty-akcja") == "Dodaj uczniów")
+    check(
+        "Plan z klasami: cztery karty",
+        page.locator("#planUstawienia .plan-karta").count() == 4,
+    )
+    check(
+        "numer lekcji jako chip",
+        page.locator("#planUstawienia .siatka-kom .chip").count() >= 4,
+    )
+    check(
+        "„Zaawansowane” w stopce karty siatki",
+        page.locator("#planUstawienia .plan-karta .stopka details.plan-zaaw").count()
+        == 1,
+    )
+    page.evaluate(
+        "() => { state.classes = [makeClass('ZSS', '1x', [])]; renderPlanUstawienia(); }"
+    )
+    check(
+        "klasa bez uczniów: karta kroków, krok 1 odhaczony",
+        page.locator("#planUstawienia .plan-pusty li.ok").count() == 1
+        and page.inner_text("#planUstawienia .plan-pusty-akcja") == "Dodaj uczniów",
+    )
     page.evaluate("() => { state.classes = []; renderPlanUstawienia(); }")
-    check("0 klas: karta kroków, przycisk + Dodaj klasę",
-          page.locator("#planUstawienia .plan-pusty li.ok").count() == 0
-          and page.inner_text("#planUstawienia .plan-pusty-akcja") == "+ Dodaj klasę"
-          and page.locator("#planUstawienia table").count() == 0)
+    check(
+        "0 klas: karta kroków, przycisk + Dodaj klasę",
+        page.locator("#planUstawienia .plan-pusty li.ok").count() == 0
+        and page.inner_text("#planUstawienia .plan-pusty-akcja") == "+ Dodaj klasę"
+        and page.locator("#planUstawienia table").count() == 0,
+    )
 
     check("brak błędów JS", not errors, errors)
     browser.close()
