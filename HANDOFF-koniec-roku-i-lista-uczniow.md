@@ -131,8 +131,11 @@ nie zatwierdzony**.
   czy zapytasz IOD o termin.
   **Odpowiedź Artura 04.11 (słowa):** „Z przypomnieniem, dane do końca sierpnia". Czyli: dane klasy kończącej
   szkołę trzymane do końca sierpnia, potem dziennik przypomina o usunięciu (usuwa Artur, nie automat).
-  Otwarte przy projekcie: skąd dziennik wie, że klasa kończy szkołę (np. 8 klasa SP / ostatnia klasa
-  technikum i LO); co z nagrobkiem klasy i starymi plikami kopii.
+  **Ostatnie klasy (Artur 04.11, słowa):** „8 to ostatnia, 5 technikum to ostatnia i 4 liceum to ostatnia"
+  — SP: 8, technikum: 5, LO: 4.
+  Otwarte przy projekcie: jak dziennik rozpozna typ szkoły i numer klasy (klasa ma pole `school` i wolną
+  nazwę, np. „7b", „4dLO", „2 inf" — niezmierzone, czy to wystarczy); co z nagrobkiem klasy i starymi
+  plikami kopii.
 - **Chwiejny test (do zbadania, nie naprawiony):** `test_niebylo_wyprzedzenie.py` raz na 3 biegi padł w
   pełnym zestawie (04.11, telefon: „nie będzie" wpisane do dwóch klas 8c i 4dLO zamiast jednej), osobno i w
   powtórce zielony. Zgaduję wyścig przy krótkich odczekaniach (300 ms) pod obciążeniem — przyczyna nieznana.
