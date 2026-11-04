@@ -129,6 +129,10 @@ nie zatwierdzony**.
     to VULCAN.
   Pytania do Artura przed projektem: czy usunięcie ma iść samo (np. przypomnienie po końcu roku), czy ręcznie;
   czy zapytasz IOD o termin.
+  **Odpowiedź Artura 04.11 (słowa):** „Z przypomnieniem, dane do końca sierpnia". Czyli: dane klasy kończącej
+  szkołę trzymane do końca sierpnia, potem dziennik przypomina o usunięciu (usuwa Artur, nie automat).
+  Otwarte przy projekcie: skąd dziennik wie, że klasa kończy szkołę (np. 8 klasa SP / ostatnia klasa
+  technikum i LO); co z nagrobkiem klasy i starymi plikami kopii.
 - **Chwiejny test (do zbadania, nie naprawiony):** `test_niebylo_wyprzedzenie.py` raz na 3 biegi padł w
   pełnym zestawie (04.11, telefon: „nie będzie" wpisane do dwóch klas 8c i 4dLO zamiast jednej), osobno i w
   powtórce zielony. Zgaduję wyścig przy krótkich odczekaniach (300 ms) pod obciążeniem — przyczyna nieznana.
@@ -177,4 +181,4 @@ nie rusza; przeglądarka trafia do cudzej planszy. Obejście: `--port`. Poprawka
 ## Resume
 „Robimy handoff »koniec roku i lista uczniów« z
 `D:\Projects\nauczyciel\wf\dziennik-wf\HANDOFF-koniec-roku-i-lista-uczniow.md`, sekcja »Stan 2026-11-04«.
-Punkty 1–3 wdrożone. Zostały: punkt 4 (nowy rok; P1: stary rok zostaje) i punkt 5 (koniec nauki klasy: nagrobek klasy przy scalaniu + stare pliki kopii; termin usunięcia — IOD)."
+Punkty 1–3 wdrożone. Zostały: punkt 4 (nowy rok; P1: stary rok zostaje) i punkt 5 (koniec nauki klasy: dane do końca sierpnia, potem przypomnienie o usunięciu; nagrobek klasy przy scalaniu + stare pliki kopii)."
