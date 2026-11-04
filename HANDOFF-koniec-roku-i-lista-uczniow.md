@@ -138,7 +138,8 @@ nie zatwierdzony**.
   plikami kopii.
 - **Chwiejny test (do zbadania, nie naprawiony):** `test_niebylo_wyprzedzenie.py` raz na 3 biegi padł w
   pełnym zestawie (04.11, telefon: „nie będzie" wpisane do dwóch klas 8c i 4dLO zamiast jednej), osobno i w
-  powtórce zielony. Zgaduję wyścig przy krótkich odczekaniach (300 ms) pod obciążeniem — przyczyna nieznana.
+  powtórce zielony. Padł przy `sprawdz_wszystko.py` z domyślnym `-j 5`; pre-push biegnie `-j 1`, bo równoległe
+  Chromium daje fałszywe FAIL-e (pamięć 2026-09-22) — prawie na pewno to. Niesprawdzone biegiem `-j 1`.
 - **Punkt 3 przesuwanie wiersza — WDROŻONY 04.11** (Artur w piaskownicy: „pasuje"; sw.js v54).
   - Uczniowie: ▲▼ w kolumnie numeru (przy nazwisku, widać na telefonie bez przewijania); skrajne ukryte;
     fokus jedzie z uczniem (kolejne kliknięcia przesuwają dalej). Historia jedzie z uczniem (po id).
