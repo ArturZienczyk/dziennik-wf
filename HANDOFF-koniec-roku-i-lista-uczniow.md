@@ -110,6 +110,25 @@ nie zatwierdzony**.
   - Funkcje: `odszedlDnia`, `naLekcji`, `wSrednich`, `ustawOdszedl` (przy `relData`). Kopia przed zmianą:
     `_wersje-poprzednie/dziennik_wf_roboczy_2026-11-04_przed-odszedl.html`.
   - Testy `test_uczen_odszedl.py` (32/32, laptop + telefon) i `test_odszedl_kopia.py` (7/7, kopia telefon <-> laptop: data przechodzi, zdjecie daty przechodzi, stara kopia jej nie wskrzesza). Oba padaja na celowo zepsutym kodzie (sprawdzone 04.11). Pelny zestaw 42/42 na kopii folderu z roboczym jako prod. W repo od wdrożenia.
+- **P1 — odpowiedź Artura 04.11 (słowa):** „Nie trzeba będzie kasować". Stary rok nie znika z dziennika.
+  Propozycja agenta (NIE decyzja Artura): „nowy rok" zakłada nową klasę z tą samą listą uczniów, stary rok
+  zostaje jako osobna klasa do wglądu. Warunek przed projektem: sprawdzić w piaskownicy, czy wczytanie
+  zeszłorocznej kopii nie wrzuca starych wpisów do nowej klasy (te same id uczniów, ryzyko z „Czego NIE wiemy").
+- **Punkt 5 — koniec nauki klasy (dopisany 04.11, nie zaczęty).** Artur (słowa): „Czy ewentualne dotarcie do
+  8 klasy może skutkować dobrnięciem do końca nauki w danej szkole i wtedy możliwości usunięcia danych?"
+  Stan kodu (zmierzony, nie decyzja):
+  - „usuń klasę" istnieje (`uiDeleteClass`): kasuje klasę z frekwencją/ocenami/pomiarami, najpierw sama robi
+    kopię wszystkich klas (`backupBeforeDestruction`).
+  - **Wczytanie kopii przywraca usuniętą klasę:** `scalKopie` dokłada każdą klasę, której nie ma lokalnie
+    (`if (!lk) { state.classes.push(zk) ...}`) — klasa nie ma nagrobka (uczeń i wpis mają). Usunięcie na
+    laptopie + kopia z telefonu, gdzie klasa jest = klasa wraca.
+  - **Dane zostają w starych plikach kopii** (folder kopii, Pobrane, Gmail, WhatsApp, kopia z chwili usuwania).
+    Zaszyfrowane hasłem, ale istnieją; apka ich nie rusza.
+  - Kiedy wolno usunąć: **nie wiemy** (przepisy / zasady ZSS niesprawdzone). Do zapytania szkolnego IOD.
+    Domysł agenta, niepotwierdzony: po klasyfikacji końcowej i terminie odwołań, bo oficjalna dokumentacja
+    to VULCAN.
+  Pytania do Artura przed projektem: czy usunięcie ma iść samo (np. przypomnienie po końcu roku), czy ręcznie;
+  czy zapytasz IOD o termin.
 - **Chwiejny test (do zbadania, nie naprawiony):** `test_niebylo_wyprzedzenie.py` raz na 3 biegi padł w
   pełnym zestawie (04.11, telefon: „nie będzie" wpisane do dwóch klas 8c i 4dLO zamiast jednej), osobno i w
   powtórce zielony. Zgaduję wyścig przy krótkich odczekaniach (300 ms) pod obciążeniem — przyczyna nieznana.
@@ -158,4 +177,4 @@ nie rusza; przeglądarka trafia do cudzej planszy. Obejście: `--port`. Poprawka
 ## Resume
 „Robimy handoff »koniec roku i lista uczniów« z
 `D:\Projects\nauczyciel\wf\dziennik-wf\HANDOFF-koniec-roku-i-lista-uczniow.md`, sekcja »Stan 2026-11-04«.
-Punkty 1–3 wdrożone. Został punkt 4 (nowy rok) — najpierw piaskownica i pytanie P1 o odtworzenie starego roku z kopii."
+Punkty 1–3 wdrożone. Zostały: punkt 4 (nowy rok; P1: stary rok zostaje) i punkt 5 (koniec nauki klasy: nagrobek klasy przy scalaniu + stare pliki kopii; termin usunięcia — IOD)."
