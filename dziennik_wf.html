@@ -513,6 +513,10 @@
   table.attendance tbody tr.long-term-released { background: var(--bg); color: var(--ink-muted); font-style: italic; }
   tr.long-term-released .cell-name { color: var(--ink-muted); font-style: italic; }
   tr.long-term-released .cell-name::after { content: ' · zwol.'; font-size: 11px; }
+  table.attendance tbody tr.odszedl { background: var(--bg); color: var(--ink-muted); }
+  tr.odszedl .student-name { color: var(--ink-muted); text-decoration: line-through; }
+  .odszedl-tag { font-size: 11px; color: var(--ink-muted); font-style: italic; white-space: nowrap; }
+  .odszedl-data { font-size: 12px; min-width: 128px; }
 
   .student-name {
     border: none; background: transparent; font-family: inherit;
@@ -1262,8 +1266,13 @@
     table.attendance thead th:nth-child(2) { z-index: 3; background: var(--line-soft); }
     /* Wiersz ucznia zwolnionego: zachować jego tło też pod sticky */
     table.attendance tbody tr.long-term-released td:nth-child(1),
-    table.attendance tbody tr.long-term-released td:nth-child(2) { background: var(--bg); }
+    table.attendance tbody tr.long-term-released td:nth-child(2),
+    table.attendance tbody tr.odszedl td:nth-child(1),
+    table.attendance tbody tr.odszedl td:nth-child(2) { background: var(--bg); }
     .student-name { min-width: 92px; }
+    /* Lista uczniów: domyślne pole nazwiska (218 px) zostawiało przy przewijaniu w bok 80 px na resztę
+       wiersza — data „Odszedł od” i Wzrost/Waga chowały się pod przyklejoną kolumną (11-04, telefon 369) */
+    #studentsBody .student-name { width: 120px; }
   }
 
   /* === Tryb klawiatury (laptop) === */
@@ -1554,6 +1563,7 @@
             <th class="left">Zwolnienie lekarskie OD–DO</th>
             <th>Wzrost [cm]</th>
             <th>Waga [kg]</th>
+            <th title="uczeń zostaje na liście wyszarzony z historią; od tego dnia nie ma go na lekcjach. Pusta data = wraca">Odszedł od</th>
             <th></th>
           </tr>
         </thead>
@@ -3603,7 +3613,7 @@ function terazHHMM() { const d = new Date(); return d.getHours() + ':' + String(
 // Średni % klasy (jak karta „Średni % ćwiczył" w Statystykach) dla danej klasy
 function procentKlasy(cls) {
   let c = 0, b = 0;
-  (cls.students || []).forEach(s => { if (s.longTermReleased) return; const st = getStudentStatsKlasy(cls, s.id); c += st.cwiczyl; b += st.baza; });
+  (cls.students || []).forEach(s => { if (!wSrednich(s)) return; const st = getStudentStatsKlasy(cls, s.id); c += st.cwiczyl; b += st.baza; });
   return b > 0 ? Math.round(c / b * 100) : null;
 }
 // Widok dnia: kolumny podglądu przed/po otwartej lekcji. Otwarta = bieżąca klasa + data + nr (tabela z klawiaturą).
@@ -3626,7 +3636,7 @@ function renderDzien() {
   const iso = state.currentDate, dzis = dzisISO();
   const kOtw = attKey();
   // nagłówek otwartej kolumny
-  const active = cur.students.filter(s => !s.longTermReleased);
+  const active = cur.students.filter(s => naLekcji(s, iso));
   const day = cur.attendance[kOtw] || {};
   const wpisani = active.filter(s => attRead(day[s.id]).s).length;
   const pk = procentKlasy(cur);
@@ -3636,7 +3646,7 @@ function renderDzien() {
   if (nrOtw === null) { const z = lekcje.find(l => l.cls && l.cls.id === cur.id && kluczZ(iso, nrDlaLekcji(cur, iso, l.nr)) === kOtw); if (z) nrOtw = z.nr; }
   const wPlanie = lekcje.some(l => l.cls && l.cls.id === cur.id);
   head.innerHTML = `<span class="nr">${nrOtw !== null ? 'L' + nrOtw : (lekcje.length && !wPlanie) ? 'poza planem' : 'lekcja'}</span><span class="kl">${escapeHtml(cur.name)}${cur.plec ? ' <span class="plec">' + (cur.plec === 'dz' ? 'dz.' : 'chł.') + '</span>' : ''}</span>` +
-    `<span class="sum">${pk === null ? '' : '<b>' + pk + '%</b> · '}${wpisani}/${active.length} wpisanych${cur.students.length > active.length ? ` · +${cur.students.length - active.length} zwol.` : ''}</span><span class="otw">otwarta</span>` +
+    `<span class="sum">${pk === null ? '' : '<b>' + pk + '%</b> · '}${wpisani}/${active.length} wpisanych${cur.students.some(s => s.longTermReleased && !odszedlDnia(s, iso)) ? ` · +${cur.students.filter(s => s.longTermReleased && !odszedlDnia(s, iso)).length} zwol.` : ''}</span><span class="otw">otwarta</span>` +
     ((cur.odwolane || {})[kOtw] ? `<span class="niebylo-info"><button type="button" class="niebylo-zmien" onclick="nieByloOkno('${cur.id}','${kOtw}')" title="zmień powód albo dopisz komentarz">nie było: ${escapeHtml(cur.odwolane[kOtw])}</button> <button type="button" class="niebylo-cofnij" onclick="zalegleCofnijNieBylo('${cur.id}','${kOtw}')" title="zdejmij „nie było”">${iso >= dzis ? 'jednak będzie' : 'jednak była'}</button></span>` : '');
   const zastOtw = zastepstwoDane(cur.id, kOtw);
   if (!zastOtw && !(cur.odwolane || {})[kOtw] && !cur.attendance[kOtw]) head.insertAdjacentHTML('beforeend', `<span class="niebylo-info"><button type="button" class="niebylo-cofnij niebylo-postaw" onclick="event.stopPropagation(); nieByloOkno('${cur.id}','${kOtw}')" title="lekcja się nie odbędzie / nie odbyła — wpisz powód (też cały dzień albo kilka dni)">${iso >= dzis ? 'nie będzie' : 'nie było'}</button></span>`);
@@ -3750,7 +3760,7 @@ function kolumnaPodgladu(cls, iso, nr, k, dzis) {
   const brak = !jest && !niebylo && !zast && iso < dzis;
   const day = (cls.attendance || {})[k] || {};
   const counts = { C: 0, NC: 0, BS: 0, NB: 0, NU: 0, ZW: 0, NS: 0 };
-  const active = (cls.students || []).filter(s => !s.longTermReleased);
+  const active = (cls.students || []).filter(s => naLekcji(s, iso));
   active.forEach(s => { const c = attRead(day[s.id]); if (c.s && counts[c.s] !== undefined) counts[c.s]++; });
   let sum;
   if (zast) sum = `<span class="zast-tag">zastępstwo</span>${zast.zaKogo ? 'za ' + escapeHtml(zast.zaKogo) : 'bez frekwencji tu'}`;
@@ -3861,6 +3871,23 @@ function isReleasedOn(s, date) {
 }
 function releaseOn(s, date) { return getReleases(s).find(r => r.od && r.do && r.od <= date && date <= r.do) || null; }
 function relData(d) { return d ? d.slice(8, 10) + '.' + d.slice(5, 7) : '?'; }
+// Uczeń, który odszedł (Artur 2026-10-02, P3 handoffu „koniec roku"): zostaje na liście wyszarzony,
+// z całą historią. Od dnia s.odszedl (włącznie) nie ma go na lekcjach: „Zapisz lekcję" nie daje mu C,
+// nie liczy się do „wpisanych", kopia do VULCANa go pomija, nie wchodzi do średnich klasy.
+// Wpisy sprzed odejścia zostają i liczą się do jego własnego procentu. Różnica wobec „×": historia zostaje.
+function odszedlDnia(s, iso) { return !!(s && s.odszedl) && !!iso && iso >= s.odszedl; }
+// Uczeń w bazie lekcji danego dnia: nie zwolniony długoterminowo i jeszcze nie odszedł
+function naLekcji(s, iso) { return !s.longTermReleased && !odszedlDnia(s, iso); }
+// Uczeń w średnich klasy (Statystyki, Oceny, kafelek %): jak wyżej, na dziś
+function wSrednich(s) { return naLekcji(s, dzisISO()); }
+function odszedlOpis(s) { return s && s.odszedl ? 'odszedł ' + relData(s.odszedl) : ''; }
+function ustawOdszedl(id, iso) {
+  const s = state.students.find(x => x.id === id);
+  if (!s) return;
+  if (iso) s.odszedl = iso; else delete s.odszedl;
+  save(); renderStudents();
+  showToast(iso ? (s.name || 'Uczeń') + ': odszedł od ' + relData(iso) + ' — historia zostaje, od tego dnia poza lekcjami.' : (s.name || 'Uczeń') + ' wraca na lekcje.', 'info');
+}
 function addRelease(id) {
   const s = state.students.find(x => x.id === id);
   const od = document.getElementById('relOd_' + id).value;
@@ -3884,7 +3911,7 @@ function removeRelease(id, idx) {
 function finalizeLesson() {
   // Liczę kto już ma status, kto jeszcze nie, ilu jest aktywnych
   const day = state.attendance[attKey()] || {};
-  const activeStudents = state.students.filter(s => !s.longTermReleased);
+  const activeStudents = state.students.filter(s => naLekcji(s, state.currentDate));
 
   const withoutStatus = activeStudents.filter(s => !attRead(day[s.id]).s);
   const toZW = withoutStatus.filter(s => isReleasedOn(s, state.currentDate));
@@ -4030,8 +4057,13 @@ function renderAttendance() {
 
     const rel = s.longTermReleased ? null : releaseOn(s, state.currentDate);
     if (rel) tr.classList.add('released-period');
+    const odsz = odszedlDnia(s, state.currentDate);
+    if (odsz) tr.classList.add('odszedl');
     let statusHtml = '';
-    if (s.longTermReleased && !todayStatus) {
+    if (odsz && !todayStatus) {
+      // Odszedł (11-04): wyszarzony z historią; wpisu nie stawiamy — klik i tak otwiera picker na wypadek pomyłki w dacie
+      statusHtml = `<button class="status-btn status-blocked" onclick="openPicker('${s.id}')" title="${odszedlOpis(s)} — od tego dnia poza lekcjami; datę zmienisz w zakładce Uczniowie">— ${odszedlOpis(s)} —</button>`;
+    } else if (s.longTermReleased && !todayStatus) {
       // Zwolniony długoterminowo, ale bywa nieobecny (user 2026-09-19): klik = picker, wpis nadpisuje ZW
       statusHtml = `<button class="status-btn status-blocked" onclick="openPicker('${s.id}')" title="zwolniony długoterminowo — klik, żeby zapisać np. nieobecność">— zwolniony —</button>`;
     } else if (!todayStatus && rel) {
@@ -4079,7 +4111,7 @@ function renderAttendance() {
 
 function updateSaveBar() {
   const day = state.attendance[attKey()] || {};
-  const activeStudents = state.students.filter(s => !s.longTermReleased);
+  const activeStudents = state.students.filter(s => naLekcji(s, state.currentDate));
   const withoutStatus = activeStudents.filter(s => !attRead(day[s.id]).s);
   const exceptions = activeStudents.filter(s => { const st = attRead(day[s.id]).s; return st && st !== 'C'; });
   const alreadyC = activeStudents.filter(s => attRead(day[s.id]).s === 'C');
@@ -4352,7 +4384,7 @@ function renderKarta() {
   const brk = getSemesterBreak();
   const cls = getCurrentClass();
   const f = state.kartaFilter;
-  let h = '<div class="karta-head"><div><h3>' + (escapeHtml(s.name) || 'uczeń') + '</h3><div class="sub">' + escapeHtml((cls && cls.name) || '') + ' · karta ucznia · stan na ' + kartaData(dzisISO()) + (s.longTermReleased ? ' · <b>zwolniony długoterminowo</b>' : '') + (getReleases(s).length ? ' · zwolnienia OD–DO: ' + getReleases(s).map(r => relData(r.od) + '–' + relData(r.do)).join(', ') : '') + '</div></div>'
+  let h = '<div class="karta-head"><div><h3>' + (escapeHtml(s.name) || 'uczeń') + '</h3><div class="sub">' + escapeHtml((cls && cls.name) || '') + ' · karta ucznia · stan na ' + kartaData(dzisISO()) + (s.longTermReleased ? ' · <b>zwolniony długoterminowo</b>' : '') + (s.odszedl ? ' · <b>' + odszedlOpis(s) + '</b>' : '') + (getReleases(s).length ? ' · zwolnienia OD–DO: ' + getReleases(s).map(r => relData(r.od) + '–' + relData(r.do)).join(', ') : '') + '</div></div>'
     + '<div class="karta-actions"><label class="karta-druk-opt" title="Domyślnie wydruk to 1 strona: bilans, oś czasu, krzywa, oceny, pomiary. Zaznacz, żeby dodać listę wszystkich lekcji (2-3 strony więcej)."><input type="checkbox" id="kartaDrukLista"' + (state.kartaDrukLista ? ' checked' : '') + ' onchange="state.kartaDrukLista = this.checked"> z listą lekcji</label><button onclick="drukujKarte()">🖨 Drukuj / PDF</button><button onclick="closeKarta()">Zamknij</button></div></div>'
     + '<div class="karta-zakres"><label>Zakres: od <input type="date" id="kartaOd" value="' + (state.kartaOd || '') + '" onchange="kartaZakres(this.value, document.getElementById(\'kartaDo\').value)"></label>'
     + '<label>do <input type="date" id="kartaDo" value="' + (state.kartaDo || '') + '" onchange="kartaZakres(document.getElementById(\'kartaOd\').value, this.value)"></label>'
@@ -4416,6 +4448,7 @@ function renderStudents() {
   state.students.forEach((s, i) => {
     const tr = document.createElement('tr');
     if (s.longTermReleased) tr.classList.add('long-term-released');
+    if (odszedlDnia(s, today)) tr.classList.add('odszedl');
     tr.innerHTML = `
       <td class="left">${i + 1}</td>
       <td class="left"><input type="text" class="student-name" value="${escapeHtml(s.name)}" placeholder="Imię nazwisko" oninput="updateStudentName('${s.id}', this.value)"></td>
@@ -4423,7 +4456,8 @@ function renderStudents() {
       <td class="left">${getReleases(s).map((r, k) => `<span class="rel-chip${isReleasedOn(s, today) && r.od <= today && today <= r.do ? ' active' : ''}" title="${r.od} – ${r.do}">${relData(r.od)}–${relData(r.do)}<button type="button" title="usuń okres" onclick="removeRelease('${s.id}', ${k})">×</button></span>`).join('')}<span class="rel-form">od <input type="date" id="relOd_${s.id}"> do <input type="date" id="relDo_${s.id}" onkeydown="if(event.key==='Enter'){event.preventDefault();addRelease('${s.id}');}"> <button type="button" class="rel-zapisz" onclick="addRelease('${s.id}')" title="zapisuje zakres OD–DO jako zwolnienie lekarskie">zapisz zwolnienie</button></span></td>
       <td><input type="number" value="${s.height}" min="100" max="220" style="width:70px; text-align:right;" oninput="updateStudentField('${s.id}', 'height', this.value)"></td>
       <td><input type="number" value="${s.weight}" min="20" max="120" step="0.1" style="width:70px; text-align:right;" oninput="updateStudentField('${s.id}', 'weight', this.value)"></td>
-      <td><button class="delete-btn" onclick="deleteStudent('${s.id}')" title="usuń">×</button></td>
+      <td><input type="date" class="odszedl-data" value="${s.odszedl || ''}" title="odszedł od tego dnia (włącznie): zostaje wyszarzony z historią. Wyczyść datę = wraca na lekcje" onchange="ustawOdszedl('${s.id}', this.value)"></td>
+      <td><button class="delete-btn" onclick="deleteStudent('${s.id}')" title="usuń razem z historią (pomyłka na liście). Uczeń, który odszedł ze szkoły: wpisz datę w „Odszedł od”">×</button></td>
     `;
     tbody.appendChild(tr);
   });
@@ -4455,7 +4489,7 @@ function deleteStudent(id) {
   const s = state.students.find(x => x.id === id);
   showConfirm(
     'Usuń ucznia',
-    'Usunąć ucznia "' + (s.name || 'bez nazwiska') + '" razem z całą jego historią obecności?',
+    'Usunąć ucznia "' + (s.name || 'bez nazwiska') + '" razem z całą jego historią obecności?\n\nJeśli uczeń odszedł ze szkoły albo zmienił klasę — anuluj i wpisz datę w kolumnie „Odszedł od”: zostanie wyszarzony, historia zostanie.',
     () => {
       state.students = state.students.filter(s => s.id !== id);
       Object.keys(state.attendance).forEach(d => {
@@ -4651,7 +4685,7 @@ function raportKlasy(cls, zakres) {
   let sumC = 0, sumB = 0;
   const wiersze = (cls.students || []).filter(s => s.name).map((s, i) => {
     const st = getStudentStatsKlasy(cls, s.id, from || undefined, to || undefined);
-    if (!s.longTermReleased) { sumC += st.C; sumB += st.baza; }
+    if (wSrednich(s)) { sumC += st.C; sumB += st.baza; }
     // średnia jak calculateStudentAverage: okna Syst. waga 1 + kolumny ręczne z wagą (0 = info)
     let sv = 0, sw = 0;
     const syst = okna.map(w => {
@@ -4670,7 +4704,7 @@ function raportKlasy(cls, zakres) {
     });
     const avg = sw ? Math.round(sv / sw) : null;
     const alarm = st.percent !== null && st.percent < 50;
-    return '<tr' + (s.longTermReleased ? ' class="zw"' : '') + '><td>' + (i + 1) + '</td><td class="l">' + escapeHtml(s.name) + (s.longTermReleased ? ' <i>(zw. dł.)</i>' : '') + '</td>'
+    return '<tr' + (!wSrednich(s) ? ' class="zw"' : '') + '><td>' + (i + 1) + '</td><td class="l">' + escapeHtml(s.name) + (s.longTermReleased ? ' <i>(zw. dł.)</i>' : '') + (s.odszedl ? ' <i>(' + odszedlOpis(s) + ')</i>' : '') + '</td>'
       + '<td>' + st.baza + '</td><td class="ost">' + (st.percent === null ? '—' : Math.round(st.percent) + '%') + '</td>'
       + syst + '<td class="oc">' + (oceny.join(' · ') || '—') + '</td>'
       + '<td class="ost">' + (avg === null ? '—' : avg + ' → ' + gradeMenLabel(avg)) + '</td><td>' + (alarm ? '⚠' : '') + '</td></tr>';
@@ -4719,9 +4753,10 @@ function renderStats() {
     const cls = stats.percent === null ? '' : pctKlasa(stats.percent);
     const tr = document.createElement('tr');
     if (s.longTermReleased) tr.classList.add('long-term-released');
+    if (!wSrednich(s) && s.odszedl) tr.classList.add('odszedl');
     tr.innerHTML = `
       <td class="left">${i + 1}</td>
-      <td class="left">${s.name ? '<button type="button" class="stats-name-btn" onclick="openKarta(\'' + s.id + '\')" title="Otwórz kartę ucznia: historia, oś czasu, krzywa, lista lekcji">' + escapeHtml(s.name) + '</button>' : '<span style="color:var(--ink-muted);">—</span>'}</td>
+      <td class="left">${s.name ? '<button type="button" class="stats-name-btn" onclick="openKarta(\'' + s.id + '\')" title="Otwórz kartę ucznia: historia, oś czasu, krzywa, lista lekcji">' + escapeHtml(s.name) + '</button>' : '<span style="color:var(--ink-muted);">—</span>'}${s.odszedl ? ' <span class="odszedl-tag">' + odszedlOpis(s) + '</span>' : ''}</td>
       <td>${stats.total}</td>
       <td>${stats.baza}</td>
       <td>${stats.C}</td>
@@ -4760,7 +4795,7 @@ function renderStats() {
   });
 
   // Karty podsumowujące
-  const active = state.students.filter(s => !s.longTermReleased);
+  const active = state.students.filter(wSrednich);
   let totalC = 0, totalBaza = 0;
   active.forEach(s => {
     const st = getStudentStats(s.id, Z.from, Z.to);
@@ -4773,7 +4808,7 @@ function renderStats() {
   const grid = document.getElementById('summaryGrid');
   grid.innerHTML = `
     <div class="summary-card"><div class="summary-label">Liczba uczniów aktywnych</div><div class="summary-value">${active.length}</div></div>
-    <div class="summary-card"><div class="summary-label">Zwolnionych długoterminowo</div><div class="summary-value">${state.students.length - active.length}</div></div>
+    <div class="summary-card"><div class="summary-label">Zwolnionych długoterminowo</div><div class="summary-value">${state.students.filter(s => s.longTermReleased && !odszedlDnia(s, dzisISO())).length}</div></div>
     <div class="summary-card"><div class="summary-label">Zapisanych lekcji${Z.z === 'rok' ? '' : Z.z === 'daty' ? ' · wybrane daty' : ' · ' + Z.z + ' półr.'}</div><div class="summary-value">${totalLessons}</div></div>
     <div class="summary-card"><div class="summary-label">Średni % ćwiczył (klasa)</div><div class="summary-value">${avgPercent}</div></div>
     <div class="summary-card summary-zast" title="lekcje odbyte z inną klasą (moje lekcje i okienka), wszystkie klasy"><div class="summary-label">Zastępstw (wszystkie klasy)</div><div class="summary-value">${zastepstwaLicz()}</div></div>
@@ -4930,7 +4965,7 @@ function findBestStudent(words) {
   let bestStudent = null;
   let bestScore = 0;
   state.students.forEach(s => {
-    if (s.longTermReleased) return;
+    if (s.longTermReleased || odszedlDnia(s, state.currentDate)) return;
     if (!s.name) return;
     const studentNameNorm = normalize(s.name);
     const studentWords = studentNameNorm.split(' ').filter(w => w.length >= 2);
@@ -5566,6 +5601,7 @@ function copyForVulcan(clsId, klucz) {
   let skippedC = 0, noStatus = 0;
   students.forEach(s => {
     if (!s.name || !s.name.trim()) return;
+    if (odszedlDnia(s, date) && !attRead(day[s.id]).s) return;   // odszedł: VULCAN nie ma go już na liście
     let token;
     if (s.longTermReleased && !attRead(day[s.id]).s) token = 'ZW';
     else {
@@ -5825,7 +5861,7 @@ function findStudentByFragment(fragment) {
   let bestScore = 0;
 
   state.students.forEach(s => {
-    if (s.longTermReleased || !s.name) return;
+    if (s.longTermReleased || odszedlDnia(s, state.currentDate) || !s.name) return;
     const normName = normalize(s.name);
     // Test: czy fragment jest częścią imienia/nazwiska
     if (normName.includes(frag)) {
@@ -5995,7 +6031,7 @@ function calculateColumnAverage(columnId) {
   const colGrades = state.grades[columnId] || {};
   const values = [];
   state.students.forEach(s => {
-    if (s.longTermReleased) return;
+    if (!wSrednich(s)) return;
     const v = colGrades[s.id];
     if (v !== undefined && v !== null) values.push(v);
   });
@@ -6203,7 +6239,7 @@ function renderOcenyBody() {
 
   state.students.forEach((student, idx) => {
     const alarmCount = countAlarmGrades(student.id);
-    const rowClass = (alarmCount >= 2 ? 'alarm-row' : '') + (student.longTermReleased ? ' long-term-released' : '');
+    const rowClass = (alarmCount >= 2 ? 'alarm-row' : '') + (student.longTermReleased ? ' long-term-released' : '') + (!wSrednich(student) && student.odszedl ? ' odszedl' : '');
 
     h += `<tr class="${rowClass}">`;
     h += `<td class="cell-lp">${idx + 1}</td>`;
@@ -6271,7 +6307,7 @@ function renderOcenyFoot() {
 
   // średnia ogólna klasy
   const classAvgs = state.students
-    .filter(s => !s.longTermReleased)
+    .filter(wSrednich)
     .map(s => calculateStudentAverage(s.id))
     .filter(v => v !== null);
   const classAvg = classAvgs.length > 0
@@ -7029,7 +7065,7 @@ const KBD_STATUS = {
 };
 
 function kbdActiveStudents() {
-  return state.students;   // zwolniony długoterminowo też (19.09): bywa nieobecny, wpis i „0” wyczyść muszą do niego docierać; Enter nadal go pomija (finalizeLesson)
+  return state.students.filter(s => !odszedlDnia(s, state.currentDate));   // odszedł: poza lekcją (11-04). Zwolniony długoterminowo też (19.09): bywa nieobecny, wpis i „0” wyczyść muszą do niego docierać; Enter nadal go pomija (finalizeLesson)
 }
 
 function setKbdRow(sid) {

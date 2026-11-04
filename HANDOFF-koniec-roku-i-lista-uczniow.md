@@ -91,9 +91,33 @@ plik z apką obok**, nie tylko krok 6. Kandydat na strażnika: test, że każda 
 w `start.html` istnieje w `dziennik_wf.html` (dziś takiej bramki nie ma, stąd rozjazd) — **rozważany,
 nie zatwierdzony**.
 
-## Stan 2026-10-02 (koniec sesji)
+## Stan 2026-11-04 (nadpisuje „Stan 2026-10-02" niżej)
+- **Punkt 1 „nie będzie" z wyprzedzeniem — WDROŻONY 21.10** po akceptacji Artura (commit b6e05ef). Plansza
+  z 02.10 już niepotrzebna. Otwarta tylko uwaga Artura z 04.10 o zbędnym elemencie (który — niepotwierdzone).
+- **Dopisek 2 „Start w 5 minut" — ZROBIONY** (commit 66849a5: blok Kopia dziennika, „nie było" z Zaległych).
+  Strażnik „nazwy przycisków ze `start.html` istnieją w apce" — nadal tylko rozważany.
+- Roboczy = prod (zmierzone 04.11, diff pusty).
+- **Punkt 2 uczeń „odszedł" — WDROŻONY 04.11** (Artur sprawdził w piaskownicy: „jest dobrze"; sw.js v53).
+  - Uczniowie: kolumna „Odszedł od” (data; pusta = wraca). Wiersz wyszarzony, nazwisko przekreślone.
+    „×” zostaje do pomyłek, a jego okno podpowiada datę zamiast kasowania.
+  - Od tej daty (włącznie): Zapisz lekcję nie daje mu C, nie liczy się do „wpisanych”, klawiatura i dopasowanie
+    po nazwisku go pomijają, kopia do VULCANa go pomija (chyba że ma wpis), w Obecności „— odszedł DD.MM —”.
+  - Wpisy sprzed odejścia zostają; jego własny % liczy się z nich (Statystyki: wiersz z dopiskiem, karta ucznia).
+  - Założenie agenta, przyjęte razem z „jest dobrze" (nie pytane osobno): nie wchodzi do średnich klasy (% klasy, średnia ocen,
+    raport całego dziennika) od dnia odejścia — tak jak zwolniony długoterminowo.
+  - Przy okazji (potrzebne, żeby data działała na telefonie): na liście uczniów pole nazwiska zwężone do 120 px;
+    wcześniej przyklejona kolumna zabierała 218 z 330 px i chowała datę oraz Wzrost/Waga.
+  - Funkcje: `odszedlDnia`, `naLekcji`, `wSrednich`, `ustawOdszedl` (przy `relData`). Kopia przed zmianą:
+    `_wersje-poprzednie/dziennik_wf_roboczy_2026-11-04_przed-odszedl.html`.
+  - Testy `test_uczen_odszedl.py` (32/32, laptop + telefon) i `test_odszedl_kopia.py` (7/7, kopia telefon <-> laptop: data przechodzi, zdjecie daty przechodzi, stara kopia jej nie wskrzesza). Oba padaja na celowo zepsutym kodzie (sprawdzone 04.11). Pelny zestaw 42/42 na kopii folderu z roboczym jako prod. W repo od wdrożenia.
+- **Chwiejny test (do zbadania, nie naprawiony):** `test_niebylo_wyprzedzenie.py` raz na 3 biegi padł w
+  pełnym zestawie (04.11, telefon: „nie będzie" wpisane do dwóch klas 8c i 4dLO zamiast jednej), osobno i w
+  powtórce zielony. Zgaduję wyścig przy krótkich odczekaniach (300 ms) pod obciążeniem — przyczyna nieznana.
+- Potem punkt 3, potem 4.
+
+## Stan 2026-10-02 (koniec sesji) — historyczny, patrz „Stan 2026-11-04" wyżej
 Kolejność ułożona wg „kiedy potrzebne", Artur: „tak" na start od punktu 1.
-1. **„Nie będzie" z wyprzedzeniem (P6/P7) — ZROBIONE W ROBOCZYM, czeka na oko Artura.**
+1. **„Nie będzie" z wyprzedzeniem (P6/P7) — ZROBIONE W ROBOCZYM, czeka na oko Artura.** *(04.11: wdrożone 21.10.)*
    - Kod: `dziennik_wf_roboczy.html` (**gitignored — zmiana żyje tylko na dysku**; prod `dziennik_wf.html`
      nietknięty; kopia bezpieczeństwa `_wersje-poprzednie/dziennik_wf_roboczy_2026-10-02_nie-bedzie.html`). Funkcje: `nieByloZakres`, `nieByloZakresWidok`, zakres w `nieByloOk`/`nieByloOkno`,
      przycisk `.niebylo-postaw` w `kolumnaPodgladu` i w nagłówku otwartej lekcji; „jednak będzie" dla dnia ≥ dziś.
@@ -124,6 +148,5 @@ nie rusza; przeglądarka trafia do cudzej planszy. Obejście: `--port`. Poprawka
 
 ## Resume
 „Robimy handoff »koniec roku i lista uczniów« z
-`D:\Projects\nauczyciel\wf\dziennik-wf\HANDOFF-koniec-roku-i-lista-uczniow.md`, sekcja »Stan 2026-10-02«.
-Najpierw otwórz planszę (port 8780) i przeczytaj moje uwagi albo „pasuje" — potem wdrożenie punktu 1.
-Potem punkty 2–4."
+`D:\Projects\nauczyciel\wf\dziennik-wf\HANDOFF-koniec-roku-i-lista-uczniow.md`, sekcja »Stan 2026-11-04«.
+Punkty 1 i 2 wdrożone. Teraz punkt 3 (przesuwanie wiersza góra/dół), potem 4."
