@@ -517,6 +517,11 @@
   tr.odszedl .student-name { color: var(--ink-muted); text-decoration: line-through; }
   .odszedl-tag { font-size: 11px; color: var(--ink-muted); font-style: italic; white-space: nowrap; }
   .odszedl-data { font-size: 12px; min-width: 128px; }
+  .przes { display: flex; flex-direction: column; align-items: center; line-height: 1; width: 28px; }
+  /* palec na telefonie: ~28×22 px na strzałkę */
+  .przes button { border: none; background: none; color: var(--ink-muted); font-size: 12px; padding: 5px 8px; margin: -2px 0; cursor: pointer; border-radius: 4px; }
+  .przes button:hover, .przes button:focus-visible { color: var(--ink); background: var(--line-soft); }
+  .przes button:disabled { visibility: hidden; }
 
   .student-name {
     border: none; background: transparent; font-family: inherit;
@@ -2360,6 +2365,7 @@ function scalKopie(data) {
       lt[p] = tz;
       if (p in L) w.nadpisane.push(_sciezkaOpis(lk, p, bylo, jest)); else w.dodane++;
     });
+    porzadkujWgPoz(lk);   // przesunięcia z drugiego urządzenia (pole poz w uczniu)
   });
   if (data.planWf && Array.isArray(data.planWf.plany)) data.planWf.plany.forEach(pl => { try { zaleglePlanZastosuj(pl); } catch (e) { /* stary plan bez od/klasy */ } });
   ustawieniaScal(data.ustawienia);
@@ -4450,7 +4456,7 @@ function renderStudents() {
     if (s.longTermReleased) tr.classList.add('long-term-released');
     if (odszedlDnia(s, today)) tr.classList.add('odszedl');
     tr.innerHTML = `
-      <td class="left">${i + 1}</td>
+      <td class="left"><div class="przes"><button type="button" data-krok="-1" ${i === 0 ? 'disabled' : ''} onclick="przesunUcznia('${s.id}', -1)" title="przesuń wyżej" aria-label="przesuń wyżej">▲</button><span>${i + 1}</span><button type="button" data-krok="1" ${i === state.students.length - 1 ? 'disabled' : ''} onclick="przesunUcznia('${s.id}', 1)" title="przesuń niżej" aria-label="przesuń niżej">▼</button></div></td>
       <td class="left"><input type="text" class="student-name" value="${escapeHtml(s.name)}" placeholder="Imię nazwisko" oninput="updateStudentName('${s.id}', this.value)"></td>
       <td><input type="checkbox" class="long-term-checkbox" ${s.longTermReleased ? 'checked' : ''} onchange="toggleLongTerm('${s.id}', this.checked)"></td>
       <td class="left">${getReleases(s).map((r, k) => `<span class="rel-chip${isReleasedOn(s, today) && r.od <= today && today <= r.do ? ' active' : ''}" title="${r.od} – ${r.do}">${relData(r.od)}–${relData(r.do)}<button type="button" title="usuń okres" onclick="removeRelease('${s.id}', ${k})">×</button></span>`).join('')}<span class="rel-form">od <input type="date" id="relOd_${s.id}"> do <input type="date" id="relDo_${s.id}" onkeydown="if(event.key==='Enter'){event.preventDefault();addRelease('${s.id}');}"> <button type="button" class="rel-zapisz" onclick="addRelease('${s.id}')" title="zapisuje zakres OD–DO jako zwolnienie lekarskie">zapisz zwolnienie</button></span></td>
@@ -4478,6 +4484,27 @@ function toggleLongTerm(id, val) {
     save();
     renderStudents();
   }
+}
+// Przesuwanie ucznia na liście (Artur 2026-10-02, P4): poprawka pomyłki w kolejności bez kasowania listy.
+// Kolejność tablicy NIE jest liściem scalania kopii (uczeń jest) — dlatego przesunięcie zapisuje pozycję
+// w samym uczniu (pole poz), a scalKopie układa listę wg poz (porzadkujWgPoz). Inaczej poprawka
+// kolejności z telefonu nie przeszłaby na laptop.
+function przesunUcznia(id, krok) {
+  const i = state.students.findIndex(s => s.id === id), j = i + krok;
+  if (i < 0 || j < 0 || j >= state.students.length) return;
+  const [s] = state.students.splice(i, 1);
+  state.students.splice(j, 0, s);
+  state.students.forEach((u, k) => { u.poz = k + 1; });
+  save(); renderStudents();
+  // fokus jedzie z uczniem — kolejne kliknięcia / Enter przesuwają go dalej
+  const b = document.querySelector('#studentsBody tr:nth-child(' + (j + 1) + ') .przes button[data-krok="' + krok + '"]');
+  if (b && !b.disabled) b.focus();
+}
+// Uczeń bez poz (dopisany przed pierwszym przesunięciem) stoi tam, gdzie w tablicy; sort stabilny
+function porzadkujWgPoz(cls) {
+  const st = cls.students || [];
+  const klucz = new Map(st.map((s, i) => [s.id, s.poz != null ? s.poz : i + 1]));
+  st.sort((a, b) => klucz.get(a.id) - klucz.get(b.id));
 }
 function addStudent() {
   const newId = 'u' + Date.now();

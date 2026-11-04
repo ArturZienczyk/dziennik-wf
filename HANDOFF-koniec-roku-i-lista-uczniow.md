@@ -113,7 +113,16 @@ nie zatwierdzony**.
 - **Chwiejny test (do zbadania, nie naprawiony):** `test_niebylo_wyprzedzenie.py` raz na 3 biegi padł w
   pełnym zestawie (04.11, telefon: „nie będzie" wpisane do dwóch klas 8c i 4dLO zamiast jednej), osobno i w
   powtórce zielony. Zgaduję wyścig przy krótkich odczekaniach (300 ms) pod obciążeniem — przyczyna nieznana.
-- Potem punkt 3, potem 4.
+- **Punkt 3 przesuwanie wiersza — WDROŻONY 04.11** (Artur w piaskownicy: „pasuje"; sw.js v54).
+  - Uczniowie: ▲▼ w kolumnie numeru (przy nazwisku, widać na telefonie bez przewijania); skrajne ukryte;
+    fokus jedzie z uczniem (kolejne kliknięcia przesuwają dalej). Historia jedzie z uczniem (po id).
+  - Kopia: kolejność tablicy nie była liściem scalania (uczeń jest) — przesunięcie zapisuje pozycję w uczniu
+    (`poz`), `scalKopie` układa listę wg `poz` (`porzadkujWgPoz`). Uczeń bez `poz` stoi, gdzie w tablicy.
+  - Funkcje: `przesunUcznia`, `porzadkujWgPoz` (przy `addStudent`). Kopia przed zmianą:
+    `_wersje-poprzednie/dziennik_wf_roboczy_2026-11-04_przed-przesuwanie.html`.
+  - Test `test_przesuwanie.py` (24/24: laptop + telefon + kopia dwóch urządzeń); pada na celowo zepsutym
+    scalaniu i na braku `poz`. Pełny zestaw 44/44 na kopii folderu z roboczym jako prod. W repo od wdrożenia.
+- Potem punkt 4.
 
 ## Stan 2026-10-02 (koniec sesji) — historyczny, patrz „Stan 2026-11-04" wyżej
 Kolejność ułożona wg „kiedy potrzebne", Artur: „tak" na start od punktu 1.
@@ -149,4 +158,4 @@ nie rusza; przeglądarka trafia do cudzej planszy. Obejście: `--port`. Poprawka
 ## Resume
 „Robimy handoff »koniec roku i lista uczniów« z
 `D:\Projects\nauczyciel\wf\dziennik-wf\HANDOFF-koniec-roku-i-lista-uczniow.md`, sekcja »Stan 2026-11-04«.
-Punkty 1 i 2 wdrożone. Teraz punkt 3 (przesuwanie wiersza góra/dół), potem 4."
+Punkty 1–3 wdrożone. Został punkt 4 (nowy rok) — najpierw piaskownica i pytanie P1 o odtworzenie starego roku z kopii."
