@@ -186,6 +186,14 @@
   .plan-karta { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; font-size: 13px; }
   .plan-karta h3 { margin: 0 0 2px 0; font-size: 16px; }
   .plan-karta h3 .licz { color: var(--ink-muted); font-weight: 400; font-size: 13px; }
+  /* Rotacja hali — tydzień cyklu (2026-11-17) */
+  .rot-lista { display: grid; gap: 4px; margin-top: 8px; }
+  .rot-wiersz { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 3px 6px; border-radius: 6px; }
+  .rot-wiersz.ten { background: var(--bg); outline: 1px solid var(--line); }
+  .rot-daty { min-width: 128px; font-variant-numeric: tabular-nums; }
+  .rot-nr { min-width: 40px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); font-family: inherit; font-size: 13px; cursor: pointer; }
+  .rot-nr.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .rot-kor { font-size: 12px; color: #8A5A00; }
   .plan-karta .opis { margin: 0 0 10px 0; color: var(--ink-muted); font-size: 12.5px; }
   .plan-karta table { border-collapse: collapse; }
   .plan-karta th, .plan-karta td { min-width: 64px; }
@@ -3075,6 +3083,23 @@ function renderPlanUstawienia() {
     h += '</table>';
   }
   h += `<div class="dodaj"><input type="text" id="dyzurMiejsce" placeholder="miejsce, np. parter, szatnie, boisko" style="width:220px;" onkeydown="if(event.key==='Enter'){event.preventDefault();dyzurDodaj();}"> <button type="button" onclick="dyzurDodaj()">dodaj miejsce</button></div></div>`;
+  // --- karta 3b: rotacja hali — tydzień cyklu (2026-11-17); tylko gdy plan niesie rotację
+  const pr = plany.find(x => x.rotacja && x.rotacja.tygodnie && x.rotacja.tygodnie.length);
+  if (pr) {
+    const L = pr.rotacja.tygodnie.length, ten = tydzienPoniedzialek(dzisISO()), kor = pr.rotacja.korekty || {};
+    let w = '';
+    for (let i = -2; i <= 5; i++) {
+      const pon = usprDodajDni(ten, 7 * i), pt = usprDodajDni(pon, 4);
+      const nr = rotacjaTydzien(pr, pon);
+      if (nr === null) continue;
+      w += `<div class="rot-wiersz${pon === ten ? ' ten' : ''}" data-pon="${pon}"><span class="rot-daty">${pon.slice(8, 10)}.${pon.slice(5, 7)}–${pt.slice(8, 10)}.${pt.slice(5, 7)}${pon === ten ? ' · <b>ten</b>' : ''}</span>` +
+        ROT_RZ.slice(0, L).map((rz, j) => `<button type="button" class="rot-nr${j === nr ? ' on' : ''}" data-n="${j + 1}" onclick="rotacjaUstaw('${pr.od}','${pon}',${j + 1})" title="tydzień od ${pon} to ${rz} tydzień cyklu">${rz}</button>`).join('') +
+        (kor[pon] ? '<span class="rot-kor">korekta</span>' : '') + '</div>';
+    }
+    h += '<div class="plan-karta"><h3>Rotacja hali — tydzień cyklu</h3>' +
+      '<p class="opis">Którym tygodniem z kartki na hali jest dany tydzień — od tego zależy plakietka miejsca przy lekcji (hala / kondycyjna / tenisowa). Gdy szkoła przesunie cykl (np. powtórzy tydzień), kliknij właściwy numer: od tego tygodnia liczy się dalej po kolei, wcześniejsze zostają. Klik w numer, który wychodzi z daty, zdejmuje korektę.</p>' +
+      '<div class="rot-lista">' + w + '</div></div>';
+  }
   // --- karta 4: dni wolne
   const zakresy = wolneZakresy(p ? p.wolne : []);
   h += `<div class="plan-karta"><h3>Dni wolne <span class="licz">(${p ? (p.wolne || []).length : 0})</span></h3>` +
@@ -3303,7 +3328,10 @@ function zaleglePlanZastosuj(plan) {
     if (plan.inne) stary.inne = Object.assign({}, stary.inne || {}, plan.inne);
     if (plan.dyzury) stary.dyzury = Object.assign({}, stary.dyzury || {}, plan.dyzury);
     if (plan.dzwonki) stary.dzwonki = plan.dzwonki;
-    if (plan.rotacja) stary.rotacja = plan.rotacja;
+    if (plan.rotacja) {   // kotwice z pliku dochodzą, kliknięte w apce zostają (wygrywają przy tym samym poniedziałku)
+      const korekty = Object.assign({}, plan.rotacja.korekty || {}, (stary.rotacja && stary.rotacja.korekty) || {});
+      stary.rotacja = Object.assign({}, plan.rotacja, { korekty });
+    }
     stary.wolne = Array.from(new Set((stary.wolne || []).concat(plan.wolne || []))).sort();
     if (plan.do) stary.do = plan.do;
     stary.wygenerowano = plan.wygenerowano || stary.wygenerowano || '';
@@ -3785,24 +3813,54 @@ function czasLekcji(iso, nr) {
   const d = ((p && p.dzwonki) || DZWONKI_ZAPAS)[nr];
   return d ? d[0].replace(/^0/, '') + '–' + d[1].replace(/^0/, '') : '';
 }
-// Miejsce na hali z rotacji 4-tygodniowej (30.09): plan-wf.json → pole `rotacja` z rotacja_hali.py.
+// Miejsce na hali z rotacji 4-tygodniowej (30.09): plan-wf.json → pole `rotacja` (rotacja_ze_zdjecia.py, kartka z hali).
 // Tydzień cyklu liczony od `start` co tydzień kalendarza (tryb 'kal'); 'nauka' pomija tygodnie w całości wolne.
+// KOREKTY (2026-11-17): szkoła potrafi przesunąć cykl — krótki tydzień 9–13.11 powtórzono jako II, więc od
+// 16.11 jest III, choć z daty wychodzi IV. Korekta = kotwica { 'poniedziałek': numer 1–4 }: od tego tygodnia
+// liczymy dalej po kolei; tygodnie wcześniej bez zmian. Kotwice przychodzą z pliku (rotacja.korekty) albo
+// z kliku w zakładce Plan — to ten sam obiekt; ponowne wczytanie planu dokłada kotwice z pliku, kliknięte
+// zostają (zaleglePlanZastosuj). JEDNO miejsce liczenia: plakietka i karta w Planie pytają tej funkcji.
 var MIEJSCE_NAPIS = { S: 'hala', S2: '½ sektora', K: 'kondycyjna', T: 'tenisowa' };
-function miejsceLekcji(iso, nr) {
-  const p = zaleglePlany().find(p => p.rotacja && planObejmuje(p, iso));
-  if (!p || nr === null) return null;
-  const r = p.rotacja, d = new Date(iso + 'T00:00:00'), dow = (d.getDay() + 6) % 7;
-  const pon = new Date(d); pon.setDate(d.getDate() - dow);
-  const s = new Date(r.start + 'T00:00:00');
-  if (pon < s || !r.tygodnie || !r.tygodnie.length) return null;
+var ROT_RZ = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+// Indeks tygodnia cyklu (0 = I) dla poniedziałku ponIso albo null (przed startem / brak rotacji).
+// pominKotwice: liczy tak, jakby kotwicy pod tym poniedziałkiem nie było (do zdejmowania korekty).
+function rotacjaTydzien(p, ponIso, pominKotwice) {
+  const r = p && p.rotacja;
+  if (!r || !r.start || !r.tygodnie || !r.tygodnie.length || ponIso < r.start) return null;
+  const L = r.tygodnie.length;
+  const kot = Object.keys(r.korekty || {}).filter(k => k <= ponIso && k >= r.start && k !== pominKotwice).sort().pop();
+  const od = kot || r.start, baza = kot ? (parseInt(r.korekty[kot], 10) - 1) : 0;
+  const s = new Date(od + 'T00:00:00'), pon = new Date(ponIso + 'T00:00:00');
   let n;
   if (r.tryb === 'nauka') {
     const wolne = new Set(p.wolne || []), isoD = x => x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
     const nauka = m0 => { for (let i = 0; i < 5; i++) { const x = new Date(m0); x.setDate(m0.getDate() + i); if (!wolne.has(isoD(x))) return true; } return false; };
     n = 0; for (const x = new Date(s); x < pon; x.setDate(x.getDate() + 7)) if (nauka(x)) n++;
   } else n = Math.round((pon - s) / 864e5 / 7);
-  const kod = ((r.tygodnie[n % r.tygodnie.length] || {})[dow] || {})[nr];
+  return (((baza + n) % L) + L) % L;
+}
+function miejsceLekcji(iso, nr) {
+  const p = zaleglePlany().find(p => p.rotacja && planObejmuje(p, iso));
+  if (!p || nr === null) return null;
+  const w = rotacjaTydzien(p, tydzienPoniedzialek(iso));
+  if (w === null) return null;
+  const dow = (new Date(iso + 'T12:00:00').getDay() + 6) % 7;
+  const kod = ((p.rotacja.tygodnie[w] || {})[dow] || {})[nr];
   return kod ? { kod, napis: MIEJSCE_NAPIS[kod] || kod } : null;
+}
+// Klik w zakładce Plan: „tydzień od ponIso to numer n (1–4)”. Klik w numer, który wychodzi bez korekty
+// pod tym poniedziałkiem, zdejmuje korektę (nie zostawia martwej kotwicy).
+function rotacjaUstaw(planOd, ponIso, n) {
+  const p = zaleglePlany().find(x => x.od === planOd && x.rotacja);
+  if (!p) return;
+  const r = p.rotacja;
+  r.korekty = r.korekty || {};
+  if (rotacjaTydzien(p, ponIso, ponIso) === n - 1) delete r.korekty[ponIso];
+  else r.korekty[ponIso] = n;
+  save();
+  renderPlanUstawienia();
+  renderAttendance();
+  showToast('Rotacja hali: tydzień od ' + ponIso.slice(8, 10) + '.' + ponIso.slice(5, 7) + ' = ' + ROT_RZ[rotacjaTydzien(p, ponIso)] + (r.korekty[ponIso] ? ' (korekta)' : ' (z daty)'), 'success');
 }
 // Guzik otwartej lekcji w pasku dnia: kopia nagłówka otwartej (#kolOtwartaHead zostaje źródłem
 // tekstu dla testów i widoku Tydzień, w widoku dnia jest schowany CSS-em).

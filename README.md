@@ -515,6 +515,22 @@ i brak poziomego przewijania na telefonie 369 px).
 **Zbiór do piaskownicy** (do przeklikania tej i innych funkcji): `python zrob_piaskownice.py`, potem
 `py -3.14 zbior_piaskownicy.py` → `backups\PIASKOWNICA-dane-testowe.enc.json`, hasło `piaskownica`,
 zmyślone klasy 6A/7B (test), 5 tygodni. Wczytanie: Uczniowie → Kopia dziennika → wczytaj kopię.
+`--plan` dokłada prawdziwy `plan-wf.json` (zakładka Plan, pasek tygodnia, rotacja) — wtedy chip „Zaległe”
+w piaskownicy pokazuje szum (zmyślone klasy dopasowują się do planu).
+
+## Rotacja hali — korekta tygodnia cyklu (2026-11-17)
+
+Plakietka miejsca (hala / kondycyjna / tenisowa) bierze tydzień cyklu I–IV z daty, licząc od `rotacja.start`.
+Szkoła potrafi cykl przesunąć: krótki tydzień 9–13.11 powtórzono jako II, więc od 16.11 jest III, choć z daty
+wychodzi IV. **Korekta = kotwica `{poniedziałek: numer 1–4}`** w `rotacja.korekty`: od tego tygodnia liczy się
+dalej po kolei, wcześniejsze zostają. Liczy jedna funkcja `rotacjaTydzien()` (plakietka i karta pytają jej).
+
+- Klik: zakładka **🗓 Plan → Rotacja hali — tydzień cyklu** (8 tygodni wokół dziś). Klik w numer z daty zdejmuje korektę.
+- Źródło stałe: `plan-roczny/plan-lekcji-2026-09/rotacja_ze_zdjecia.py` → `KOREKTY` → `rotacja-artur.json` →
+  `plan-wf.json`; strona wyjść liczy tym samym algorytmem i ma ten sam wybór I–IV (localStorage).
+- Ponowne wczytanie `plan-wf.json` dokłada kotwice z pliku, kliknięte zostają (`zaleglePlanZastosuj`).
+
+Bramka: `py -3.14 test_rotacja_korekty.py` (17 sprawdzeń, czyta prawdziwy `plan-wf.json`).
 
 ## Bramki: jedna komenda i zapadka przed pushem (2026-09-21)
 

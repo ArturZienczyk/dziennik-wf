@@ -14,6 +14,7 @@
 #     py -3.14 zbior_piaskownicy.py     # -> backups/PIASKOWNICA-dane-testowe.enc.json, hasło: piaskownica
 #
 # Uwaga: daty to ostatnie 25 dni roboczych bez kalendarza — lekcje wypadają też w święta (np. 11.11).
+import json
 import random
 import sys
 from pathlib import Path
@@ -25,11 +26,14 @@ from playwright.sync_api import sync_playwright  # noqa: E402
 
 HASLO = "piaskownica"
 PORT = 8797  # nie 8765/8766 — tam bywa plansza
+_ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
 CEL = (
-    Path(sys.argv[1])
-    if len(sys.argv) > 1
-    else ROOT / "backups" / "PIASKOWNICA-dane-testowe.enc.json"
+    Path(_ARGS[0]) if _ARGS else ROOT / "backups" / "PIASKOWNICA-dane-testowe.enc.json"
 )
+# --plan: dołącz prawdziwy plan-wf.json (rozkład lekcji + rotacja hali, bez danych dzieci) — żeby w piaskownicy
+# dało się przeklikać zakładkę Plan, pasek tygodnia i plakietki miejsca (2026-11-17: korekty rotacji).
+PLAN = ROOT.parent.parent / "plan-roczny" / "plan-lekcji-2026-09" / "plan-wf.json"
+Z_PLANEM = "--plan" in sys.argv
 
 DOLOZ = """(d) => {
   const rng = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
@@ -82,6 +86,12 @@ def main():
             }
         )
         wynik = page.evaluate(DOLOZ, {"nazwiska": drugie})
+        if Z_PLANEM:
+            page.evaluate(
+                "(p) => { zaleglePlanZastosuj(p); refreshAll(); }",
+                json.loads(PLAN.read_text(encoding="utf-8")),
+            )
+            wynik["plan"] = PLAN.name
         tekst = page.evaluate("(p) => encryptSnapshot(p)", HASLO)
         CEL.write_bytes(tekst.encode("utf-8"))
         dane = page.evaluate("([t, p]) => decryptBackup(t, p)", [tekst, HASLO])
