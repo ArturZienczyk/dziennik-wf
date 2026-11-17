@@ -261,6 +261,28 @@
   .dzien-row .nav { display: inline-flex; gap: 6px; white-space: nowrap; flex: 0 0 auto; }
   .dzien-row .nav button, .dzien-row .dzien-usun { padding: 6px 11px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); font-family: inherit; font-size: 13px; cursor: pointer; }
   .dzien-row .dzien-usun { color: var(--accent-warm); border-color: #E5C5C0; }
+  /* Usprawiedliwienia — tydzień (2026-11-17): siatka uczeń × lekcje tygodnia jednej klasy, klik NB↔NU bez okna */
+  .dzien-row .dzien-uspr { padding: 6px 9px; border: 1px solid #A9BFDD; border-radius: 6px; background: var(--paper); color: #1A2C50; font-family: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+  /* Wejście: laptop = górny pasek obok „Zaległe" (belka dnia przy 1280 px ma ~40 px luzu — przycisk zepchnąłby
+     „Dzień | Tydzień" do drugiego wiersza, 59 → 98 px); telefon = belka dnia (tam pasek górny jest ciasny, belka ma luz) */
+  .uspr-chip { padding: 6px 12px; border: 1px solid #A9BFDD; border-radius: 999px; background: var(--paper); color: #1A2C50; font-family: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+  .dzien-row .dzien-uspr { display: none; }
+  #usprModal .modal { max-width: 980px; }
+  .uspr-nav { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 10px 0; font-size: 14px; }
+  .uspr-nav button, .uspr-nav select { padding: 6px 11px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); font-family: inherit; font-size: 13px; cursor: pointer; }
+  .uspr-nav .uspr-tydz { font-family: 'Source Serif 4', Georgia, serif; font-size: 17px; min-width: 150px; text-align: center; }
+  .uspr-licz { font-size: 13px; color: var(--ink-muted); margin: 0 0 8px 0; }
+  .uspr-licz b { color: var(--ink); }
+  .uspr-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 6px; max-height: 60vh; }
+  table.uspr { border-collapse: collapse; width: 100%; font-size: 13px; }
+  table.uspr th, table.uspr td { border-bottom: 1px solid var(--line); padding: 4px 6px; text-align: center; white-space: nowrap; }
+  table.uspr th { position: sticky; top: 0; background: var(--bg); font-weight: 500; z-index: 1; }
+  table.uspr th.dzien-nowy, table.uspr td.dzien-nowy { border-left: 2px solid var(--line); }
+  table.uspr td.l, table.uspr th.l { text-align: left; }
+  table.uspr .uspr-kr { min-width: 40px; padding: 5px 8px; font-size: 13px; }
+  table.uspr button.uspr-kr { cursor: pointer; }
+  table.uspr button.uspr-kr.zmieniona { outline: 2px solid #6A8FBD; outline-offset: 1px; }
+  table.uspr span.uspr-kr { display: inline-block; opacity: .55; cursor: default; }
   .przel { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin-left: auto; }
   .przel button { padding: 5px 12px; font-size: 13px; cursor: pointer; color: var(--ink-muted); background: var(--paper); border: none; font-family: inherit; }
   .przel button.on { background: var(--ink); color: var(--paper); }
@@ -1208,6 +1230,8 @@
     .tab.active { margin-bottom: 0; }
     .tab-content.active { padding: 8px; border-radius: 0 8px 8px 8px; }
     .dzien-row .lesson-count, .dzien-row .dzien-usun { display: none; }
+    .uspr-chip { display: none; }
+    .dzien-row .dzien-uspr { display: inline-block; }
     .dzien-row .data { font-size: 16px; }
     .dzien-kolumny { gap: 8px; }
     .dzien-kolumny .kol { min-width: 0; }
@@ -1356,6 +1380,7 @@
       <h1>Dziennik WF</h1>
       <p class="subtitle">dane zapisują się lokalnie · klasa i szkoła: zakładka Uczniowie</p>
       <div id="zalegleChip" style="margin-left:auto"></div>
+      <button type="button" class="uspr-chip" id="usprOtworzBtn" onclick="otworzUspr()" title="tydzień jednej klasy na jednym ekranie: klik w NB = usprawiedliwione (NU), drugi klik cofa">✋ Usprawiedliwienia</button>
     </div>
     <div class="tabs">
       <button class="tab active" onclick="switchTab('obecnosc')">📋 Obecność</button>
@@ -1396,6 +1421,7 @@
       <span id="lessonNrHint" style="display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap;"></span>
       <span class="lesson-count" id="lessonCount"></span>
       <button type="button" class="dzien-usun" onclick="deleteLesson()" title="usuń wszystkie wpisy obecności tej lekcji">🗑 usuń wpisy</button>
+      <button type="button" class="dzien-uspr" id="usprOtworzBtnTel" onclick="otworzUspr()" title="tydzień tej klasy na jednym ekranie: klik w NB = usprawiedliwione (NU), drugi klik cofa">✋ usprawiedliwienia</button>
       <span class="przel" id="widokPrzel"><button type="button" data-w="dzien" onclick="ustawWidok('dzien')">Dzień</button><button type="button" data-w="tydzien" onclick="ustawWidok('tydzien')">Tydzień</button></span>
     </div>
 
@@ -2078,6 +2104,30 @@
         <button id="gradeDeleteBtn" class="btn-delete-soft" style="display:none;" onclick="deleteGrade()">Usuń</button>
         <button class="btn-save" onclick="saveGrade()">Zapisz</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: usprawiedliwienia — tydzień jednej klasy (2026-11-17). Klik w NB = NU od razu, drugi klik cofa. -->
+<div class="modal-bg" id="usprModal" onclick="if(event.target===this) zamknijUspr()">
+  <div class="modal">
+    <h3 style="margin-bottom: 6px;">✋ Usprawiedliwienia — tydzień</h3>
+    <p style="font-size: 13px; color: var(--ink-muted); margin: 0 0 12px 0;">
+      Otwórz obok ten sam tydzień w e-dzienniku i klikaj czerwone <b>NB</b> tych, którzy dostali usprawiedliwienie — kratka od razu zmienia się na <b>NU</b>. Drugi klik w tę samą kratkę cofa. Procenty przeliczą się same.
+    </p>
+    <div class="uspr-nav">
+      <select id="usprKlasa" onchange="usprZmienKlase(this.value)" title="klasa"></select>
+      <button type="button" onclick="usprTydzien(-7)" title="poprzedni tydzień">◀</button>
+      <span class="uspr-tydz" id="usprTydzLabel"></span>
+      <button type="button" onclick="usprTydzien(7)" title="następny tydzień">▶</button>
+      <button type="button" onclick="usprTydzien(0)">ten tydzień</button>
+      <label style="font-size:13px;margin-left:auto;cursor:pointer;"><input type="checkbox" id="usprWszyscy" onchange="renderUspr()"> pokaż całą klasę</label>
+    </div>
+    <p class="uspr-licz" id="usprLicz"></p>
+    <div class="uspr-wrap" id="usprSiatka"></div>
+    <div class="modal-actions" style="margin-top: 14px;">
+      <button type="button" id="usprCofnijBtn" onclick="usprCofnijWszystko()" style="display:none">↶ Cofnij zmiany z tego okna</button>
+      <button type="button" onclick="zamknijUspr()">Gotowe</button>
     </div>
   </div>
 </div>
@@ -4206,6 +4256,123 @@ function usprawiedliwDate(studentId, date) {
     }
   );
 }
+// =====================================================
+// USPRAWIEDLIWIENIA — TYDZIEŃ (2026-11-17)
+// Po co: usprawiedliwienia przychodzą w e-dzienniku hurtem (rodzic usprawiedliwia cały dzień),
+// a apka umiała NB→NU tylko pojedynczo — okienko ucznia + potwierdzenie na każdą datę.
+// Tu: jedna klasa, jeden tydzień, wiersz = uczeń, kolumna = lekcja (wpis frekwencji) tygodnia.
+// Klik NB → NU od razu, bez okna; klik NU → NB (cofnięcie pomyłki). Inne statusy tylko do odczytu.
+// Spóźnienie (sp) zostaje przy komórce. usprZmiany pamięta stan sprzed pierwszego kliku w tym
+// otwarciu okna — „Cofnij zmiany z tego okna" przywraca dokładnie to (także po zmianie klasy/tygodnia).
+// =====================================================
+let usprPon = null;
+let usprZmiany = {};   // 'clsId|klucz|sid' → komórka sprzed zmiany (surowa wartość)
+function usprDodajDni(iso, n) { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); const p = x => String(x).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
+function usprDM(iso) { return iso.slice(8, 10) + '.' + iso.slice(5, 7); }
+function usprKlucze(cls, pon) {
+  const kon = usprDodajDni(pon, 5);   // Pn–Pt; sobota i niedziela poza siatką
+  const nrS = k => { const n = kluczNr(k); return n === null ? -1 : n; };
+  return Object.keys(cls.attendance || {}).filter(k => { const d = kluczData(k); return d >= pon && d < kon; })
+    .sort((a, b) => kluczData(a) < kluczData(b) ? -1 : kluczData(a) > kluczData(b) ? 1 : nrS(a) - nrS(b));
+}
+function usprIle(cls, klucze, st) {
+  let n = 0;
+  klucze.forEach(k => Object.keys(cls.attendance[k] || {}).forEach(sid => { if (attRead(cls.attendance[k][sid]).s === st) n++; }));
+  return n;
+}
+function otworzUspr() {
+  usprPon = tydzienPoniedzialek(state.currentDate);
+  usprZmiany = {};
+  renderUspr();
+  document.getElementById('usprModal').classList.add('active');
+}
+function zamknijUspr() {
+  document.getElementById('usprModal').classList.remove('active');
+  refreshAll();
+}
+function usprTydzien(dni) {
+  usprPon = dni === 0 ? tydzienPoniedzialek(dzisISO()) : usprDodajDni(usprPon, dni);
+  renderUspr();
+}
+function usprZmienKlase(id) { activateClass(id); save(); renderUspr(); }
+function usprKlik(sid, klucz) {
+  const cls = getCurrentClass();
+  if (!cls || !cls.attendance[klucz]) return;
+  const c = attRead(cls.attendance[klucz][sid]);
+  let nowy;
+  if (c.s === 'NB') nowy = 'NU'; else if (c.s === 'NU') nowy = 'NB'; else return;
+  const id = cls.id + '|' + klucz + '|' + sid;
+  if (!(id in usprZmiany)) usprZmiany[id] = cls.attendance[klucz][sid];
+  cls.attendance[klucz][sid] = attWrite(nowy, c.sp);
+  if (JSON.stringify(cls.attendance[klucz][sid]) === JSON.stringify(usprZmiany[id])) delete usprZmiany[id];   // wróciło do stanu sprzed okna
+  save();
+  renderUspr();
+}
+function usprCofnijWszystko() {
+  Object.keys(usprZmiany).forEach(id => {
+    const [clsId, klucz, sid] = id.split('|');
+    const cls = state.classes.find(c => c.id === clsId);
+    if (cls && cls.attendance[klucz]) cls.attendance[klucz][sid] = usprZmiany[id];
+  });
+  const n = Object.keys(usprZmiany).length;
+  usprZmiany = {};
+  save();
+  renderUspr();
+  showToast('Cofnięto zmian: ' + n, 'success');
+}
+function renderUspr() {
+  const cls = getCurrentClass();
+  const sel = document.getElementById('usprKlasa');
+  sel.innerHTML = state.classes.map(c => `<option value="${c.id}"${cls && c.id === cls.id ? ' selected' : ''}>${escapeHtml((c.school ? c.school + ' · ' : '') + c.name)}</option>`).join('');
+  const pt = usprDodajDni(usprPon, 4);
+  document.getElementById('usprTydzLabel').textContent = usprDM(usprPon) + '–' + usprDM(pt) + '.' + pt.slice(0, 4);
+  const siatka = document.getElementById('usprSiatka');
+  const licz = document.getElementById('usprLicz');
+  const nZmian = Object.keys(usprZmiany).length;
+  const cofnij = document.getElementById('usprCofnijBtn');
+  cofnij.style.display = nZmian ? '' : 'none';
+  cofnij.textContent = '↶ Cofnij zmiany z tego okna (' + nZmian + ')';
+  if (!cls) { siatka.innerHTML = '<p style="padding:12px;margin:0;">Brak klas.</p>'; licz.textContent = ''; return; }
+  const klucze = usprKlucze(cls, usprPon);
+  licz.innerHTML = `Nieusprawiedliwione (NB) w tym tygodniu: <b id="usprIleNB">${usprIle(cls, klucze, 'NB')}</b> · usprawiedliwione (NU): <b id="usprIleNU">${usprIle(cls, klucze, 'NU')}</b>` + (nZmian ? ` · zmienione w tym oknie: <b>${nZmian}</b>` : '');
+  if (!klucze.length) {
+    siatka.innerHTML = '<p style="padding:12px;margin:0;color:var(--ink-muted);">W tym tygodniu ta klasa nie ma wpisanej frekwencji.</p>';
+    return;
+  }
+  const wszyscy = document.getElementById('usprWszyscy').checked;
+  const wiersze = cls.students.filter(s => wszyscy || klucze.some(k => { const st = attRead((cls.attendance[k] || {})[s.id]).s; return st === 'NB' || st === 'NU'; }));
+  let h = '<table class="uspr"><thead><tr><th class="l">Uczeń</th>';
+  let poprz = null;
+  klucze.forEach(k => {
+    const d = kluczData(k), nr = kluczNr(k);
+    h += `<th${d !== poprz ? ' class="dzien-nowy"' : ''}>${ZALEGLE_DNI[zalegleDzienTyg(d)]} ${usprDM(d)}${nr === null ? '' : '<br><small>lekcja ' + nr + '</small>'}</th>`;
+    poprz = d;
+  });
+  h += '</tr></thead><tbody>';
+  if (!wiersze.length) h += `<tr><td class="l" colspan="${klucze.length + 1}" style="padding:12px;color:var(--ink-muted);">Nikt nie był nieobecny w tym tygodniu. ✓</td></tr>`;
+  wiersze.forEach(s => {
+    h += `<tr data-sid="${s.id}"><td class="l">${escapeHtml(s.name || '—')}</td>`;
+    poprz = null;
+    klucze.forEach(k => {
+      const d = kluczData(k);
+      const c = attRead((cls.attendance[k] || {})[s.id]);
+      const info = c.s ? STATUS_INFO[c.s] : null;
+      const zm = (cls.id + '|' + k + '|' + s.id) in usprZmiany;
+      let kom = '';
+      if (c.s === 'NB' || c.s === 'NU') {
+        kom = `<button type="button" class="status-btn ${info.cls} uspr-kr${zm ? ' zmieniona' : ''}" data-k="${k}" onclick="usprKlik('${s.id}','${k}')" title="${escapeHtml(s.name || '')} · ${kluczEtykieta(k)} — ${c.s === 'NB' ? 'klik: usprawiedliw (NB → NU)' : 'klik: cofnij na NB'}">${info.label}${c.sp ? '<small>+sp</small>' : ''}</button>`;
+      } else if (info) {
+        kom = `<span class="status-btn ${info.cls} uspr-kr" title="${info.label} — ${escapeHtml(info.desc)}">${info.label}</span>`;
+      }
+      h += `<td${d !== poprz ? ' class="dzien-nowy"' : ''}>${kom}</td>`;
+      poprz = d;
+    });
+    h += '</tr>';
+  });
+  h += '</tbody></table>';
+  siatka.innerHTML = h;
+}
+
 // =====================================================
 // KARTA UCZNIA — historia ćwiczenia jednej osoby w 4 odsłonach:
 // kafle (klik = filtr) → oś czasu → krzywa skumulowana → lista lekcji + oceny + pomiary.
@@ -7332,6 +7499,7 @@ document.addEventListener('keydown', function (e) {
     else if (open.id === 'classPromptModal') classPromptCancel();
     else if (open.id === 'pwdPromptModal') pwdPromptCancel();
     else if (open.id === 'kopiaModal') zamknijKopieModal();
+    else if (open.id === 'usprModal') zamknijUspr();
     return;
   }
 

@@ -495,6 +495,23 @@ Bramka: `py -3.14 test_zalegle.py` (54 sprawdzeń: liczenie v1 i v2, pasek tygod
 dnia, klawiatura pod `#nr`, siatka, dni wolne, „nie było", „wpisz", magazyn, prawdziwy
 `plan-wf.json`).
 
+## Usprawiedliwienia — tydzień jednej klasy (2026-11-17)
+
+Po co: usprawiedliwienia przychodzą w e-dzienniku hurtem (rodzic usprawiedliwia cały dzień), a apka
+umiała NB → NU tylko pojedynczo — okienko ucznia i potwierdzenie przy każdej dacie. Teraz: przycisk
+**✋ Usprawiedliwienia** otwiera siatkę jednej klasy na tydzień (wiersz = uczeń, kolumna = wpisana lekcja
+Pn–Pt, ◀ ▶ = tydzień, wybór klasy w okienku). Domyślnie tylko uczniowie z NB/NU w tym tygodniu.
+
+- Klik w NB = NU od razu, **bez okna** (wybór Artura); drugi klik cofa. Inne statusy tylko do podglądu.
+- Spóźnienie zostaje przy komórce (NB+sp → NU+sp).
+- „↶ Cofnij zmiany z tego okna" przywraca stan sprzed otwarcia okna (też po zmianie klasy/tygodnia).
+- Procenty liczy dalej `wagaLekcji()` — nic osobnego.
+- **Wejście:** laptop = górny pasek obok „Zaległe"; telefon (≤ 700 px) = belka dnia. Powód: przy 1280 px
+  belka dnia ma ~40 px luzu — przycisk tam spychał „Dzień | Tydzień" do drugiego wiersza (59 → 98 px).
+
+Bramka: `py -3.14 test_usprawiedliwienia_tydzien.py` (32 sprawdzenia, w tym wysokości obu pasków przy 1280 px
+i brak poziomego przewijania na telefonie 369 px).
+
 ## Bramki: jedna komenda i zapadka przed pushem (2026-09-21)
 
 `py -3.14 sprawdz_wszystko.py` uruchamia **wszystkie** bramki dziennika i drukuje tabelkę
