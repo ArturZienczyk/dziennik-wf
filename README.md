@@ -309,7 +309,10 @@ Trzy warstwy, z których pierwsza jest tylko zasłoną, a sednem jest druga:
 1. **Ekran blokady.** Przy otwarciu dziennika — hasło (klucz nie przeżywa
    przeładowania strony). Po 10 min bez klawisza/dotknięcia albo gdy karta zejdzie
    w tło — PIN (4 cyfry; klucz siedzi w pamięci strony). 5 złych PIN-ów → hasło.
-   Przycisk „🔒 Zablokuj” w pasku zakładek zasłania od ręki. Klawisze i kliknięcia
+   Przycisk „🔒 Zablokuj” w pasku zakładek zasłania od ręki. **Ekran hasła mówi, czemu nie PIN**
+   (2026-11-17, `ZAMEK_POWOD_HASLA`): po otwarciu od nowa („telefon potrafi sam zamknąć przeglądarkę w tle”)
+   albo po zasłonie bez ustawionego PIN-u — wcześniej oba wyglądały tak samo jak „Użyj hasła”
+   (bramka `test_zamek_powod.py`). Klawisze i kliknięcia
    nie docierają do zasłoniętej apki (`inert` + przechwycenie `keydown`).
 2. **Magazyn szyfrowany.** `localStorage` i IndexedDB trzymają WYŁĄCZNIE szyfrogram
    (AES-GCM 256, klucz z hasła PBKDF2 150 000 — te same prymitywy co kopie
