@@ -512,6 +512,10 @@ Pn–Pt, ◀ ▶ = tydzień, wybór klasy w okienku). Domyślnie tylko uczniowie
 Bramka: `py -3.14 test_usprawiedliwienia_tydzien.py` (32 sprawdzenia, w tym wysokości obu pasków przy 1280 px
 i brak poziomego przewijania na telefonie 369 px).
 
+**Zbiór do piaskownicy** (do przeklikania tej i innych funkcji): `python zrob_piaskownice.py`, potem
+`py -3.14 zbior_piaskownicy.py` → `backups\PIASKOWNICA-dane-testowe.enc.json`, hasło `piaskownica`,
+zmyślone klasy 6A/7B (test), 5 tygodni. Wczytanie: Uczniowie → Kopia dziennika → wczytaj kopię.
+
 ## Bramki: jedna komenda i zapadka przed pushem (2026-09-21)
 
 `py -3.14 sprawdz_wszystko.py` uruchamia **wszystkie** bramki dziennika i drukuje tabelkę
